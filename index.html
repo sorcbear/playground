@@ -6,67 +6,28 @@
   <title>Circle Puzzle</title>
   <style>
     :root { --maxw: 720px; }
-    body{
-      margin:0;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;
-      background:#fff; color:#111;
-    }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif; background:#fff; color:#111; }
     .wrap{ max-width:var(--maxw); margin:0 auto; padding:12px; }
-    .stage{
-      width:100%;
-      aspect-ratio:918/1024;
-      border-radius:10px;
-      overflow:hidden;
-      background:#fff;
-      touch-action:manipulation;
-      user-select:none;
-    }
+    .stage{ width:100%; aspect-ratio:918/1024; border-radius:10px; overflow:hidden; background:#fff; touch-action:manipulation; user-select:none; }
     svg{ width:100%; height:100%; display:block; }
 
-    /* 透明命中层（不显示） */
+    /* 仅用于“显示选中状态”，不接收点击（点击统一由 catcher 处理） */
     .hit{
       fill: rgba(0,0,0,0);
       stroke: rgba(0,0,0,0);
-      pointer-events: all;
-      cursor: pointer;
+      pointer-events: none;
     }
-    /* 红点层：默认透明，选中时显示 */
+    .hit.selected + .dot{ fill: rgba(220,0,0,0.92); }
+
     .dot{
       fill: rgba(220,0,0,0);
       pointer-events: none;
     }
-    .hit.selected + .dot{
-      fill: rgba(220,0,0,0.92);
-    }
 
-    .panel{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-      margin-top:12px;
-      flex-wrap:wrap;
-    }
-    button{
-      appearance:none;
-      border:0;
-      background:#111;
-      color:#fff;
-      padding:12px 16px;
-      border-radius:10px;
-      font-size:16px;
-      font-weight:700;
-    }
+    .panel{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:12px; flex-wrap:wrap; }
+    button{ appearance:none; border:0; background:#111; color:#fff; padding:12px 16px; border-radius:10px; font-size:16px; font-weight:700; }
     button:active{ transform:translateY(1px); }
-    .msg{
-      flex:1;
-      min-width:220px;
-      padding:10px 12px;
-      border-radius:10px;
-      background:#f5f5f5;
-      font-size:14px;
-      line-height:1.35;
-    }
+    .msg{ flex:1; min-width:220px; padding:10px 12px; border-radius:10px; background:#f5f5f5; font-size:14px; line-height:1.35; }
   </style>
 </head>
 <body>
@@ -74,19 +35,17 @@
     <div class="stage">
       <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg"
            xmlns="http://www.w3.org/2000/svg"
-           xmlns:xlink="http://www.w3.org/1999/xlink"
-           aria-label="circle puzzle">
-
-        <!-- 背景图：必须是仓库根目录 map.png（严格小写） -->
+           xmlns:xlink="http://www.w3.org/1999/xlink">
         <image id="bg"
-               href="map.png"
-               xlink:href="map.png"
+               href="map.png" xlink:href="map.png"
                x="0" y="0" width="918" height="1024"
                preserveAspectRatio="xMidYMid meet"
                style="pointer-events:none;"></image>
 
-        <!-- 捕获整图点击：用“吸附最近圆”来切换 -->
-        <rect id="catcher" x="0" y="0" width="918" height="1024" fill="rgba(0,0,0,0)"></rect>
+        <!-- catcher 必须永远在最上层，专门接收点击 -->
+        <rect id="catcher" x="0" y="0" width="918" height="1024"
+              fill="rgba(0,0,0,0)"
+              style="pointer-events:all;"></rect>
       </svg>
     </div>
 
@@ -97,40 +56,29 @@
   </div>
 
 <script>
-/**
- * 你的圆心坐标（46个）
- */
+/** 你的 46 个圆心坐标 */
 const CIRCLES = [{"x":678,"y":84},{"x":752,"y":88},{"x":376,"y":166},{"x":473,"y":196},{"x":553,"y":171},{"x":657,"y":219},{"x":307,"y":263},{"x":886,"y":187},{"x":444,"y":247},{"x":115,"y":274},{"x":256,"y":209},{"x":806,"y":211},{"x":879,"y":318},{"x":217,"y":346},{"x":303,"y":346},{"x":547,"y":349},{"x":267,"y":638},{"x":105,"y":346},{"x":78,"y":434},{"x":56,"y":541},{"x":189,"y":548},{"x":164,"y":460},{"x":585,"y":491},{"x":438,"y":491},{"x":369,"y":579},{"x":813,"y":847},{"x":274,"y":550},{"x":485,"y":431},{"x":617,"y":305},{"x":608,"y":617},{"x":535,"y":573},{"x":839,"y":590},{"x":825,"y":659},{"x":897,"y":421},{"x":390,"y":673},{"x":303,"y":718},{"x":527,"y":663},{"x":486,"y":728},{"x":862,"y":744},{"x":730,"y":172},{"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},{"x":206,"y":774},{"x":186,"y":622}];
 
-/**
- * 可调参数
- * - R_DOT：红点半径（影响“填满”视觉）
- * - R_HIT：点击命中半径（不改变红点，只影响易点击）
- * - SNAP_DIST：吸附距离（你点偏也能选中）
- * - EPS：答案匹配容差（坐标集合匹配允许的误差）
- */
-const R_DOT     = 15;
-const R_HIT     = 20;
-const SNAP_DIST = 32;
-const EPS       = 10;
+/** 可调参数 */
+const R_DOT     = 15;  // 红色填充大小
+const R_HIT_VIS = 20;  // 视觉/选择区域（不接收点击）
+const SNAP_DIST = 36;  // 点偏也能吸附命中
+const EPS       = 10;  // 答案匹配容差（坐标集合）
 
 /**
- * 正确答案：用“坐标集合”判断
- * 你如果已经知道答案对应哪些坐标，可以直接把 ANSWER_POINTS 填死。
- *
- * 这里我先给一个“从旧的答案编号推导坐标”的写法（不依赖点击顺序，判断用坐标）：
- * 如果你确认正确点就是“第3、17、18、22、28、35、38、42、45个圆”
- * 就保持不变即可。
- *
- * 如果你发现不对，只需要改 ANSWER_INDICES 这行，或直接改 ANSWER_POINTS。
+ * 先用索引推导答案点坐标（你要“坐标集合判断”，最终可以直接写 ANSWER_POINTS）
+ * 如果你不想依赖任何索引：把 ANSWER_POINTS 直接改成图2红点的坐标列表即可。
  */
 const ANSWER_INDICES = [3,17,18,22,28,35,38,42,45]; // 1-based
-const ANSWER_POINTS = ANSWER_INDICES
-  .map(n => CIRCLES[n - 1])
-  .filter(Boolean)
-  .map(p => ({x: p.x, y: p.y}));
+const ANSWER_POINTS = ANSWER_INDICES.map(n => CIRCLES[n-1]).filter(Boolean).map(p => ({x:p.x,y:p.y}));
 
-/* ========= 工具函数 ========= */
+const svg = document.getElementById("svg");
+const bg  = document.getElementById("bg");
+const catcher = document.getElementById("catcher");
+const msg = document.getElementById("msg");
+const submitBtn = document.getElementById("submitBtn");
+
+const selected = new Array(CIRCLES.length).fill(false);
 
 function el(name, attrs = {}) {
   const n = document.createElementNS("http://www.w3.org/2000/svg", name);
@@ -138,28 +86,33 @@ function el(name, attrs = {}) {
   return n;
 }
 
-function svgPointFromEvent(svg, ev){
+function svgPointFromEvent(ev){
   const pt = svg.createSVGPoint();
-  pt.x = ev.clientX;
-  pt.y = ev.clientY;
+  pt.x = ev.clientX; pt.y = ev.clientY;
   return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 
+function nearestCircleIndex(x, y){
+  let bestIdx = -1, bestD2 = Infinity;
+  for (let i=0;i<CIRCLES.length;i++){
+    const dx = x - CIRCLES[i].x;
+    const dy = y - CIRCLES[i].y;
+    const d2 = dx*dx + dy*dy;
+    if (d2 < bestD2){ bestD2 = d2; bestIdx = i; }
+  }
+  if (bestIdx < 0) return -1;
+  return bestD2 <= SNAP_DIST*SNAP_DIST ? bestIdx : -1;
+}
+
 function dist2(a, b){
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
+  const dx = a.x - b.x, dy = a.y - b.y;
   return dx*dx + dy*dy;
 }
 
-/**
- * 坐标集合比较（顺序无关、编号无关），允许 EPS 误差
- * - 每个答案点必须匹配到一个用户点
- * - 每个用户点只能被用一次（避免重复匹配）
- */
 function samePointSet(userPoints, answerPoints, eps){
   if (userPoints.length !== answerPoints.length) return false;
   const used = new Array(userPoints.length).fill(false);
-  const eps2 = eps * eps;
+  const eps2 = eps*eps;
 
   for (const ap of answerPoints){
     let found = false;
@@ -176,87 +129,55 @@ function samePointSet(userPoints, answerPoints, eps){
   return true;
 }
 
-/**
- * 吸附到最近圆：你点偏也能切换
- */
-function nearestCircleIndex(x, y){
-  let bestIdx = -1;
-  let bestD2 = Infinity;
-  for (let i=0;i<CIRCLES.length;i++){
-    const dx = x - CIRCLES[i].x;
-    const dy = y - CIRCLES[i].y;
-    const d2 = dx*dx + dy*dy;
-    if (d2 < bestD2){
-      bestD2 = d2;
-      bestIdx = i;
-    }
-  }
-  if (bestIdx < 0) return -1;
-  return bestD2 <= SNAP_DIST*SNAP_DIST ? bestIdx : -1;
+function getUserPoints(){
+  return selected
+    .map((v,i)=> v ? CIRCLES[i] : null)
+    .filter(p => p !== null)
+    .map(p => ({x:p.x, y:p.y}));
 }
 
-/* ========= 主逻辑 ========= */
-
-const svg = document.getElementById("svg");
-const bg  = document.getElementById("bg");
-const catcher = document.getElementById("catcher");
-const msg = document.getElementById("msg");
-const submitBtn = document.getElementById("submitBtn");
-
-const selected = new Array(CIRCLES.length).fill(false);
-
 function render(){
-  // 清理旧点（保留 bg 和 catcher）
+  // 清掉旧点（保留 bg 和 catcher）
   [...svg.querySelectorAll(".hit,.dot")].forEach(n => n.remove());
 
+  // 关键：把点插入到 catcher 之前，保证 catcher 永远在最上层接收点击
   CIRCLES.forEach((c, i) => {
-    const hit = el("circle", { cx: c.x, cy: c.y, r: R_HIT });
+    const hit = el("circle", { cx:c.x, cy:c.y, r:R_HIT_VIS });
     hit.classList.add("hit");
     if (selected[i]) hit.classList.add("selected");
 
-    const dot = el("circle", { cx: c.x, cy: c.y, r: R_DOT });
+    const dot = el("circle", { cx:c.x, cy:c.y, r:R_DOT });
     dot.classList.add("dot");
 
-    svg.appendChild(hit);
-    svg.appendChild(dot);
+    svg.insertBefore(hit, catcher);
+    svg.insertBefore(dot, catcher);
   });
 
-  const chosenCount = selected.filter(Boolean).length;
-  msg.textContent = `已选择 ${chosenCount} 个圆点。`;
+  msg.textContent = `已选择 ${selected.filter(Boolean).length} 个圆点。`;
   msg.style.background = "#f5f5f5";
 }
 
-function getUserPoints(){
-  return selected
-    .map((v,i) => v ? CIRCLES[i] : null)
-    .filter(p => p !== null)
-    .map(p => ({x: p.x, y: p.y}));
-}
-
-/* 背景图加载成功后再渲染，避免空白时点击 */
 bg.addEventListener("load", () => {
   render();
 });
 
 bg.addEventListener("error", () => {
-  msg.textContent = "图片加载失败：请确认仓库根目录存在 map.png（严格小写）且能通过 /map.png 打开。";
+  msg.textContent = "图片加载失败：请确认根目录存在 map.png（严格小写）且能通过 /map.png 打开。";
   msg.style.background = "#fdecec";
 });
 
-/* 点击整张图 -> 吸附最近圆 -> 切换 */
-catcher.addEventListener("click", (ev) => {
-  const p = svgPointFromEvent(svg, ev);
+// 用 pointerdown 更适合手机，避免 click 被延迟/吞掉
+catcher.addEventListener("pointerdown", (ev) => {
+  ev.preventDefault();
+  const p = svgPointFromEvent(ev);
   const idx = nearestCircleIndex(p.x, p.y);
   if (idx === -1) return;
   selected[idx] = !selected[idx];
   render();
 }, { passive:false });
 
-/* Submit：坐标集合判断（顺序无关） */
 submitBtn.addEventListener("click", () => {
-  const userPts = getUserPoints();
-  const ok = samePointSet(userPts, ANSWER_POINTS, EPS);
-
+  const ok = samePointSet(getUserPoints(), ANSWER_POINTS, EPS);
   if (ok){
     msg.textContent = "Success";
     msg.style.background = "#e9f7ef";
