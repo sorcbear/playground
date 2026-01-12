@@ -19,52 +19,34 @@
       padding: 12px;
     }
     .stage{
-      position: relative;
       width: 100%;
-      aspect-ratio: 918 / 1024; /* 图1比例 */
+      aspect-ratio: 918 / 1024;  /* 必须和 viewBox 一致，保证无留白偏移 */
       border-radius: 10px;
       overflow: hidden;
       background:#fff;
       touch-action: manipulation;
       user-select: none;
     }
-    .stage img{
-      position:absolute;
-      inset:0;
+    svg{
       width:100%;
       height:100%;
-      object-fit: contain; /* 注意：整张图完整显示 */
       display:block;
-      pointer-events:none; /* 不挡点击 */
-    }
-    .stage svg{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
     }
 
-    /* 点击区域：不加大，半径就是圆本身 */
+    /* 点击层：透明圆，负责接收点击 */
     .hit {
-      fill: rgba(255,255,255,0);
+      fill: rgba(0,0,0,0);
       stroke: rgba(0,0,0,0);
       pointer-events: all;
     }
 
-    /* 被选中后：圆填充红色（看起来空心圆变实心） */
-    .hit.selected {
-      fill: rgba(220, 0, 0, 0.90);
-    }
-
-    /* 编号文字：不影响点击 */
-    .label {
-      font-size: 18px;
-      font-weight: 700;
-      fill: #111;
-      paint-order: stroke;
-      stroke: #fff;
-      stroke-width: 4px;
+    /* 红点层：统一大小，选中才显示 */
+    .dot {
+      fill: rgba(220, 0, 0, 0);
       pointer-events: none;
+    }
+    .hit.selected + .dot {
+      fill: rgba(220, 0, 0, 0.92);
     }
 
     .panel{
@@ -95,39 +77,48 @@
       font-size: 14px;
       line-height: 1.35;
     }
-    .hint{
-      font-size: 12px;
-      color:#666;
-      margin-top: 8px;
-    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="stage" id="stage">
-      <img src="map.png" alt="map" />
-      <svg viewBox="0 0 918 1024" aria-label="clickable circles" id="svg"></svg>
+    <div class="stage">
+      <!-- 关键：图片放在同一个 SVG 坐标系里，避免缩放偏移 -->
+      <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg" aria-label="circle puzzle">
+        <image href="map.png" x="0" y="0" width="918" height="1024" preserveAspectRatio="xMidYMid meet" style="pointer-events:none;"></image>
+      </svg>
     </div>
 
     <div class="panel">
       <button id="submitBtn">Submit</button>
-      <div class="msg" id="msg">点击空心圆进行选择（会变成实心红色），再点一次可取消。完成后点 Submit。</div>
+      <div class="msg" id="msg">点击空心圆选择/取消，然后 Submit。</div>
     </div>
-    <div class="hint">说明：每个圆都有编号（1、2、3…）。提交时会校验你选中的编号集合是否正确。</div>
   </div>
 
 <script>
 /**
- * 圆圈数据：基于图1提取（46个）
- * 坐标基于 viewBox(918x1024)
+ * 圆圈中心点坐标（46个）——仍然用你之前那份
+ * 但半径统一由 R_HIT / R_DOT 控制，避免红点大小不一致
  */
-const CIRCLES = [{"x":677,"y":83,"r":22},{"x":751,"y":88,"r":16},{"x":376,"y":166,"r":21},{"x":476,"y":168,"r":16},{"x":562,"y":171,"r":22},{"x":657,"y":219,"r":22},{"x":307,"y":263,"r":22},{"x":399,"y":274,"r":16},{"x":494,"y":280,"r":22},{"x":92,"y":301,"r":22},{"x":170,"y":307,"r":16},{"x":825,"y":315,"r":16},{"x":900,"y":327,"r":22},{"x":217,"y":346,"r":22},{"x":303,"y":346,"r":22},{"x":575,"y":356,"r":16},{"x":245,"y":361,"r":16},{"x":142,"y":388,"r":22},{"x":80,"y":433,"r":16},{"x":38,"y":436,"r":22},{"x":232,"y":438,"r":22},{"x":178,"y":484,"r":16},{"x":533,"y":506,"r":22},{"x":405,"y":512,"r":22},{"x":290,"y":517,"r":16},{"x":489,"y":554,"r":22},{"x":273,"y":550,"r":16},{"x":314,"y":556,"r":22},{"x":689,"y":563,"r":22},{"x":601,"y":575,"r":16},{"x":450,"y":618,"r":16},{"x":827,"y":659,"r":22},{"x":880,"y":670,"r":16},{"x":714,"y":689,"r":22},{"x":388,"y":697,"r":22},{"x":302,"y":717,"r":16},{"x":579,"y":730,"r":22},{"x":475,"y":757,"r":16},{"x":859,"y":758,"r":22},{"x":915,"y":765,"r":22},{"x":644,"y":827,"r":16},{"x":506,"y":865,"r":16},{"x":433,"y":878,"r":22},{"x":332,"y":893,"r":21},{"x":256,"y":908,"r":16},{"x":119,"y":699,"r":22}];
+const CIRCLES = [
+  {"x":677,"y":83},{"x":751,"y":88},{"x":376,"y":166},{"x":476,"y":168},{"x":562,"y":171},
+  {"x":657,"y":219},{"x":307,"y":263},{"x":399,"y":274},{"x":494,"y":280},{"x":92,"y":301},
+  {"x":170,"y":307},{"x":825,"y":315},{"x":900,"y":327},{"x":217,"y":346},{"x":303,"y":346},
+  {"x":575,"y":356},{"x":245,"y":361},{"x":142,"y":388},{"x":80,"y":433},{"x":38,"y":436},
+  {"x":232,"y":438},{"x":178,"y":484},{"x":533,"y":506},{"x":405,"y":512},{"x":290,"y":517},
+  {"x":489,"y":554},{"x":273,"y":550},{"x":314,"y":556},{"x":689,"y":563},{"x":601,"y":575},
+  {"x":450,"y":618},{"x":827,"y":659},{"x":880,"y":670},{"x":714,"y":689},{"x":388,"y":697},
+  {"x":302,"y":717},{"x":579,"y":730},{"x":475,"y":757},{"x":859,"y":758},{"x":915,"y":765},
+  {"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},{"x":256,"y":908},
+  {"x":119,"y":699}
+];
+
+// 统一半径：你截图里圆圈看起来基本等大，建议先用这个值
+const R_HIT = 18;   // 点击圆半径（不加大：固定为圆本身大小）
+const R_DOT = 15;   // 红点半径（略小于空心圆内径，看起来像“填满”但保留黑边）
 
 /**
- * 正确答案：不明文写集合，写 SHA-256("3,17,18,22,28,35,38,42,45")
- * 如果你以后要换答案：
- * 1) 先把正确编号按从小到大用逗号拼成字符串，例如 "3,5,6"
- * 2) 用任意 sha256 工具算哈希，替换下面这个值
+ * 正确答案（不显示编号，内部用 1-based 编号做校验）
+ * SHA-256("3,17,18,22,28,35,38,42,45")
  */
 const ANSWER_HASH = "a1ab820fa8147f425c00db6d397099d7e4eea44acc24c810cfb56ba96a016e71";
 
@@ -135,61 +126,50 @@ const svg = document.getElementById("svg");
 const msg = document.getElementById("msg");
 const submitBtn = document.getElementById("submitBtn");
 
-// 选择状态（与CIRCLES同长度）
 const selected = new Array(CIRCLES.length).fill(false);
 
+function el(name, attrs = {}) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+}
+
 function render(){
-  svg.innerHTML = "";
+  // 先把旧的 hit/dot 清掉（保留第一个 <image>）
+  [...svg.querySelectorAll(".hit,.dot")].forEach(n => n.remove());
 
-  CIRCLES.forEach((c, idx0) => {
-    const num = idx0 + 1;
-
-    // hit circle：不加大点击范围
-    const hit = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    hit.setAttribute("cx", c.x);
-    hit.setAttribute("cy", c.y);
-    hit.setAttribute("r", c.r);
+  CIRCLES.forEach((c, i) => {
+    const hit = el("circle", { cx: c.x, cy: c.y, r: R_HIT });
     hit.classList.add("hit");
-    if (selected[idx0]) hit.classList.add("selected");
+    if (selected[i]) hit.classList.add("selected");
+
+    const dot = el("circle", { cx: c.x, cy: c.y, r: R_DOT });
+    dot.classList.add("dot");
 
     hit.addEventListener("click", (e) => {
       e.preventDefault();
-      selected[idx0] = !selected[idx0];
+      selected[i] = !selected[i];
       render();
-      const chosen = selected
-        .map((v,i)=> v ? (i+1) : null)
-        .filter(v=>v!==null);
-      msg.textContent = `已选择：${chosen.length} 个（${chosen.join(", ")}）`;
     }, { passive: false });
 
-    // label：编号（默认放在圆心偏右上）
-    const label = document.createElementNS("http://www.w3.org/2000/svg","text");
-    const dx = c.r + 4;
-    const dy = -c.r + 6;
-    label.setAttribute("x", c.x + dx);
-    label.setAttribute("y", c.y + dy);
-    label.classList.add("label");
-    label.textContent = String(num);
-
     svg.appendChild(hit);
-    svg.appendChild(label);
+    svg.appendChild(dot);
   });
 }
 
 async function sha256Hex(str){
   const data = new TextEncoder().encode(str);
   const hashBuf = await crypto.subtle.digest("SHA-256", data);
-  const hashArr = Array.from(new Uint8Array(hashBuf));
-  return hashArr.map(b => b.toString(16).padStart(2,"0")).join("");
+  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,"0")).join("");
 }
 
 submitBtn.addEventListener("click", async () => {
-  const chosenNums = selected
+  const chosen = selected
     .map((v,i)=> v ? (i+1) : null)
     .filter(v=>v!==null)
     .sort((a,b)=>a-b);
 
-  const key = chosenNums.join(",");
+  const key = chosen.join(",");
   const h = await sha256Hex(key);
 
   if (h === ANSWER_HASH){
