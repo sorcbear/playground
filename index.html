@@ -3,129 +3,230 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Circle Position Fixer</title>
+  <title>Circle Puzzle</title>
   <style>
-    body { font-family: sans-serif; background: #eee; padding: 20px; text-align: center; }
-    .stage {
-      position: relative;
-      width: 918px; 
-      height: 1024px;
-      margin: 0 auto;
-      background: #fff;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-      overflow: hidden; /* 防止拖出边界 */
-    }
-    img {
-      width: 100%; height: 100%; display: block; pointer-events: none; user-select: none;
-    }
-    .dot {
-      position: absolute;
-      width: 20px; height: 20px;
-      background: rgba(255, 0, 0, 0.7);
-      border: 2px solid #fff;
-      border-radius: 50%;
-      transform: translate(-50%, -50%); /* 居中定位 */
-      cursor: grab;
-      z-index: 10;
-    }
-    .dot:active { cursor: grabbing; background: rgba(0, 255, 0, 0.8); }
-    .panel {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: #222; color: #fff; padding: 15px;
-      z-index: 100; display: flex; justify-content: center; gap: 20px;
-    }
-    button {
-      padding: 10px 20px; font-size: 16px; cursor: pointer;
-      background: #4CAF50; color: white; border: none; border-radius: 5px;
-    }
-    textarea { width: 1px; height: 1px; opacity: 0; position: absolute; }
+    :root { --maxw: 720px; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif; background:#fff; color:#111; }
+    .wrap{ max-width:var(--maxw); margin:0 auto; padding:12px; }
+    .stage{ width:100%; aspect-ratio:918/1024; border-radius:10px; overflow:hidden; background:#fff; touch-action:manipulation; user-select:none; }
+    svg{ width:100%; height:100%; display:block; }
+
+    .hit{ fill:rgba(0,0,0,0); stroke:rgba(0,0,0,0); pointer-events:all; cursor:pointer; }
+    .dot{ fill:rgba(220,0,0,0); pointer-events:none; }
+    .hit.selected + .dot{ fill:rgba(220,0,0,0.92); }
+
+    /* 校准模式下的十字准星和编号（仅辅助，不会影响点击） */
+    .cross { stroke:#0a66ff; stroke-width:2; pointer-events:none; }
+    .lbl { font-size:18px; font-weight:700; fill:#0a66ff; paint-order:stroke; stroke:#fff; stroke-width:5; pointer-events:none; }
+
+    .panel{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:12px; flex-wrap:wrap; }
+    button{ appearance:none; border:0; background:#111; color:#fff; padding:12px 16px; border-radius:10px; font-size:16px; font-weight:700; }
+    button.secondary{ background:#555; }
+    button.danger{ background:#b00020; }
+    button:active{ transform:translateY(1px); }
+    .msg{ flex:1; min-width:220px; padding:10px 12px; border-radius:10px; background:#f5f5f5; font-size:14px; line-height:1.35; }
+    .hint{ margin-top:8px; font-size:12px; color:#666; }
   </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="stage">
+      <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg"
+           xmlns="http://www.w3.org/2000/svg"
+           xmlns:xlink="http://www.w3.org/1999/xlink">
+        <image id="bg" href="map.png" xlink:href="map.png"
+               x="0" y="0" width="918" height="1024"
+               preserveAspectRatio="xMidYMid meet"
+               style="pointer-events:none;"></image>
 
-  <h3>第一步：拖动红点到圆圈中心 &nbsp;&nbsp; 第二步：点击底部按钮复制新坐标</h3>
-
-  <div class="stage" id="stage">
-    <img src="map.png" alt="Map">
+        <!-- 透明点击层：校准模式下点击整张图记录圆心 -->
+        <rect id="calibCatcher" x="0" y="0" width="918" height="1024"
+              fill="rgba(0,0,0,0)" style="display:none;"></rect>
+      </svg>
     </div>
 
-  <div class="panel">
-    <span id="status">已加载 46 个点</span>
-    <button onclick="exportData()">Copy New Coordinates</button>
+    <div class="panel">
+      <button id="submitBtn">Submit</button>
+      <button id="exportBtn" class="secondary" style="display:none;">Export</button>
+      <button id="undoBtn" class="secondary" style="display:none;">Undo</button>
+      <button id="resetBtn" class="danger" style="display:none;">Reset</button>
+      <div class="msg" id="msg">加载中…</div>
+    </div>
+    <div class="hint" id="hint"></div>
   </div>
-  <textarea id="clip"></textarea>
 
 <script>
-// 这里是你提供的（有偏差的）原始坐标
-let CIRCLES = [
-  {"x":677,"y":83},{"x":751,"y":88},{"x":376,"y":166},{"x":476,"y":168},{"x":562,"y":171},
-  {"x":657,"y":219},{"x":307,"y":263},{"x":399,"y":274},{"x":494,"y":280},{"x":92,"y":301},
-  {"x":170,"y":307},{"x":825,"y":315},{"x":900,"y":327},{"x":217,"y":346},{"x":303,"y":346},
-  {"x":575,"y":356},{"x":245,"y":361},{"x":142,"y":388},{"x":80,"y":433},{"x":38,"y":436},
-  {"x":232,"y":438},{"x":178,"y":484},{"x":533,"y":506},{"x":405,"y":512},{"x":290,"y":517},
-  {"x":489,"y":554},{"x":273,"y":550},{"x":314,"y":556},{"x":689,"y":563},{"x":601,"y":575},
-  {"x":450,"y":618},{"x":827,"y":659},{"x":880,"y":670},{"x":714,"y":689},{"x":388,"y":697},
-  {"x":302,"y":717},{"x":579,"y":730},{"x":475,"y":757},{"x":859,"y":758},{"x":915,"y":765},
-  {"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},{"x":256,"y":908},
-  {"x":119,"y":699}
-];
+/**
+ * ============== 你只需要改这里两处 ==============
+ * 1) 首先校准：CALIBRATION_MODE = true
+ * 2) 校准完成后：把导出的 CIRCLES 粘贴回来，然后改成 false
+ */
+const CALIBRATION_MODE = true;
 
-const stage = document.getElementById('stage');
-const dots = [];
+/**
+ * 校准后得到的圆心数组（格式：[{x,y}, ...]）
+ * 校准模式下，这里可以先留空 []
+ * 非校准模式下：必须有 46 个
+ */
+let CIRCLES = []; // <- 校准完成后会导出让你粘贴进来
 
-// 初始化：生成可拖拽的点
-CIRCLES.forEach((c, index) => {
-  const el = document.createElement('div');
-  el.className = 'dot';
-  el.style.left = c.x + 'px';
-  el.style.top = c.y + 'px';
-  el.dataset.index = index;
-  
-  // 鼠标拖拽逻辑
-  el.onmousedown = function(e) { startDrag(e, el); };
-  
-  stage.appendChild(el);
-  dots.push(el);
-});
+/**
+ * 正确答案集合（内部编号 1-based，不显示）
+ * SHA-256("3,17,18,22,28,35,38,42,45")
+ */
+const ANSWER_HASH = "a1ab820fa8147f425c00db6d397099d7e4eea44acc24c810cfb56ba96a016e71";
 
-function startDrag(e, el) {
-  e.preventDefault();
-  let startX = e.clientX;
-  let startY = e.clientY;
-  let startLeft = parseInt(el.style.left);
-  let startTop = parseInt(el.style.top);
+/**
+ * 点击半径 & 红点半径（统一，不再出现大小不一致）
+ * 如果你觉得“点不到”，只调大 R_HIT（例如 20/22）
+ */
+const R_HIT = 18;
+const R_DOT = 15;
 
-  document.onmousemove = function(ev) {
-    let dx = ev.clientX - startX;
-    let dy = ev.clientY - startY;
-    el.style.left = (startLeft + dx) + 'px';
-    el.style.top = (startTop + dy) + 'px';
-  };
+const svg = document.getElementById("svg");
+const bg  = document.getElementById("bg");
+const msg = document.getElementById("msg");
+const hint = document.getElementById("hint");
+const submitBtn = document.getElementById("submitBtn");
+const exportBtn = document.getElementById("exportBtn");
+const undoBtn = document.getElementById("undoBtn");
+const resetBtn = document.getElementById("resetBtn");
+const calibCatcher = document.getElementById("calibCatcher");
 
-  document.onmouseup = function() {
-    document.onmousemove = null;
-    document.onmouseup = null;
-  };
+function el(name, attrs = {}) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
 }
 
-function exportData() {
-  // 收集所有红点当前的坐标
-  const newCoords = dots.map(el => {
-    return {
-      x: parseInt(el.style.left),
-      y: parseInt(el.style.top)
-    };
+function clearMarks(){
+  [...svg.querySelectorAll(".hit,.dot,.cross,.lbl")].forEach(n => n.remove());
+}
+
+function drawCross(x,y, idx){
+  const g1 = el("line", { x1: x-10, y1:y, x2:x+10, y2:y });
+  const g2 = el("line", { x1: x, y1:y-10, x2:x, y2:y+10 });
+  g1.classList.add("cross");
+  g2.classList.add("cross");
+
+  const t = el("text", { x: x+12, y: y-12 });
+  t.classList.add("lbl");
+  t.textContent = String(idx);
+
+  svg.appendChild(g1); svg.appendChild(g2); svg.appendChild(t);
+}
+
+function renderPlayable(){
+  clearMarks();
+  if (!Array.isArray(CIRCLES) || CIRCLES.length === 0){
+    msg.textContent = "未找到圆心数据。请先校准。";
+    msg.style.background = "#fdecec";
+    return;
+  }
+  const selected = new Array(CIRCLES.length).fill(false);
+
+  CIRCLES.forEach((c, i) => {
+    const hit = el("circle", { cx: c.x, cy: c.y, r: R_HIT });
+    hit.classList.add("hit");
+
+    const dot = el("circle", { cx: c.x, cy: c.y, r: R_DOT });
+    dot.classList.add("dot");
+
+    hit.addEventListener("click", (e) => {
+      e.preventDefault();
+      selected[i] = !selected[i];
+      if (selected[i]) hit.classList.add("selected");
+      else hit.classList.remove("selected");
+      // dot 的显示由 CSS 控制（hit.selected + dot）
+    }, { passive:false });
+
+    svg.appendChild(hit);
+    svg.appendChild(dot);
   });
 
-  const jsonStr = JSON.stringify(newCoords);
-  const clip = document.getElementById('clip');
-  clip.value = "const CIRCLES = " + jsonStr + ";";
-  clip.select();
-  document.execCommand('copy');
-  
-  alert("新坐标已复制！\n请回到原本的游戏代码中粘贴替换 const CIRCLES 部分。");
+  submitBtn.onclick = async () => {
+    const chosen = selected.map((v,i)=> v ? (i+1) : null).filter(v=>v!==null).sort((a,b)=>a-b);
+    const h = await sha256Hex(chosen.join(","));
+    if (h === ANSWER_HASH){
+      msg.textContent = "Success";
+      msg.style.background = "#e9f7ef";
+    } else {
+      msg.textContent = "Please try again";
+      msg.style.background = "#fdecec";
+    }
+  };
+
+  msg.textContent = "图片加载成功。现在可以点击圆圈。";
+  msg.style.background = "#f5f5f5";
 }
+
+function renderCalibration(){
+  clearMarks();
+  calibCatcher.style.display = "block";
+  submitBtn.style.display = "none";
+  exportBtn.style.display = "inline-block";
+  undoBtn.style.display = "inline-block";
+  resetBtn.style.display = "inline-block";
+
+  msg.textContent = `校准模式：已记录 ${CIRCLES.length} 个圆心。请继续点击下一个圆的中心。`;
+  msg.style.background = "#f5f5f5";
+  hint.textContent = "建议：放大浏览器/手机双指缩放，尽量点在空心圆正中心。全部点完后点 Export 复制结果。";
+
+  // 点击整张图记录坐标（SVG坐标）
+  calibCatcher.onclick = (ev) => {
+    const pt = svg.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+    // 记录
+    CIRCLES.push({ x: Math.round(svgP.x), y: Math.round(svgP.y) });
+
+    // 画十字准星 + 编号（仅校准时显示）
+    drawCross(CIRCLES[CIRCLES.length-1].x, CIRCLES[CIRCLES.length-1].y, CIRCLES.length);
+
+    msg.textContent = `校准模式：已记录 ${CIRCLES.length} 个圆心。`;
+  };
+
+  undoBtn.onclick = () => {
+    if (CIRCLES.length === 0) return;
+    CIRCLES.pop();
+    clearMarks();
+    CIRCLES.forEach((c, idx) => drawCross(c.x, c.y, idx+1));
+    msg.textContent = `校准模式：已记录 ${CIRCLES.length} 个圆心。`;
+  };
+
+  resetBtn.onclick = () => {
+    CIRCLES = [];
+    clearMarks();
+    msg.textContent = `校准模式：已记录 0 个圆心。`;
+  };
+
+  exportBtn.onclick = () => {
+    const txt = `let CIRCLES = ${JSON.stringify(CIRCLES)};`;
+    // 用 prompt 方便复制
+    window.prompt("复制下面这段，粘贴回 index.html 里替换 CIRCLES，然后把 CALIBRATION_MODE 改成 false：", txt);
+  };
+
+  // 初次渲染把已有点也画出来（如果你刷新页面还在）
+  CIRCLES.forEach((c, idx) => drawCross(c.x, c.y, idx+1));
+}
+
+async function sha256Hex(str){
+  const data = new TextEncoder().encode(str);
+  const hashBuf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+// 图片加载检测
+bg.addEventListener("load", () => {
+  if (CALIBRATION_MODE) renderCalibration();
+  else renderPlayable();
+});
+
+bg.addEventListener("error", () => {
+  msg.textContent = "图片加载失败：请确认根目录存在 map.png（严格小写）且能通过 /map.png 打开。";
+  msg.style.background = "#fdecec";
+});
 </script>
 </body>
 </html>
-
