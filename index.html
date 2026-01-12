@@ -11,21 +11,17 @@
     .stage{ width:100%; aspect-ratio:918/1024; border-radius:10px; overflow:hidden; background:#fff; touch-action:manipulation; user-select:none; }
     svg{ width:100%; height:100%; display:block; }
 
+    /* 透明点击层（真正负责响应点击） */
     .hit{ fill:rgba(0,0,0,0); stroke:rgba(0,0,0,0); pointer-events:all; cursor:pointer; }
+
+    /* 红点层：默认透明，选中才显示 */
     .dot{ fill:rgba(220,0,0,0); pointer-events:none; }
     .hit.selected + .dot{ fill:rgba(220,0,0,0.92); }
 
-    /* 校准模式下的十字准星和编号（仅辅助，不会影响点击） */
-    .cross { stroke:#0a66ff; stroke-width:2; pointer-events:none; }
-    .lbl { font-size:18px; font-weight:700; fill:#0a66ff; paint-order:stroke; stroke:#fff; stroke-width:5; pointer-events:none; }
-
     .panel{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:12px; flex-wrap:wrap; }
     button{ appearance:none; border:0; background:#111; color:#fff; padding:12px 16px; border-radius:10px; font-size:16px; font-weight:700; }
-    button.secondary{ background:#555; }
-    button.danger{ background:#b00020; }
     button:active{ transform:translateY(1px); }
     .msg{ flex:1; min-width:220px; padding:10px 12px; border-radius:10px; background:#f5f5f5; font-size:14px; line-height:1.35; }
-    .hint{ margin-top:8px; font-size:12px; color:#666; }
   </style>
 </head>
 <body>
@@ -39,59 +35,50 @@
                preserveAspectRatio="xMidYMid meet"
                style="pointer-events:none;"></image>
 
-        <!-- 透明点击层：校准模式下点击整张图记录圆心 -->
-        <rect id="calibCatcher" x="0" y="0" width="918" height="1024"
-              fill="rgba(0,0,0,0)" style="display:none;"></rect>
+        <!-- 捕获整图点击，用“吸附到最近圆”来切换选择 -->
+        <rect id="catcher" x="0" y="0" width="918" height="1024" fill="rgba(0,0,0,0)"></rect>
       </svg>
     </div>
 
     <div class="panel">
       <button id="submitBtn">Submit</button>
-      <button id="exportBtn" class="secondary" style="display:none;">Export</button>
-      <button id="undoBtn" class="secondary" style="display:none;">Undo</button>
-      <button id="resetBtn" class="danger" style="display:none;">Reset</button>
-      <div class="msg" id="msg">加载中…</div>
+      <div class="msg" id="msg">点击空心圆选择/取消，然后 Submit。</div>
     </div>
-    <div class="hint" id="hint"></div>
   </div>
 
 <script>
 /**
- * ============== 你只需要改这里两处 ==============
- * 1) 首先校准：CALIBRATION_MODE = true
- * 2) 校准完成后：把导出的 CIRCLES 粘贴回来，然后改成 false
+ * 你的圆心坐标（46个）
+ * 顺序即为内部编号 1..46（不显示给用户）
  */
-const CALIBRATION_MODE = true;
+const CIRCLES = [{"x":678,"y":84},{"x":752,"y":88},{"x":376,"y":166},{"x":473,"y":196},{"x":553,"y":171},{"x":657,"y":219},{"x":307,"y":263},{"x":886,"y":187},{"x":444,"y":247},{"x":115,"y":274},{"x":256,"y":209},{"x":806,"y":211},{"x":879,"y":318},{"x":217,"y":346},{"x":303,"y":346},{"x":547,"y":349},{"x":267,"y":638},{"x":105,"y":346},{"x":78,"y":434},{"x":56,"y":541},{"x":189,"y":548},{"x":164,"y":460},{"x":585,"y":491},{"x":438,"y":491},{"x":369,"y":579},{"x":813,"y":847},{"x":274,"y":550},{"x":485,"y":431},{"x":617,"y":305},{"x":608,"y":617},{"x":535,"y":573},{"x":839,"y":590},{"x":825,"y":659},{"x":897,"y":421},{"x":390,"y":673},{"x":303,"y":718},{"x":527,"y":663},{"x":486,"y":728},{"x":862,"y":744},{"x":730,"y":172},{"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},{"x":206,"y":774},{"x":186,"y":622}];
 
 /**
- * 校准后得到的圆心数组（格式：[{x,y}, ...]）
- * 校准模式下，这里可以先留空 []
- * 非校准模式下：必须有 46 个
+ * 正确答案（内部编号 1-based，不显示）
+ * 你如果还是用之前那套答案就保持不变；
+ * 如果你根据新编号顺序变了，就在这里改。
  */
-let CIRCLES = []; // <- 校准完成后会导出让你粘贴进来
+const ANSWER_NUMS = [3,17,18,22,28,35,38,42,45]; // 这里可改
 
 /**
- * 正确答案集合（内部编号 1-based，不显示）
- * SHA-256("3,17,18,22,28,35,38,42,45")
+ * 红点“填满”的半径（统一）
+ * 你觉得太大/太小就改 14~18
  */
-const ANSWER_HASH = "a1ab820fa8147f425c00db6d397099d7e4eea44acc24c810cfb56ba96a016e71";
-
-/**
- * 点击半径 & 红点半径（统一，不再出现大小不一致）
- * 如果你觉得“点不到”，只调大 R_HIT（例如 20/22）
- */
-const R_HIT = 18;
 const R_DOT = 15;
+
+/**
+ * 吸附距离：你点在圆附近也能命中
+ * 你觉得还是难点就把 28 调到 32/36
+ */
+const SNAP_DIST = 30;
 
 const svg = document.getElementById("svg");
 const bg  = document.getElementById("bg");
+const catcher = document.getElementById("catcher");
 const msg = document.getElementById("msg");
-const hint = document.getElementById("hint");
 const submitBtn = document.getElementById("submitBtn");
-const exportBtn = document.getElementById("exportBtn");
-const undoBtn = document.getElementById("undoBtn");
-const resetBtn = document.getElementById("resetBtn");
-const calibCatcher = document.getElementById("calibCatcher");
+
+const selected = new Array(CIRCLES.length).fill(false);
 
 function el(name, attrs = {}) {
   const n = document.createElementNS("http://www.w3.org/2000/svg", name);
@@ -99,133 +86,85 @@ function el(name, attrs = {}) {
   return n;
 }
 
-function clearMarks(){
-  [...svg.querySelectorAll(".hit,.dot,.cross,.lbl")].forEach(n => n.remove());
+function svgPointFromEvent(ev){
+  const pt = svg.createSVGPoint();
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 
-function drawCross(x,y, idx){
-  const g1 = el("line", { x1: x-10, y1:y, x2:x+10, y2:y });
-  const g2 = el("line", { x1: x, y1:y-10, x2:x, y2:y+10 });
-  g1.classList.add("cross");
-  g2.classList.add("cross");
-
-  const t = el("text", { x: x+12, y: y-12 });
-  t.classList.add("lbl");
-  t.textContent = String(idx);
-
-  svg.appendChild(g1); svg.appendChild(g2); svg.appendChild(t);
-}
-
-function renderPlayable(){
-  clearMarks();
-  if (!Array.isArray(CIRCLES) || CIRCLES.length === 0){
-    msg.textContent = "未找到圆心数据。请先校准。";
-    msg.style.background = "#fdecec";
-    return;
+function nearestCircleIndex(x, y){
+  let bestIdx = -1;
+  let bestD2 = Infinity;
+  for (let i=0;i<CIRCLES.length;i++){
+    const dx = x - CIRCLES[i].x;
+    const dy = y - CIRCLES[i].y;
+    const d2 = dx*dx + dy*dy;
+    if (d2 < bestD2){
+      bestD2 = d2;
+      bestIdx = i;
+    }
   }
-  const selected = new Array(CIRCLES.length).fill(false);
+  if (bestIdx === -1) return -1;
+  return bestD2 <= SNAP_DIST*SNAP_DIST ? bestIdx : -1;
+}
+
+function render(){
+  // 清掉旧的 hit/dot（保留 image 和 catcher）
+  [...svg.querySelectorAll(".hit,.dot")].forEach(n => n.remove());
 
   CIRCLES.forEach((c, i) => {
-    const hit = el("circle", { cx: c.x, cy: c.y, r: R_HIT });
+    // 点击命中圈（半径可比红点略大，方便点到）
+    const hit = el("circle", { cx: c.x, cy: c.y, r: Math.max(R_DOT+2, 18) });
     hit.classList.add("hit");
+    if (selected[i]) hit.classList.add("selected");
 
     const dot = el("circle", { cx: c.x, cy: c.y, r: R_DOT });
     dot.classList.add("dot");
 
-    hit.addEventListener("click", (e) => {
-      e.preventDefault();
-      selected[i] = !selected[i];
-      if (selected[i]) hit.classList.add("selected");
-      else hit.classList.remove("selected");
-      // dot 的显示由 CSS 控制（hit.selected + dot）
-    }, { passive:false });
-
+    // 注意：真正点击事件统一挂在 catcher 上（吸附），这里不挂 click
     svg.appendChild(hit);
     svg.appendChild(dot);
   });
 
-  submitBtn.onclick = async () => {
-    const chosen = selected.map((v,i)=> v ? (i+1) : null).filter(v=>v!==null).sort((a,b)=>a-b);
-    const h = await sha256Hex(chosen.join(","));
-    if (h === ANSWER_HASH){
-      msg.textContent = "Success";
-      msg.style.background = "#e9f7ef";
-    } else {
-      msg.textContent = "Please try again";
-      msg.style.background = "#fdecec";
-    }
-  };
-
-  msg.textContent = "图片加载成功。现在可以点击圆圈。";
-  msg.style.background = "#f5f5f5";
+  const chosen = selected.map((v,i)=>v?(i+1):null).filter(v=>v!==null);
+  msg.textContent = `已选择 ${chosen.length} 个圆点。`;
 }
 
-function renderCalibration(){
-  clearMarks();
-  calibCatcher.style.display = "block";
-  submitBtn.style.display = "none";
-  exportBtn.style.display = "inline-block";
-  undoBtn.style.display = "inline-block";
-  resetBtn.style.display = "inline-block";
-
-  msg.textContent = `校准模式：已记录 ${CIRCLES.length} 个圆心。请继续点击下一个圆的中心。`;
-  msg.style.background = "#f5f5f5";
-  hint.textContent = "建议：放大浏览器/手机双指缩放，尽量点在空心圆正中心。全部点完后点 Export 复制结果。";
-
-  // 点击整张图记录坐标（SVG坐标）
-  calibCatcher.onclick = (ev) => {
-    const pt = svg.createSVGPoint();
-    pt.x = ev.clientX; pt.y = ev.clientY;
-    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-
-    // 记录
-    CIRCLES.push({ x: Math.round(svgP.x), y: Math.round(svgP.y) });
-
-    // 画十字准星 + 编号（仅校准时显示）
-    drawCross(CIRCLES[CIRCLES.length-1].x, CIRCLES[CIRCLES.length-1].y, CIRCLES.length);
-
-    msg.textContent = `校准模式：已记录 ${CIRCLES.length} 个圆心。`;
-  };
-
-  undoBtn.onclick = () => {
-    if (CIRCLES.length === 0) return;
-    CIRCLES.pop();
-    clearMarks();
-    CIRCLES.forEach((c, idx) => drawCross(c.x, c.y, idx+1));
-    msg.textContent = `校准模式：已记录 ${CIRCLES.length} 个圆心。`;
-  };
-
-  resetBtn.onclick = () => {
-    CIRCLES = [];
-    clearMarks();
-    msg.textContent = `校准模式：已记录 0 个圆心。`;
-  };
-
-  exportBtn.onclick = () => {
-    const txt = `let CIRCLES = ${JSON.stringify(CIRCLES)};`;
-    // 用 prompt 方便复制
-    window.prompt("复制下面这段，粘贴回 index.html 里替换 CIRCLES，然后把 CALIBRATION_MODE 改成 false：", txt);
-  };
-
-  // 初次渲染把已有点也画出来（如果你刷新页面还在）
-  CIRCLES.forEach((c, idx) => drawCross(c.x, c.y, idx+1));
+function sameSet(a, b){
+  if (a.length !== b.length) return false;
+  for (let i=0;i<a.length;i++) if (a[i] !== b[i]) return false;
+  return true;
 }
 
-async function sha256Hex(str){
-  const data = new TextEncoder().encode(str);
-  const hashBuf = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,"0")).join("");
-}
-
-// 图片加载检测
 bg.addEventListener("load", () => {
-  if (CALIBRATION_MODE) renderCalibration();
-  else renderPlayable();
+  render();
 });
 
 bg.addEventListener("error", () => {
   msg.textContent = "图片加载失败：请确认根目录存在 map.png（严格小写）且能通过 /map.png 打开。";
   msg.style.background = "#fdecec";
+});
+
+// 点击整张图 -> 找最近圆 -> 切换选中
+catcher.addEventListener("click", (ev) => {
+  const p = svgPointFromEvent(ev);
+  const idx = nearestCircleIndex(p.x, p.y);
+  if (idx === -1) return; // 点得太远就不响应
+  selected[idx] = !selected[idx];
+  render();
+}, { passive:false });
+
+submitBtn.addEventListener("click", () => {
+  const chosen = selected.map((v,i)=>v?(i+1):null).filter(v=>v!==null).sort((a,b)=>a-b);
+  const ans = [...ANSWER_NUMS].sort((a,b)=>a-b);
+
+  if (sameSet(chosen, ans)){
+    msg.textContent = "Success";
+    msg.style.background = "#e9f7ef";
+  } else {
+    msg.textContent = "Please try again";
+    msg.style.background = "#fdecec";
+  }
 });
 </script>
 </body>
