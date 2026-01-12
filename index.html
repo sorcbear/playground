@@ -3,186 +3,147 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Circle Puzzle - Optimized</title>
+  <title>Circle Puzzle</title>
   <style>
-    :root { 
-      --maxw: 720px;
-      /* 在这里可以统一微调红点表现 */
-      --dot-color: rgba(220, 0, 0, 0.85);
-      --dot-radius: 17px; /* 调整这个值直到红点完美填满图片圆圈 */
-    }
-    body {
-      margin: 0;
-      font-family: -apple-system, sans-serif;
-      background: #fdfdfd;
-      color: #111;
-    }
-    .wrap {
-      max-width: var(--maxw);
-      margin: 0 auto;
-      padding: 12px;
-    }
-    .stage {
-      width: 100%;
-      /* 保持比例 918:1024 */
+    :root { --maxw: 720px; }
+    body{ margin:0; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif; background:#fff; color:#111; }
+    .wrap{ max-width: var(--maxw); margin:0 auto; padding:12px; }
+    .stage{
+      width:100%;
       aspect-ratio: 918 / 1024;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      background: #fff;
+      border-radius:10px;
+      overflow:hidden;
+      background:#fff;
       touch-action: manipulation;
+      user-select:none;
     }
-    svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
+    svg{ width:100%; height:100%; display:block; }
 
-    /* 真正的点击响应层 */
-    .hit-area {
-      fill: transparent;
-      cursor: pointer;
+    .hit{
+      fill: rgba(0,0,0,0);
+      stroke: rgba(0,0,0,0);
       pointer-events: all;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* 显示的红点 */
-    .visual-dot {
-      fill: var(--dot-color);
-      pointer-events: none; /* 防止干扰点击 */
-      opacity: 0;
-      transition: opacity 0.15s ease;
-    }
-
-    /* 选中状态 */
-    .circle-group.selected .visual-dot {
-      opacity: 1;
-    }
-
-    .panel {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-      align-items: center;
-    }
-    button {
-      background: #111;
-      color: #fff;
-      border: 0;
-      padding: 14px 24px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: bold;
       cursor: pointer;
     }
-    button:active { transform: scale(0.98); }
-    .msg {
-      flex: 1;
-      padding: 12px;
-      border-radius: 12px;
-      background: #f0f0f0;
-      font-size: 14px;
-      min-height: 1.4em;
+    .dot{
+      fill: rgba(220,0,0,0);
+      pointer-events:none;
+    }
+    .hit.selected + .dot{
+      fill: rgba(220,0,0,0.92);
+    }
+
+    .panel{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:12px; flex-wrap:wrap; }
+    button{
+      appearance:none; border:0; background:#111; color:#fff;
+      padding:12px 16px; border-radius:10px; font-size:16px; font-weight:700;
+    }
+    button:active{ transform: translateY(1px); }
+    .msg{
+      flex:1; min-width:220px;
+      padding:10px 12px; border-radius:10px;
+      background:#f5f5f5; font-size:14px; line-height:1.35;
     }
   </style>
 </head>
 <body>
-
-<div class="wrap">
-  <div class="stage">
-    <svg viewBox="0 0 918 1024" id="puzzleSvg">
-      <image href="map.jpg" x="0" y="0" width="918" height="1024" />
+  <div class="wrap">
+    <div class="stage">
+      <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg" aria-label="circle puzzle">
+        <image href="map.png" x="0" y="0" width="918" height="1024" preserveAspectRatio="xMidYMid meet" style="pointer-events:none;"></image>
       </svg>
-  </div>
+    </div>
 
-  <div class="panel">
-    <button id="submitBtn">Submit</button>
-    <div class="msg" id="msgText">点击圆圈选择，完成后点击 Submit。</div>
+    <div class="panel">
+      <button id="submitBtn">Submit</button>
+      <div class="msg" id="msg">点击空心圆选择/取消，然后 Submit。</div>
+    </div>
   </div>
-</div>
 
 <script>
-// 基于你的坐标数据
+/**
+ * 46个圆（已按原始图1精准校准）
+ * 注意：这里的顺序就是“内部编号 1..46”（但页面不显示编号）
+ */
 const CIRCLES = [
-  {"x":677,"y":83},{"x":751,"y":88},{"x":376,"y":166},{"x":476,"y":168},{"x":562,"y":171},
-  {"x":657,"y":219},{"x":307,"y":263},{"x":399,"y":274},{"x":494,"y":280},{"x":92,"y":301},
-  {"x":170,"y":307},{"x":825,"y":315},{"x":900,"y":327},{"x":217,"y":346},{"x":303,"y":346},
-  {"x":575,"y":356},{"x":245,"y":361},{"x":142,"y":388},{"x":80,"y":433},{"x":38,"y":436},
-  {"x":232,"y":438},{"x":178,"y":484},{"x":533,"y":506},{"x":405,"y":512},{"x":290,"y":517},
-  {"x":489,"y":554},{"x":273,"y":550},{"x":314,"y":556},{"x":689,"y":563},{"x":601,"y":575},
-  {"x":450,"y":618},{"x":827,"y":659},{"x":880,"y":670},{"x":714,"y":689},{"x":388,"y":697},
-  {"x":302,"y":717},{"x":579,"y":730},{"x":475,"y":757},{"x":859,"y":758},{"x":915,"y":765},
-  {"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},{"x":256,"y":908},
-  {"x":119,"y":699}
+  {"x":677,"y":83,"r":22},{"x":751,"y":88,"r":16},{"x":376,"y":166,"r":16},{"x":551,"y":172,"r":22},{"x":729,"y":172,"r":16},
+  {"x":474,"y":181,"r":16},{"x":659,"y":221,"r":22},{"x":310,"y":264,"r":22},{"x":397,"y":272,"r":16},{"x":495,"y":280,"r":22},
+  {"x":92,"y":301,"r":22},{"x":170,"y":306,"r":16},{"x":826,"y":315,"r":16},{"x":900,"y":327,"r":22},{"x":218,"y":346,"r":22},
+  {"x":303,"y":346,"r":22},{"x":576,"y":356,"r":16},{"x":245,"y":361,"r":16},{"x":142,"y":388,"r":22},{"x":80,"y":433,"r":16},
+  {"x":38,"y":436,"r":22},{"x":232,"y":438,"r":22},{"x":178,"y":484,"r":16},{"x":533,"y":506,"r":22},{"x":405,"y":512,"r":22},
+  {"x":290,"y":517,"r":16},{"x":273,"y":550,"r":16},{"x":489,"y":554,"r":22},{"x":314,"y":556,"r":22},{"x":689,"y":563,"r":22},
+  {"x":601,"y":575,"r":16},{"x":450,"y":618,"r":16},{"x":827,"y":659,"r":22},{"x":880,"y":670,"r":16},{"x":119,"y":699,"r":22},
+  {"x":388,"y":697,"r":22},{"x":714,"y":689,"r":22},{"x":302,"y":717,"r":16},{"x":579,"y":730,"r":22},{"x":475,"y":757,"r":16},
+  {"x":859,"y":758,"r":22},{"x":915,"y":765,"r":22},{"x":644,"y":827,"r":16},{"x":506,"y":865,"r":16},{"x":433,"y":878,"r":22},
+  {"x":332,"y":893,"r":21},{"x":256,"y":908,"r":16}
 ];
 
+/**
+ * 正确答案集合（内部编号，不展示）：3,17,18,22,28,35,38,42,45
+ * 用 SHA-256("3,17,18,22,28,35,38,42,45") 存成哈希，避免明文暴露
+ */
 const ANSWER_HASH = "a1ab820fa8147f425c00db6d397099d7e4eea44acc24c810cfb56ba96a016e71";
-const svg = document.getElementById("puzzleSvg");
-const msg = document.getElementById("msgText");
 
-// 初始化：将每一个圆圈生成为一个组
-function renderCircles() {
-  CIRCLES.forEach((pos, index) => {
-    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    g.setAttribute("class", "circle-group");
-    g.dataset.id = index + 1;
+const svg = document.getElementById("svg");
+const msg = document.getElementById("msg");
+const submitBtn = document.getElementById("submitBtn");
 
-    // 1. 视觉红点层 (处于下方)
-    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    dot.setAttribute("cx", pos.x);
-    dot.setAttribute("cy", pos.y);
-    dot.setAttribute("r", "17"); // 对应 CSS 变量
-    dot.setAttribute("class", "visual-dot");
-    // 如果位置微偏，可以在这里微调每个点，例如：
-    // dot.setAttribute("transform", "translate(1, -1)");
+const selected = new Array(CIRCLES.length).fill(false);
 
-    // 2. 透明点击层 (处于上方，范围稍微大一点方便点击)
-    const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    hit.setAttribute("cx", pos.x);
-    hit.setAttribute("cy", pos.y);
-    hit.setAttribute("r", "25"); 
-    hit.setAttribute("class", "hit-area");
+function el(name, attrs = {}) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+}
 
-    hit.addEventListener("click", () => {
-      g.classList.toggle("selected");
-    });
+function render(){
+  [...svg.querySelectorAll(".hit,.dot")].forEach(n => n.remove());
 
-    g.appendChild(dot);
-    g.appendChild(hit);
-    svg.appendChild(g);
+  CIRCLES.forEach((c, i) => {
+    const hit = el("circle", { cx: c.x, cy: c.y, r: c.r });
+    hit.classList.add("hit");
+    if (selected[i]) hit.classList.add("selected");
+
+    const dotR = Math.max(8, c.r - 2);  // 红点按真实圈半径填充（统一视觉）
+    const dot = el("circle", { cx: c.x, cy: c.y, r: dotR });
+    dot.classList.add("dot");
+
+    hit.addEventListener("click", (e) => {
+      e.preventDefault();
+      selected[i] = !selected[i];
+      render();
+    }, { passive: false });
+
+    svg.appendChild(hit);
+    svg.appendChild(dot);
   });
 }
 
-// 校验逻辑
-async function checkAnswer() {
-  const selectedGroups = document.querySelectorAll(".circle-group.selected");
-  const chosenIds = Array.from(selectedGroups)
-    .map(g => parseInt(g.dataset.id))
-    .sort((a, b) => a - b);
+async function sha256Hex(str){
+  const data = new TextEncoder().encode(str);
+  const hashBuf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
 
-  const key = chosenIds.join(",");
-  const hash = await sha256(key);
+submitBtn.addEventListener("click", async () => {
+  const chosen = selected
+    .map((v,i)=> v ? (i+1) : null)
+    .filter(v=>v!==null)
+    .sort((a,b)=>a-b);
 
-  if (hash === ANSWER_HASH) {
-    msg.textContent = "Success! 解密成功";
+  const key = chosen.join(",");
+  const h = await sha256Hex(key);
+
+  if (h === ANSWER_HASH){
+    msg.textContent = "Success";
     msg.style.background = "#e9f7ef";
   } else {
-    msg.textContent = "验证失败，请重新选择 (当前选中: " + chosenIds.length + "个)";
+    msg.textContent = "Please try again";
     msg.style.background = "#fdecec";
   }
-}
+});
 
-async function sha256(str) {
-  const buf = new TextEncoder().encode(str);
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-document.getElementById("submitBtn").addEventListener("click", checkAnswer);
-
-// 运行渲染
-renderCircles();
+render();
 </script>
-
 </body>
 </html>
