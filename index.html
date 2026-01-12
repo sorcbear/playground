@@ -3,100 +3,128 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Circle Puzzle Debugger</title>
+  <title>Circle Position Fixer</title>
   <style>
-    body { margin: 0; background: #eee; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-    .container { position: relative; margin-top: 20px; background: #fff; line-height: 0; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
-    
-    /* 核心：SVG 必须完全覆盖在图片上方 */
-    #puzzleSvg {
+    body { font-family: sans-serif; background: #eee; padding: 20px; text-align: center; }
+    .stage {
+      position: relative;
+      width: 918px; 
+      height: 1024px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      overflow: hidden; /* 防止拖出边界 */
+    }
+    img {
+      width: 100%; height: 100%; display: block; pointer-events: none; user-select: none;
+    }
+    .dot {
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+      width: 20px; height: 20px;
+      background: rgba(255, 0, 0, 0.7);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%); /* 居中定位 */
+      cursor: grab;
       z-index: 10;
     }
-    img { width: 918px; height: 1024px; display: block; }
-
-    .visual-dot { fill: rgba(220, 0, 0, 0.8); pointer-events: none; }
-    .hit-area { fill: transparent; cursor: pointer; pointer-events: all; }
-    
-    /* 调试面板 */
-    .debug-panel {
-      width: 918px; background: #333; color: #fff; padding: 20px; 
-      margin-top: 10px; box-sizing: border-box; border-radius: 8px;
+    .dot:active { cursor: grabbing; background: rgba(0, 255, 0, 0.8); }
+    .panel {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #222; color: #fff; padding: 15px;
+      z-index: 100; display: flex; justify-content: center; gap: 20px;
     }
-    #coordsOutput { width: 100%; height: 100px; background: #000; color: #0f0; font-family: monospace; margin-top: 10px; }
+    button {
+      padding: 10px 20px; font-size: 16px; cursor: pointer;
+      background: #4CAF50; color: white; border: none; border-radius: 5px;
+    }
+    textarea { width: 1px; height: 1px; opacity: 0; position: absolute; }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <img src="map.jpg" id="baseImg" alt="map">
-    <svg viewBox="0 0 918 1024" id="puzzleSvg"></svg>
-  </div>
+  <h3>第一步：拖动红点到圆圈中心 &nbsp;&nbsp; 第二步：点击底部按钮复制新坐标</h3>
 
-  <div class="debug-panel">
-    <strong>调试模式：</strong> 点击图片上的圆圈，下方会自动生成修正后的坐标。
-    <br>点击后将生成的代码替换到脚本中的 <code>CIRCLES</code> 数组即可。
-    <textarea id="coordsOutput" readonly placeholder='点击圆圈获取坐标...'></textarea>
-    <button onclick="clearOutput()" style="margin-top:10px; padding:10px;">清空输出</button>
+  <div class="stage" id="stage">
+    <img src="map.jpg" alt="Map">
+    </div>
+
+  <div class="panel">
+    <span id="status">已加载 46 个点</span>
+    <button onclick="exportData()">Copy New Coordinates</button>
   </div>
+  <textarea id="clip"></textarea>
 
 <script>
-// --- 这里是之前可能有误的坐标 ---
+// 这里是你提供的（有偏差的）原始坐标
 let CIRCLES = [
-  {"x":677,"y":83},{"x":751,"y":88},{"x":376,"y":166},{"x":476,"y":168} // ... 仅作示例
+  {"x":677,"y":83},{"x":751,"y":88},{"x":376,"y":166},{"x":476,"y":168},{"x":562,"y":171},
+  {"x":657,"y":219},{"x":307,"y":263},{"x":399,"y":274},{"x":494,"y":280},{"x":92,"y":301},
+  {"x":170,"y":307},{"x":825,"y":315},{"x":900,"y":327},{"x":217,"y":346},{"x":303,"y":346},
+  {"x":575,"y":356},{"x":245,"y":361},{"x":142,"y":388},{"x":80,"y":433},{"x":38,"y":436},
+  {"x":232,"y":438},{"x":178,"y":484},{"x":533,"y":506},{"x":405,"y":512},{"x":290,"y":517},
+  {"x":489,"y":554},{"x":273,"y":550},{"x":314,"y":556},{"x":689,"y":563},{"x":601,"y":575},
+  {"x":450,"y":618},{"x":827,"y":659},{"x":880,"y":670},{"x":714,"y":689},{"x":388,"y":697},
+  {"x":302,"y":717},{"x":579,"y":730},{"x":475,"y":757},{"x":859,"y":758},{"x":915,"y":765},
+  {"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},{"x":256,"y":908},
+  {"x":119,"y":699}
 ];
 
-const svg = document.getElementById("puzzleSvg");
-const output = document.getElementById("coordsOutput");
-const collected = [];
+const stage = document.getElementById('stage');
+const dots = [];
 
-// 1. 初始化现有的圆圈看偏差
-function init() {
-  CIRCLES.forEach((c, i) => drawPoint(c.x, c.y));
-}
-
-function drawPoint(x, y) {
-  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  dot.setAttribute("cx", x); dot.setAttribute("cy", y);
-  dot.setAttribute("r", "16");
-  dot.setAttribute("class", "visual-dot");
-  g.appendChild(dot);
-  svg.appendChild(g);
-}
-
-// 2. 核心：点击获取精准坐标
-svg.addEventListener("click", (e) => {
-  const pt = svg.createSVGPoint();
-  pt.x = e.clientX;
-  pt.y = e.clientY;
+// 初始化：生成可拖拽的点
+CIRCLES.forEach((c, index) => {
+  const el = document.createElement('div');
+  el.className = 'dot';
+  el.style.left = c.x + 'px';
+  el.style.top = c.y + 'px';
+  el.dataset.index = index;
   
-  // 关键：将屏幕点击坐标转换为 SVG 内部坐标（即图片像素坐标）
-  const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+  // 鼠标拖拽逻辑
+  el.onmousedown = function(e) { startDrag(e, el); };
   
-  const nx = Math.round(svgPt.x);
-  const ny = Math.round(svgPt.y);
-  
-  // 记录并显示
-  collected.push({x: nx, y: ny});
-  drawPoint(nx, ny);
-  updateOutput();
+  stage.appendChild(el);
+  dots.push(el);
 });
 
-function updateOutput() {
-  output.value = JSON.stringify(collected);
+function startDrag(e, el) {
+  e.preventDefault();
+  let startX = e.clientX;
+  let startY = e.clientY;
+  let startLeft = parseInt(el.style.left);
+  let startTop = parseInt(el.style.top);
+
+  document.onmousemove = function(ev) {
+    let dx = ev.clientX - startX;
+    let dy = ev.clientY - startY;
+    el.style.left = (startLeft + dx) + 'px';
+    el.style.top = (startTop + dy) + 'px';
+  };
+
+  document.onmouseup = function() {
+    document.onmousemove = null;
+    document.onmouseup = null;
+  };
 }
 
-function clearOutput() {
-  collected.length = 0;
-  output.value = "";
-  // 清除除了图片外的所有圆圈
-  while (svg.firstChild) svg.removeChild(svg.firstChild);
-}
+function exportData() {
+  // 收集所有红点当前的坐标
+  const newCoords = dots.map(el => {
+    return {
+      x: parseInt(el.style.left),
+      y: parseInt(el.style.top)
+    };
+  });
 
-init();
+  const jsonStr = JSON.stringify(newCoords);
+  const clip = document.getElementById('clip');
+  clip.value = "const CIRCLES = " + jsonStr + ";";
+  clip.select();
+  document.execCommand('copy');
+  
+  alert("新坐标已复制！\n请回到原本的游戏代码中粘贴替换 const CIRCLES 部分。");
+}
 </script>
 </body>
 </html>
