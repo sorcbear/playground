@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Circle Puzzle</title>
+  <style>
+    :root { --maxw: 720px; }
+    body{
+      margin:0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+                   "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      background:#fff;
+      color:#111;
+    }
+    .wrap{
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 12px;
+    }
+    .stage{
+      position: relative;
+      width: 100%;
+      aspect-ratio: 918 / 1024; /* 图1比例 */
+      border-radius: 10px;
+      overflow: hidden;
+      background:#fff;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    .stage img{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit: contain; /* 注意：整张图完整显示 */
+      display:block;
+      pointer-events:none; /* 不挡点击 */
+    }
+    .stage svg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+    }
+
+    /* 点击区域：不加大，半径就是圆本身 */
+    .hit {
+      fill: rgba(255,255,255,0);
+      stroke: rgba(0,0,0,0);
+      pointer-events: all;
+    }
+
+    /* 被选中后：圆填充红色（看起来空心圆变实心） */
+    .hit.selected {
+      fill: rgba(220, 0, 0, 0.90);
+    }
+
+    /* 编号文字：不影响点击 */
+    .label {
+      font-size: 18px;
+      font-weight: 700;
+      fill: #111;
+      paint-order: stroke;
+      stroke: #fff;
+      stroke-width: 4px;
+      pointer-events: none;
+    }
+
+    .panel{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content: space-between;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    button{
+      appearance:none;
+      border:0;
+      background:#111;
+      color:#fff;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    button:active{ transform: translateY(1px); }
+    .msg{
+      flex:1;
+      min-width: 220px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background:#f5f5f5;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .hint{
+      font-size: 12px;
+      color:#666;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="stage" id="stage">
+      <img src="map.png" alt="map" />
+      <svg viewBox="0 0 918 1024" aria-label="clickable circles" id="svg"></svg>
+    </div>
+
+    <div class="panel">
+      <button id="submitBtn">Submit</button>
+      <div class="msg" id="msg">点击空心圆进行选择（会变成实心红色），再点一次可取消。完成后点 Submit。</div>
+    </div>
+    <div class="hint">说明：每个圆都有编号（1、2、3…）。提交时会校验你选中的编号集合是否正确。</div>
+  </div>
+
+<script>
+/**
+ * 圆圈数据：基于图1提取（46个）
+ * 坐标基于 viewBox(918x1024)
+ */
+const CIRCLES = [{"x":677,"y":83,"r":22},{"x":751,"y":88,"r":16},{"x":376,"y":166,"r":21},{"x":476,"y":168,"r":16},{"x":562,"y":171,"r":22},{"x":657,"y":219,"r":22},{"x":307,"y":263,"r":22},{"x":399,"y":274,"r":16},{"x":494,"y":280,"r":22},{"x":92,"y":301,"r":22},{"x":170,"y":307,"r":16},{"x":825,"y":315,"r":16},{"x":900,"y":327,"r":22},{"x":217,"y":346,"r":22},{"x":303,"y":346,"r":22},{"x":575,"y":356,"r":16},{"x":245,"y":361,"r":16},{"x":142,"y":388,"r":22},{"x":80,"y":433,"r":16},{"x":38,"y":436,"r":22},{"x":232,"y":438,"r":22},{"x":178,"y":484,"r":16},{"x":533,"y":506,"r":22},{"x":405,"y":512,"r":22},{"x":290,"y":517,"r":16},{"x":489,"y":554,"r":22},{"x":273,"y":550,"r":16},{"x":314,"y":556,"r":22},{"x":689,"y":563,"r":22},{"x":601,"y":575,"r":16},{"x":450,"y":618,"r":16},{"x":827,"y":659,"r":22},{"x":880,"y":670,"r":16},{"x":714,"y":689,"r":22},{"x":388,"y":697,"r":22},{"x":302,"y":717,"r":16},{"x":579,"y":730,"r":22},{"x":475,"y":757,"r":16},{"x":859,"y":758,"r":22},{"x":915,"y":765,"r":22},{"x":644,"y":827,"r":16},{"x":506,"y":865,"r":16},{"x":433,"y":878,"r":22},{"x":332,"y":893,"r":21},{"x":256,"y":908,"r":16},{"x":119,"y":699,"r":22}];
+
+/**
+ * 正确答案：不明文写集合，写 SHA-256("3,17,18,22,28,35,38,42,45")
+ * 如果你以后要换答案：
+ * 1) 先把正确编号按从小到大用逗号拼成字符串，例如 "3,5,6"
+ * 2) 用任意 sha256 工具算哈希，替换下面这个值
+ */
+const ANSWER_HASH = "a1ab820fa8147f425c00db6d397099d7e4eea44acc24c810cfb56ba96a016e71";
+
+const svg = document.getElementById("svg");
+const msg = document.getElementById("msg");
+const submitBtn = document.getElementById("submitBtn");
+
+// 选择状态（与CIRCLES同长度）
+const selected = new Array(CIRCLES.length).fill(false);
+
+function render(){
+  svg.innerHTML = "";
+
+  CIRCLES.forEach((c, idx0) => {
+    const num = idx0 + 1;
+
+    // hit circle：不加大点击范围
+    const hit = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    hit.setAttribute("cx", c.x);
+    hit.setAttribute("cy", c.y);
+    hit.setAttribute("r", c.r);
+    hit.classList.add("hit");
+    if (selected[idx0]) hit.classList.add("selected");
+
+    hit.addEventListener("click", (e) => {
+      e.preventDefault();
+      selected[idx0] = !selected[idx0];
+      render();
+      const chosen = selected
+        .map((v,i)=> v ? (i+1) : null)
+        .filter(v=>v!==null);
+      msg.textContent = `已选择：${chosen.length} 个（${chosen.join(", ")}）`;
+    }, { passive: false });
+
+    // label：编号（默认放在圆心偏右上）
+    const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+    const dx = c.r + 4;
+    const dy = -c.r + 6;
+    label.setAttribute("x", c.x + dx);
+    label.setAttribute("y", c.y + dy);
+    label.classList.add("label");
+    label.textContent = String(num);
+
+    svg.appendChild(hit);
+    svg.appendChild(label);
+  });
+}
+
+async function sha256Hex(str){
+  const data = new TextEncoder().encode(str);
+  const hashBuf = await crypto.subtle.digest("SHA-256", data);
+  const hashArr = Array.from(new Uint8Array(hashBuf));
+  return hashArr.map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+submitBtn.addEventListener("click", async () => {
+  const chosenNums = selected
+    .map((v,i)=> v ? (i+1) : null)
+    .filter(v=>v!==null)
+    .sort((a,b)=>a-b);
+
+  const key = chosenNums.join(",");
+  const h = await sha256Hex(key);
+
+  if (h === ANSWER_HASH){
+    msg.textContent = "Success";
+    msg.style.background = "#e9f7ef";
+  } else {
+    msg.textContent = "Please try again";
+    msg.style.background = "#fdecec";
+  }
+});
+
+render();
+</script>
+</body>
+</html>
