@@ -3,147 +3,100 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Circle Puzzle</title>
+  <title>Circle Puzzle Debugger</title>
   <style>
-    :root { --maxw: 720px; }
-    body{ margin:0; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif; background:#fff; color:#111; }
-    .wrap{ max-width: var(--maxw); margin:0 auto; padding:12px; }
-    .stage{
-      width:100%;
-      aspect-ratio: 918 / 1024;
-      border-radius:10px;
-      overflow:hidden;
-      background:#fff;
-      touch-action: manipulation;
-      user-select:none;
+    body { margin: 0; background: #eee; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+    .container { position: relative; margin-top: 20px; background: #fff; line-height: 0; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+    
+    /* 核心：SVG 必须完全覆盖在图片上方 */
+    #puzzleSvg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
     }
-    svg{ width:100%; height:100%; display:block; }
+    img { width: 918px; height: 1024px; display: block; }
 
-    .hit{
-      fill: rgba(0,0,0,0);
-      stroke: rgba(0,0,0,0);
-      pointer-events: all;
-      cursor: pointer;
+    .visual-dot { fill: rgba(220, 0, 0, 0.8); pointer-events: none; }
+    .hit-area { fill: transparent; cursor: pointer; pointer-events: all; }
+    
+    /* 调试面板 */
+    .debug-panel {
+      width: 918px; background: #333; color: #fff; padding: 20px; 
+      margin-top: 10px; box-sizing: border-box; border-radius: 8px;
     }
-    .dot{
-      fill: rgba(220,0,0,0);
-      pointer-events:none;
-    }
-    .hit.selected + .dot{
-      fill: rgba(220,0,0,0.92);
-    }
-
-    .panel{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:12px; flex-wrap:wrap; }
-    button{
-      appearance:none; border:0; background:#111; color:#fff;
-      padding:12px 16px; border-radius:10px; font-size:16px; font-weight:700;
-    }
-    button:active{ transform: translateY(1px); }
-    .msg{
-      flex:1; min-width:220px;
-      padding:10px 12px; border-radius:10px;
-      background:#f5f5f5; font-size:14px; line-height:1.35;
-    }
+    #coordsOutput { width: 100%; height: 100px; background: #000; color: #0f0; font-family: monospace; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="stage">
-      <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg" aria-label="circle puzzle">
-        <image href="map.png" x="0" y="0" width="918" height="1024" preserveAspectRatio="xMidYMid meet" style="pointer-events:none;"></image>
-      </svg>
-    </div>
 
-    <div class="panel">
-      <button id="submitBtn">Submit</button>
-      <div class="msg" id="msg">点击空心圆选择/取消，然后 Submit。</div>
-    </div>
+  <div class="container">
+    <img src="map.jpg" id="baseImg" alt="map">
+    <svg viewBox="0 0 918 1024" id="puzzleSvg"></svg>
+  </div>
+
+  <div class="debug-panel">
+    <strong>调试模式：</strong> 点击图片上的圆圈，下方会自动生成修正后的坐标。
+    <br>点击后将生成的代码替换到脚本中的 <code>CIRCLES</code> 数组即可。
+    <textarea id="coordsOutput" readonly placeholder='点击圆圈获取坐标...'></textarea>
+    <button onclick="clearOutput()" style="margin-top:10px; padding:10px;">清空输出</button>
   </div>
 
 <script>
-/**
- * 46个圆（已按原始图1精准校准）
- * 注意：这里的顺序就是“内部编号 1..46”（但页面不显示编号）
- */
-const CIRCLES = [
-  {"x":677,"y":83,"r":22},{"x":751,"y":88,"r":16},{"x":376,"y":166,"r":16},{"x":551,"y":172,"r":22},{"x":729,"y":172,"r":16},
-  {"x":474,"y":181,"r":16},{"x":659,"y":221,"r":22},{"x":310,"y":264,"r":22},{"x":397,"y":272,"r":16},{"x":495,"y":280,"r":22},
-  {"x":92,"y":301,"r":22},{"x":170,"y":306,"r":16},{"x":826,"y":315,"r":16},{"x":900,"y":327,"r":22},{"x":218,"y":346,"r":22},
-  {"x":303,"y":346,"r":22},{"x":576,"y":356,"r":16},{"x":245,"y":361,"r":16},{"x":142,"y":388,"r":22},{"x":80,"y":433,"r":16},
-  {"x":38,"y":436,"r":22},{"x":232,"y":438,"r":22},{"x":178,"y":484,"r":16},{"x":533,"y":506,"r":22},{"x":405,"y":512,"r":22},
-  {"x":290,"y":517,"r":16},{"x":273,"y":550,"r":16},{"x":489,"y":554,"r":22},{"x":314,"y":556,"r":22},{"x":689,"y":563,"r":22},
-  {"x":601,"y":575,"r":16},{"x":450,"y":618,"r":16},{"x":827,"y":659,"r":22},{"x":880,"y":670,"r":16},{"x":119,"y":699,"r":22},
-  {"x":388,"y":697,"r":22},{"x":714,"y":689,"r":22},{"x":302,"y":717,"r":16},{"x":579,"y":730,"r":22},{"x":475,"y":757,"r":16},
-  {"x":859,"y":758,"r":22},{"x":915,"y":765,"r":22},{"x":644,"y":827,"r":16},{"x":506,"y":865,"r":16},{"x":433,"y":878,"r":22},
-  {"x":332,"y":893,"r":21},{"x":256,"y":908,"r":16}
+// --- 这里是之前可能有误的坐标 ---
+let CIRCLES = [
+  {"x":677,"y":83},{"x":751,"y":88},{"x":376,"y":166},{"x":476,"y":168} // ... 仅作示例
 ];
 
-/**
- * 正确答案集合（内部编号，不展示）：3,17,18,22,28,35,38,42,45
- * 用 SHA-256("3,17,18,22,28,35,38,42,45") 存成哈希，避免明文暴露
- */
-const ANSWER_HASH = "a1ab820fa8147f425c00db6d397099d7e4eea44acc24c810cfb56ba96a016e71";
+const svg = document.getElementById("puzzleSvg");
+const output = document.getElementById("coordsOutput");
+const collected = [];
 
-const svg = document.getElementById("svg");
-const msg = document.getElementById("msg");
-const submitBtn = document.getElementById("submitBtn");
-
-const selected = new Array(CIRCLES.length).fill(false);
-
-function el(name, attrs = {}) {
-  const n = document.createElementNS("http://www.w3.org/2000/svg", name);
-  for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v);
-  return n;
+// 1. 初始化现有的圆圈看偏差
+function init() {
+  CIRCLES.forEach((c, i) => drawPoint(c.x, c.y));
 }
 
-function render(){
-  [...svg.querySelectorAll(".hit,.dot")].forEach(n => n.remove());
-
-  CIRCLES.forEach((c, i) => {
-    const hit = el("circle", { cx: c.x, cy: c.y, r: c.r });
-    hit.classList.add("hit");
-    if (selected[i]) hit.classList.add("selected");
-
-    const dotR = Math.max(8, c.r - 2);  // 红点按真实圈半径填充（统一视觉）
-    const dot = el("circle", { cx: c.x, cy: c.y, r: dotR });
-    dot.classList.add("dot");
-
-    hit.addEventListener("click", (e) => {
-      e.preventDefault();
-      selected[i] = !selected[i];
-      render();
-    }, { passive: false });
-
-    svg.appendChild(hit);
-    svg.appendChild(dot);
-  });
+function drawPoint(x, y) {
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  dot.setAttribute("cx", x); dot.setAttribute("cy", y);
+  dot.setAttribute("r", "16");
+  dot.setAttribute("class", "visual-dot");
+  g.appendChild(dot);
+  svg.appendChild(g);
 }
 
-async function sha256Hex(str){
-  const data = new TextEncoder().encode(str);
-  const hashBuf = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,"0")).join("");
-}
-
-submitBtn.addEventListener("click", async () => {
-  const chosen = selected
-    .map((v,i)=> v ? (i+1) : null)
-    .filter(v=>v!==null)
-    .sort((a,b)=>a-b);
-
-  const key = chosen.join(",");
-  const h = await sha256Hex(key);
-
-  if (h === ANSWER_HASH){
-    msg.textContent = "Success";
-    msg.style.background = "#e9f7ef";
-  } else {
-    msg.textContent = "Please try again";
-    msg.style.background = "#fdecec";
-  }
+// 2. 核心：点击获取精准坐标
+svg.addEventListener("click", (e) => {
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  
+  // 关键：将屏幕点击坐标转换为 SVG 内部坐标（即图片像素坐标）
+  const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+  
+  const nx = Math.round(svgPt.x);
+  const ny = Math.round(svgPt.y);
+  
+  // 记录并显示
+  collected.push({x: nx, y: ny});
+  drawPoint(nx, ny);
+  updateOutput();
 });
 
-render();
+function updateOutput() {
+  output.value = JSON.stringify(collected);
+}
+
+function clearOutput() {
+  collected.length = 0;
+  output.value = "";
+  // 清除除了图片外的所有圆圈
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+}
+
+init();
 </script>
 </body>
 </html>
