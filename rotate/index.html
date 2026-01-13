@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rotate Puzzle 4x7</title>
+  <style>
+    :root{
+      --bg:#0f1115;
+      --panel:#151923;
+      --text:#e8eaf0;
+      --muted:#a9b0c3;
+      --line:rgba(255,255,255,.12);
+      --line2:rgba(255,255,255,.20);
+      --btn:#1a2030;
+      --btnHover:#222a3f;
+      --danger:#c23b3b;
+      --ok:#2fbf71;
+      --radius:16px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      background: radial-gradient(1200px 500px at 50% -10%, rgba(120,140,255,.18), transparent 70%),
+                  radial-gradient(1000px 600px at 90% 0%, rgba(90,255,200,.08), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+    }
+    .wrap{
+      max-width: 1100px;
+      margin: 28px auto;
+      padding: 0 14px 28px;
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .head{
+      padding: 16px 18px;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      justify-content:space-between;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0,0,0,.12);
+    }
+    .title{
+      font-size: 16px;
+      line-height: 1.25;
+      font-weight: 650;
+      margin: 0 0 6px 0;
+      letter-spacing:.2px;
+    }
+    .desc{
+      margin:0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      font-size: 12px;
+      color: var(--muted);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .pill strong{ color: var(--text); font-weight:650; }
+    .content{
+      padding: 16px 18px 18px;
+    }
+
+    /* Board */
+    .boardShell{
+      border: 1px solid var(--line2);
+      border-radius: var(--radius);
+      overflow:hidden;
+      background: rgba(0,0,0,.20);
+    }
+    .board{
+      display:grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      width: 100%;
+      aspect-ratio: 7 / 4;
+      touch-action: manipulation;
+      user-select:none;
+    }
+    .tile{
+      position:relative;
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      cursor:pointer;
+      background: rgba(255,255,255,.02);
+    }
+    /* remove outer borders */
+    .tile[data-last-col="1"]{ border-right:none; }
+    .tile[data-last-row="1"]{ border-bottom:none; }
+
+    .tile img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      transform-origin:center center;
+      transition: transform 120ms ease;
+      pointer-events:none;
+      -webkit-user-drag:none;
+      user-select:none;
+    }
+    .tile:active{ filter: brightness(1.08); }
+
+    .hud{
+      margin-top: 14px;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .msg{
+      min-height: 20px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+      flex: 1 1 320px;
+    }
+    .msg.ok{ color: rgba(47,191,113,.95); border-color: rgba(47,191,113,.35); }
+    .msg.bad{ color: rgba(194,59,59,.95); border-color: rgba(194,59,59,.35); }
+
+    .btnRow{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:flex-end;
+      flex: 0 0 auto;
+    }
+    button{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing:.2px;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border: 1px solid var(--line2);
+      box-shadow: 0 8px 20px rgba(0,0,0,.22);
+      min-width: 120px;
+    }
+    button:hover{ background: rgba(255,255,255,.08); }
+    button:active{ transform: translateY(1px); }
+    button.secondary{
+      background: rgba(255,255,255,.03);
+    }
+    button.secondary:hover{ background: rgba(255,255,255,.06); }
+
+    .setupBar{
+      margin-top: 12px;
+      display:none;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+      padding: 10px 12px;
+      border: 1px dashed rgba(255,255,255,.25);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .setupBar code{
+      color: var(--text);
+      background: rgba(0,0,0,.25);
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+    }
+    .setupBar .btnSmall{
+      min-width: unset;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+    }
+    .setupBar .danger{
+      border-color: rgba(194,59,59,.35);
+      color: rgba(255,255,255,.95);
+      background: rgba(194,59,59,.12);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <div>
+          <h1 class="title">旋转拼图（4×7）</h1>
+          <p class="desc" id="hintText">请点击方格使画面恢复正确方向，然后提交。</p>
+        </div>
+        <div class="pill">
+          Clicks: <strong id="clickCount">0</strong>/<strong id="clickLimit">27</strong>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="boardShell">
+          <div id="board" class="board" aria-label="puzzle board"></div>
+        </div>
+
+        <div id="setupBar" class="setupBar">
+          <span>当前为 <strong>Setup 模式</strong>：点击方块设置初始角度（0/90/180/270）。保存后普通模式会读取。</span>
+          <span>本地存储键：<code>rotatePuzzle_4x7_seed</code></span>
+          <button id="btnSaveSetup" class="btnSmall">Save Setup</button>
+          <button id="btnClearSetup" class="btnSmall danger">Clear Saved Setup</button>
+        </div>
+
+        <div class="hud">
+          <div id="message" class="msg">提示：点击任意方块顺时针旋转 90°。最多允许 27 次点击。Undo 会回到起始状态。</div>
+          <div class="btnRow">
+            <button id="btnUndo" class="secondary">Undo</button>
+            <button id="btnSubmit">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rotate Puzzle 4x7</title>
+  <style>
+    :root{
+      --bg:#0f1115;
+      --panel:#151923;
+      --text:#e8eaf0;
+      --muted:#a9b0c3;
+      --line:rgba(255,255,255,.12);
+      --line2:rgba(255,255,255,.20);
+      --btn:#1a2030;
+      --btnHover:#222a3f;
+      --danger:#c23b3b;
+      --ok:#2fbf71;
+      --radius:16px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      background: radial-gradient(1200px 500px at 50% -10%, rgba(120,140,255,.18), transparent 70%),
+                  radial-gradient(1000px 600px at 90% 0%, rgba(90,255,200,.08), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+    }
+    .wrap{
+      max-width: 1100px;
+      margin: 28px auto;
+      padding: 0 14px 28px;
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .head{
+      padding: 16px 18px;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      justify-content:space-between;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0,0,0,.12);
+    }
+    .title{
+      font-size: 16px;
+      line-height: 1.25;
+      font-weight: 650;
+      margin: 0 0 6px 0;
+      letter-spacing:.2px;
+    }
+    .desc{
+      margin:0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      font-size: 12px;
+      color: var(--muted);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .pill strong{ color: var(--text); font-weight:650; }
+    .content{
+      padding: 16px 18px 18px;
+    }
+
+    /* Board */
+    .boardShell{
+      border: 1px solid var(--line2);
+      border-radius: var(--radius);
+      overflow:hidden;
+      background: rgba(0,0,0,.20);
+    }
+    .board{
+      display:grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      width: 100%;
+      aspect-ratio: 7 / 4;
+      touch-action: manipulation;
+      user-select:none;
+    }
+    .tile{
+      position:relative;
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      cursor:pointer;
+      background: rgba(255,255,255,.02);
+    }
+    /* remove outer borders */
+    .tile[data-last-col="1"]{ border-right:none; }
+    .tile[data-last-row="1"]{ border-bottom:none; }
+
+    .tile img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      transform-origin:center center;
+      transition: transform 120ms ease;
+      pointer-events:none;
+      -webkit-user-drag:none;
+      user-select:none;
+    }
+    .tile:active{ filter: brightness(1.08); }
+
+    .hud{
+      margin-top: 14px;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .msg{
+      min-height: 20px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+      flex: 1 1 320px;
+    }
+    .msg.ok{ color: rgba(47,191,113,.95); border-color: rgba(47,191,113,.35); }
+    .msg.bad{ color: rgba(194,59,59,.95); border-color: rgba(194,59,59,.35); }
+
+    .btnRow{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:flex-end;
+      flex: 0 0 auto;
+    }
+    button{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing:.2px;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border: 1px solid var(--line2);
+      box-shadow: 0 8px 20px rgba(0,0,0,.22);
+      min-width: 120px;
+    }
+    button:hover{ background: rgba(255,255,255,.08); }
+    button:active{ transform: translateY(1px); }
+    button.secondary{
+      background: rgba(255,255,255,.03);
+    }
+    button.secondary:hover{ background: rgba(255,255,255,.06); }
+
+    .setupBar{
+      margin-top: 12px;
+      display:none;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+      padding: 10px 12px;
+      border: 1px dashed rgba(255,255,255,.25);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .setupBar code{
+      color: var(--text);
+      background: rgba(0,0,0,.25);
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+    }
+    .setupBar .btnSmall{
+      min-width: unset;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+    }
+    .setupBar .danger{
+      border-color: rgba(194,59,59,.35);
+      color: rgba(255,255,255,.95);
+      background: rgba(194,59,59,.12);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <div>
+          <h1 class="title">旋转拼图（4×7）</h1>
+          <p class="desc" id="hintText">请点击方格使画面恢复正确方向，然后提交。</p>
+        </div>
+        <div class="pill">
+          Clicks: <strong id="clickCount">0</strong>/<strong id="clickLimit">27</strong>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="boardShell">
+          <div id="board" class="board" aria-label="puzzle board"></div>
+        </div>
+
+        <div id="setupBar" class="setupBar">
+          <span>当前为 <strong>Setup 模式</strong>：点击方块设置初始角度（0/90/180/270）。保存后普通模式会读取。</span>
+          <span>本地存储键：<code>rotatePuzzle_4x7_seed</code></span>
+          <button id="btnSaveSetup" class="btnSmall">Save Setup</button>
+          <button id="btnClearSetup" class="btnSmall danger">Clear Saved Setup</button>
+        </div>
+
+        <div class="hud">
+          <div id="message" class="msg">提示：点击任意方块顺时针旋转 90°。最多允许 27 次点击。Undo 会回到起始状态。</div>
+          <div class="btnRow">
+            <button id="btnUndo" class="secondary">Undo</button>
+            <button id="btnSubmit">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
