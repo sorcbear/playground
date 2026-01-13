@@ -9,9 +9,11 @@
     body{
       margin:0;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;
-      background:#fff; color:#111;
+      background:#fff;
+      color:#111;
     }
     .wrap{ max-width:var(--maxw); margin:0 auto; padding:12px; }
+
     .stage{
       width:100%;
       aspect-ratio:918/1024;
@@ -23,234 +25,155 @@
     }
     svg{ width:100%; height:100%; display:block; }
 
-    /* 仅用于显示选中状态，不接收点击（点击统一由 catcher 处理） */
-    .hit{ fill:rgba(0,0,0,0); stroke:rgba(0,0,0,0); pointer-events:none; }
-    .dot{ fill:rgba(220,0,0,0); pointer-events:none; }
+    /* 圆点显示 */
+    .hit{ fill:transparent; pointer-events:none; }
+    .dot{ fill:transparent; pointer-events:none; }
     .hit.selected + .dot{ fill:rgba(220,0,0,0.92); }
 
+    /* 上方提示：纯白，无色块 */
     .hint{
       margin-top:12px;
-      padding:10px 12px;
-      border-radius:10px;
-      background:#f5f5f5;
+      padding:0;
+      background:transparent;
       font-size:14px;
-      line-height:1.45;
+      line-height:1.5;
     }
 
     .panel{
       display:flex;
       gap:12px;
-      align-items:center;
-      justify-content:space-between;
-      margin-top:10px;
+      margin-top:12px;
     }
+
     button{
       appearance:none;
       border:0;
       background:#111;
       color:#fff;
-      padding:12px 16px;
-      border-radius:10px;
+      padding:14px 16px;
+      border-radius:14px;
       font-size:16px;
       font-weight:700;
-      width:48%;
+      width:50%;
     }
     button:active{ transform:translateY(1px); }
 
+    /* 下方结果提示：纯白，无色块 */
     .msg{
-      margin-top:10px;
-      padding:10px 12px;
-      border-radius:10px;
-      background:#f5f5f5;
+      margin-top:12px;
+      padding:0;
+      background:transparent;
       font-size:14px;
-      line-height:1.35;
-      min-height:20px;
+      min-height:1.4em;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="stage">
-      <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg"
-           xmlns="http://www.w3.org/2000/svg"
-           xmlns:xlink="http://www.w3.org/1999/xlink">
-        <image id="bg"
-               href="map.png" xlink:href="./map.png"
-               x="0" y="0" width="918" height="1024"
-               preserveAspectRatio="xMidYMid meet"
-               style="pointer-events:none;"></image>
+<div class="wrap">
 
-        <!-- catcher 必须永远在最上层，专门接收点击 -->
-        <rect id="catcher" x="0" y="0" width="918" height="1024"
-              fill="rgba(0,0,0,0)"
-              style="pointer-events:all;"></rect>
-      </svg>
-    </div>
+  <div class="stage">
+    <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg"
+         xmlns="http://www.w3.org/2000/svg"
+         xmlns:xlink="http://www.w3.org/1999/xlink">
+      <image id="bg"
+             href="map.png" xlink:href="map.png"
+             x="0" y="0" width="918" height="1024"
+             preserveAspectRatio="xMidYMid meet"
+             style="pointer-events:none;"></image>
 
-    <!-- 提示（按钮上面） -->
-    <div class="hint" id="hint">
-      请结合环境信息，在图中点击正确位置的圆圈并提交。
-    </div>
-
-    <!-- 左 Undo / 右 Submit -->
-    <div class="panel">
-      <button id="undoBtn" type="button">Undo</button>
-      <button id="submitBtn" type="button">Submit</button>
-    </div>
-
-    <!-- 仅显示结果：Success / Please try again（不再显示“已选择n个…”） -->
-    <div class="msg" id="msg"></div>
+      <rect id="catcher"
+            x="0" y="0" width="918" height="1024"
+            fill="transparent"
+            style="pointer-events:all;"></rect>
+    </svg>
   </div>
 
+  <!-- 提示文案（白底） -->
+  <div class="hint">
+    请结合环境信息，在上图中点击正确位置的圆圈后提交。
+  </div>
+
+  <!-- 按钮 -->
+  <div class="panel">
+    <button id="undoBtn">Undo</button>
+    <button id="submitBtn">Submit</button>
+  </div>
+
+  <!-- 结果提示（白底） -->
+  <div class="msg" id="msg"></div>
+
+</div>
+
 <script>
-/** 46 个圆心坐标（你已校准完成） */
 const CIRCLES = [{"x":678,"y":84},{"x":752,"y":88},{"x":376,"y":166},{"x":473,"y":196},{"x":553,"y":171},{"x":657,"y":219},{"x":307,"y":263},{"x":886,"y":187},{"x":444,"y":247},{"x":115,"y":274},{"x":256,"y":209},{"x":806,"y":211},{"x":879,"y":318},{"x":217,"y":346},{"x":303,"y":346},{"x":547,"y":349},{"x":267,"y":638},{"x":105,"y":346},{"x":78,"y":434},{"x":56,"y":541},{"x":189,"y":548},{"x":164,"y":460},{"x":585,"y":491},{"x":438,"y":491},{"x":369,"y":579},{"x":813,"y":847},{"x":274,"y":550},{"x":485,"y":431},{"x":617,"y":305},{"x":608,"y":617},{"x":535,"y":573},{"x":839,"y":590},{"x":825,"y":659},{"x":897,"y":421},{"x":390,"y":673},{"x":303,"y":718},{"x":527,"y":663},{"x":486,"y":728},{"x":862,"y":744},{"x":730,"y":172},{"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},{"x":206,"y":774},{"x":186,"y":622}];
 
-/** 正确答案：坐标集合判断（顺序无关） */
 const ANSWER_POINTS = [
-  {x: 376, y: 166},
-  {x: 217, y: 346},
-  {x: 303, y: 346},
-  {x: 78,  y: 434},
-  {x: 274, y: 550},
-  {x: 825, y: 659},
-  {x: 303, y: 718},
-  {x: 644, y: 827},
-  {x: 433, y: 878},
+  {x:376,y:166},{x:217,y:346},{x:303,y:346},
+  {x:78,y:434},{x:274,y:550},{x:825,y:659},
+  {x:303,y:718},{x:644,y:827},{x:433,y:878}
 ];
 
-/** 可调参数 */
-const R_DOT     = 10;  // 红色半径
-const R_HIT_VIS = 20;  // 仅用于显示/选中范围
-const SNAP_DIST = 36;  // 点偏也能吸附命中
-const EPS       = 10;  // 答案集合匹配容差（像素）
+const R_DOT=10, SNAP_DIST=36, EPS=10;
 
-const svg = document.getElementById("svg");
-const bg  = document.getElementById("bg");
-const catcher = document.getElementById("catcher");
-const msg = document.getElementById("msg");
-const submitBtn = document.getElementById("submitBtn");
-const undoBtn = document.getElementById("undoBtn");
+const svg=document.getElementById("svg");
+const catcher=document.getElementById("catcher");
+const msg=document.getElementById("msg");
+const submitBtn=document.getElementById("submitBtn");
+const undoBtn=document.getElementById("undoBtn");
 
-const selected = new Array(CIRCLES.length).fill(false);
+const selected=new Array(CIRCLES.length).fill(false);
 
-function el(name, attrs = {}) {
-  const n = document.createElementNS("http://www.w3.org/2000/svg", name);
-  for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, v);
-  return n;
+function el(n,a={}){const e=document.createElementNS("http://www.w3.org/2000/svg",n);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function svgPt(ev){const p=svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+function d2(a,b){const dx=a.x-b.x,dy=a.y-b.y;return dx*dx+dy*dy;}
+function nearest(x,y){
+  let bi=-1,bd=1e9;
+  CIRCLES.forEach((c,i)=>{const dx=x-c.x,dy=y-c.y,dd=dx*dx+dy*dy;if(dd<bd){bd=dd;bi=i;}});
+  return bd<=SNAP_DIST*SNAP_DIST?bi:-1;
 }
-function svgPointFromEvent(ev){
-  const pt = svg.createSVGPoint();
-  pt.x = ev.clientX; pt.y = ev.clientY;
-  return pt.matrixTransform(svg.getScreenCTM().inverse());
-}
-function dist2(a,b){
-  const dx=a.x-b.x, dy=a.y-b.y;
-  return dx*dx+dy*dy;
-}
-function nearestCircleIndex(x, y){
-  let bestIdx=-1, bestD2=Infinity;
-  for (let i=0;i<CIRCLES.length;i++){
-    const dx=x-CIRCLES[i].x, dy=y-CIRCLES[i].y;
-    const d2=dx*dx+dy*dy;
-    if (d2<bestD2){ bestD2=d2; bestIdx=i; }
-  }
-  if (bestIdx<0) return -1;
-  return bestD2 <= SNAP_DIST*SNAP_DIST ? bestIdx : -1;
-}
-/** 坐标集合判断（顺序无关），允许 EPS 容差 */
-function samePointSet(userPoints, answerPoints, eps){
-  if (userPoints.length !== answerPoints.length) return false;
-  const used = new Array(userPoints.length).fill(false);
-  const eps2 = eps*eps;
-
-  for (const ap of answerPoints){
-    let found=false;
-    for (let i=0;i<userPoints.length;i++){
-      if (used[i]) continue;
-      if (dist2(ap, userPoints[i]) <= eps2){
-        used[i]=true; found=true; break;
-      }
+function sameSet(u,a){
+  if(u.length!==a.length)return false;
+  const used=new Array(u.length).fill(false);
+  for(const p of a){
+    let ok=false;
+    for(let i=0;i<u.length;i++){
+      if(!used[i]&&d2(p,u[i])<=EPS*EPS){used[i]=true;ok=true;break;}
     }
-    if (!found) return false;
+    if(!ok)return false;
   }
   return true;
 }
-function getUserPoints(){
-  return selected
-    .map((v,i)=> v ? CIRCLES[i] : null)
-    .filter(Boolean)
-    .map(p => ({x:p.x, y:p.y}));
-}
-
+function userPts(){return selected.map((v,i)=>v?CIRCLES[i]:null).filter(Boolean);}
 function render(){
-  // 清掉旧点（保留 bg 和 catcher）
-  [...svg.querySelectorAll(".hit,.dot")].forEach(n => n.remove());
-
-  // 点插入到 catcher 之前，保证 catcher 永远最上层接收点击
-  CIRCLES.forEach((c, i) => {
-    const hit = el("circle", { cx:c.x, cy:c.y, r:R_HIT_VIS });
-    hit.classList.add("hit");
-    if (selected[i]) hit.classList.add("selected");
-
-    const dot = el("circle", { cx:c.x, cy:c.y, r:R_DOT });
-    dot.classList.add("dot");
-
-    svg.insertBefore(hit, catcher);
-    svg.insertBefore(dot, catcher);
+  svg.querySelectorAll(".hit,.dot").forEach(n=>n.remove());
+  CIRCLES.forEach((c,i)=>{
+    const h=el("circle",{cx:c.x,cy:c.y,r:20});h.classList.add("hit");if(selected[i])h.classList.add("selected");
+    const d=el("circle",{cx:c.x,cy:c.y,r:R_DOT});d.classList.add("dot");
+    svg.insertBefore(h,catcher);svg.insertBefore(d,catcher);
   });
 }
 
-// 背景图加载后再渲染
-bg.addEventListener("load", () => {
-  msg.textContent = "";
-  msg.style.background = "#f5f5f5";
+catcher.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  const p=svgPt(e);
+  const i=nearest(p.x,p.y);
+  if(i<0)return;
+  selected[i]=!selected[i];
+  msg.textContent="";
   render();
-});
+},{passive:false});
 
-bg.addEventListener("error", () => {
-  msg.textContent = "图片加载失败：请确认根目录存在 map.png（严格小写）且能通过 /map.png 打开。";
-  msg.style.background = "#fdecec";
-});
-
-// 手机端用 pointerdown 更稳定
-catcher.addEventListener("pointerdown", (ev) => {
-  ev.preventDefault();
-  const p = svgPointFromEvent(ev);
-  const idx = nearestCircleIndex(p.x, p.y);
-  if (idx === -1) return;
-  selected[idx] = !selected[idx];
-
-  // 用户继续操作时清掉结果提示，避免误导
-  if (msg.textContent) {
-    msg.textContent = "";
-    msg.style.background = "#f5f5f5";
-  }
-
+undoBtn.onclick=()=>{
+  selected.fill(false);
+  msg.textContent="";
   render();
-}, { passive:false });
+};
 
-// Undo：恢复初始状态（全部取消选择）
-undoBtn.addEventListener("click", () => {
-  for (let i=0;i<selected.length;i++) selected[i] = false;
-  msg.textContent = "";
-  msg.style.background = "#f5f5f5";
-  render();
-});
+submitBtn.onclick=()=>{
+  msg.textContent=sameSet(userPts(),ANSWER_POINTS)?"Success":"Please try again";
+};
 
-// Submit：只显示 Success / Please try again
-submitBtn.addEventListener("click", () => {
-  const ok = samePointSet(getUserPoints(), ANSWER_POINTS, EPS);
-  if (ok){
-    msg.textContent = "Success";
-    msg.style.background = "#e9f7ef";
-  } else {
-    msg.textContent = "Please try again";
-    msg.style.background = "#fdecec";
-  }
-});
+render();
 </script>
 </body>
 </html>
-
-
