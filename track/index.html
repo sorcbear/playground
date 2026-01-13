@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Direction Choice</title>
+  <style>
+    :root { --btn-h: 52px; }
+
+    body{
+      margin:0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+                   "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      background:#fff;
+      color:#111;
+    }
+    .wrap{
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 18px 14px 28px;
+      box-sizing: border-box;
+    }
+
+    .image-box{
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #f5f5f5;
+    }
+    .image-box img{
+      width: 100%;
+      height: auto;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .text{
+      margin-top: 14px;
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .hint{
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #444;
+    }
+
+    .status{
+      margin-top: 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      min-height: 20px;
+    }
+
+    .actions{
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    button{
+      height: var(--btn-h);
+      border: none;
+      border-radius: 10px;
+      background: #000;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    button:disabled{
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .success{
+      margin-top: 14px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .countdown{
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- 1) 把你的图片放在同目录下，并命名为 track.png（或改这里的 src） -->
+    <div class="image-box">
+      <img src="track.png" alt="bike trace" />
+    </div>
+
+    <div class="text" id="questionText">
+      上一名玩家已经顺利找到了下一个线索。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？
+    </div>
+
+    <div class="hint">
+      如果选错，本页面将冻结 5 分钟无法再次提交获取线索。
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="actions" id="actions">
+      <button id="btnLeft">向左走</button>
+      <button id="btnRight">向右走</button>
+    </div>
+
+    <div class="success" id="success" style="display:none;">success</div>
+  </div>
+
+  <script>
+    // ====== 配置 ======
+    const CORRECT = "right";              // 正确答案：向右走
+    const LOCK_MS = 5 * 60 * 1000;        // 5分钟冻结
+    const STORAGE_KEY = "bike_trace_lock_until_v1";
+
+    // ====== DOM ======
+    const statusEl = document.getElementById("status");
+    const actionsEl = document.getElementById("actions");
+    const successEl = document.getElementById("success");
+    const btnLeft = document.getElementById("btnLeft");
+    const btnRight = document.getElementById("btnRight");
+
+    let timer = null;
+
+    function now() { return Date.now(); }
+
+    function getLockUntil() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const t = raw ? Number(raw) : 0;
+      return Number.isFinite(t) ? t : 0;
+    }
+
+    function setLockUntil(ts) {
+      localStorage.setItem(STORAGE_KEY, String(ts));
+    }
+
+    function clearTimer() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    function fmtRemaining(ms) {
+      const totalSec = Math.max(0, Math.ceil(ms / 1000));
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    }
+
+    function setDisabled(disabled) {
+      btnLeft.disabled = disabled;
+      btnRight.disabled = disabled;
+    }
+
+    function showLockedUI(remainingMs) {
+      setDisabled(true);
+      statusEl.innerHTML = `页面已冻结：<span class="countdown" id="cd">${fmtRemaining(remainingMs)}</span>`;
+    }
+
+    function showUnlockedUI() {
+      clearTimer();
+      setDisabled(false);
+      statusEl.textContent = "";
+    }
+
+    function lockForFiveMinutes() {
+      const until = now() + LOCK_MS;
+      setLockUntil(until);
+      applyLockState(); // 立即进入倒计时
+    }
+
+    function applyLockState() {
+      clearTimer();
+
+      const until = getLockUntil();
+      const rem = until - now();
+
+      if (rem > 0) {
+        showLockedUI(rem);
+
+        timer = setInterval(() => {
+          const until2 = getLockUntil();
+          const rem2 = until2 - now();
+          if (rem2 <= 0) {
+            showUnlockedUI();
+            return;
+          }
+          const cdEl = document.getElementById("cd");
+          if (cdEl) cdEl.textContent = fmtRemaining(rem2);
+        }, 250);
+      } else {
+        showUnlockedUI();
+      }
+    }
+
+    function onAnswer(choice) {
+      // 如果处于冻结状态，直接拒绝
+      const until = getLockUntil();
+      if (until - now() > 0) return;
+
+      if (choice === CORRECT) {
+        // 正确：显示 success
+        actionsEl.style.display = "none";
+        successEl.style.display = "block";
+        statusEl.textContent = "";
+      } else {
+        // 错误：冻结5分钟
+        lockForFiveMinutes();
+      }
+    }
+
+    btnLeft.addEventListener("click", () => onAnswer("left"));
+    btnRight.addEventListener("click", () => onAnswer("right"));
+
+    // 页面加载时检查是否冻结
+    applyLockState();
+  </script>
+</body>
+</html>
