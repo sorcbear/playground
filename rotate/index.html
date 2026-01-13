@@ -3,22 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rotate Puzzle</title>
+  <title>Rotate</title>
 
   <style>
     :root{
-      --bg:#0f1115;
-      --text:#e8eaf0;
-      --muted:#a9b0c3;
-      --line:rgba(255,255,255,.12);
-      --line2:rgba(255,255,255,.20);
-      --danger:#c23b3b;
+      --bg:#ffffff;
+      --panel:#f3f3f3;
+      --text:#111111;
+      --muted:#777777;
+      --line:rgba(0,0,0,.12);
+      --line2:rgba(0,0,0,.2);
+      --btn:#000000;
+      --btnHover:#222222;
       --ok:#2fbf71;
-      --radius:16px;
-      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --bad:#c23b3b;
+      --radius:18px;
     }
 
-    *{ box-sizing:border-box }
+    *{ box-sizing:border-box; }
+    html, body { height:100%; }
 
     body{
       margin:0;
@@ -28,98 +31,127 @@
     }
 
     .wrap{
-      max-width:1100px;
-      margin:28px auto;
-      padding:0 14px 28px;
+      max-width: 1200px;
+      margin: 16px auto;
+      padding: 0 10px 24px;
+    }
+
+    /* 手机上让拼图更大 */
+    @media (max-width: 520px){
+      .wrap{
+        margin: 8px auto;
+        padding: 0 6px 16px;
+      }
     }
 
     .card{
-      background: rgba(255,255,255,.04);
-      border:1px solid var(--line);
-      border-radius:22px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      overflow: hidden;
     }
 
     .content{
-      padding:16px 18px 18px;
+      padding: 12px;
     }
 
+    /* ===== Board ===== */
+
     .boardShell{
-      border:1px solid var(--line2);
-      border-radius:var(--radius);
-      overflow:hidden;
+      border: 1px solid var(--line2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #eaeaea;
     }
 
     .board{
       display:grid;
-      grid-template-columns:repeat(7,1fr);
-      grid-template-rows:repeat(4,1fr);
-      aspect-ratio:7/4;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      width: 100%;
+      aspect-ratio: 7 / 4;
       user-select:none;
+      touch-action: manipulation;
     }
 
     .tile{
-      border-right:1px solid var(--line);
-      border-bottom:1px solid var(--line);
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
       overflow:hidden;
       cursor:pointer;
     }
-
-    .tile[data-last-col="1"]{ border-right:none }
-    .tile[data-last-row="1"]{ border-bottom:none }
+    .tile[data-last-col="1"]{ border-right:none; }
+    .tile[data-last-row="1"]{ border-bottom:none; }
 
     .tile img{
       width:100%;
       height:100%;
       object-fit:cover;
-      transition:transform 120ms ease;
+      transition: transform 120ms ease;
       pointer-events:none;
+      user-select:none;
     }
+
+    /* ===== Setup Bar ===== */
 
     .setupBar{
-      margin-top:12px;
-      padding:10px 12px;
-      border:1px dashed var(--line2);
-      border-radius:14px;
+      margin-top: 10px;
+      padding: 8px;
+      border: 1px dashed var(--line2);
+      border-radius: 14px;
       display:none;
-      font-size:13px;
-      color:var(--muted);
-      gap:12px;
-      flex-wrap:wrap;
+      gap:10px;
     }
 
+    /* ===== HUD ===== */
+
     .hud{
-      margin-top:14px;
+      margin-top: 10px;
       display:flex;
-      gap:12px;
-      justify-content:space-between;
-      flex-wrap:wrap;
+      gap:10px;
+      align-items:stretch;
     }
 
     .msg{
-      flex:1 1 320px;
-      padding:10px 12px;
+      flex:1;
+      padding: 10px;
       border:1px solid var(--line);
-      border-radius:12px;
-      font-size:13px;
-      color:var(--muted);
+      border-radius: 14px;
+      font-size: 14px;
+      color: var(--muted);
+      background: #ffffff;
     }
+    .msg.ok{ color: var(--ok); }
+    .msg.bad{ color: var(--bad); }
 
-    .msg.ok{ color:var(--ok) }
-    .msg.bad{ color:var(--danger) }
+    .btnCol{
+      display:flex;
+      gap:10px;
+    }
 
     button{
-      padding:12px 16px;
-      border-radius:14px;
-      border:1px solid var(--line2);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
+      min-width: 110px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: none;
       cursor:pointer;
-      font-weight:600;
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      background: var(--btn);
     }
 
-    button:hover{ background:rgba(255,255,255,.1) }
+    button:hover{
+      background: var(--btnHover);
+    }
+
+    /* ===== Hidden elements required by old JS ===== */
+
+    #hintText,
+    #clickCount,
+    #clickLimit{
+      display:none !important;
+    }
   </style>
 </head>
 
@@ -127,6 +159,11 @@
   <div class="wrap">
     <div class="card">
       <div class="content">
+
+        <!-- required but hidden for JS -->
+        <p id="hintText"></p>
+        <span id="clickCount">0</span>
+        <span id="clickLimit">27</span>
 
         <div class="boardShell">
           <div id="board" class="board"></div>
@@ -139,7 +176,7 @@
 
         <div class="hud">
           <div id="message" class="msg"></div>
-          <div>
+          <div class="btnCol">
             <button id="btnUndo">Undo</button>
             <button id="btnSubmit">Submit</button>
           </div>
@@ -150,6 +187,6 @@
   </div>
 
   <!-- 强制破缓存，确保使用最新 JS -->
-  <script src="./script.js?v=final"></script>
+  <script src="./script.js?v=white-bg-final"></script>
 </body>
 </html>
