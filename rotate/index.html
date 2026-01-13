@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rotate Puzzle 4×7</title>
+  <title>Rotate Puzzle</title>
 
   <style>
     :root{
@@ -39,23 +39,6 @@
       border-radius:22px;
       box-shadow:var(--shadow);
       overflow:hidden;
-    }
-
-    .head{
-      padding:16px 18px;
-      border-bottom:1px solid var(--line);
-    }
-
-    .title{
-      margin:0 0 6px 0;
-      font-size:16px;
-      font-weight:650;
-    }
-
-    .desc{
-      margin:0;
-      font-size:13px;
-      color:var(--muted);
     }
 
     .content{
@@ -143,12 +126,8 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="head">
-        <h1 class="title">旋转拼图（4×7）</h1>
-        <p id="hintText" class="desc"></p>
-      </div>
-
       <div class="content">
+
         <div class="boardShell">
           <div id="board" class="board"></div>
         </div>
@@ -165,11 +144,12 @@
             <button id="btnSubmit">Submit</button>
           </div>
         </div>
+
       </div>
     </div>
   </div>
 
-  <!-- 强制破缓存 -->
+  <!-- 强制破缓存，确保使用最新 JS -->
   <script src="./script.js?v=final"></script>
 </body>
 </html>
