@@ -54,7 +54,7 @@
   function resetToSeed() {
     curSteps = seedSteps.slice();
     applyAllRotations();
-    setMessage("已重置到起始状态。");
+    setMessage("已重置。");
   }
 
   function buildBoard() {
