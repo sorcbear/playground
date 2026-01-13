@@ -8,11 +8,10 @@
   <style>
     :root{
       --bg:#ffffff;
-      --panel:#f3f3f3;
       --text:#111111;
-      --muted:#777777;
+      --muted:#888888;
       --line:rgba(0,0,0,.12);
-      --line2:rgba(0,0,0,.2);
+      --line2:rgba(0,0,0,.18);
       --btn:#000000;
       --btnHover:#222222;
       --ok:#2fbf71;
@@ -30,32 +29,20 @@
       color: var(--text);
     }
 
+    /* ===== 页面整体容器：手机端尽量贴边 ===== */
     .wrap{
       max-width: 1200px;
-      margin: 16px auto;
-      padding: 0 10px 24px;
+      margin: 10px auto;
+      padding: 0 6px 16px;
     }
 
-    /* 手机上让拼图更大 */
-    @media (max-width: 520px){
+    @media (min-width: 768px){
       .wrap{
-        margin: 8px auto;
-        padding: 0 6px 16px;
+        padding: 0 16px 24px;
       }
     }
 
-    .card{
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      overflow: hidden;
-    }
-
-    .content{
-      padding: 12px;
-    }
-
-    /* ===== Board ===== */
+    /* ===== 拼图区域 ===== */
 
     .boardShell{
       border: 1px solid var(--line2);
@@ -92,6 +79,15 @@
       user-select:none;
     }
 
+    /* ===== 横屏提示 ===== */
+
+    .orientation-hint{
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
     /* ===== Setup Bar ===== */
 
     .setupBar{
@@ -103,10 +99,10 @@
       gap:10px;
     }
 
-    /* ===== HUD ===== */
+    /* ===== 底部操作区 ===== */
 
     .hud{
-      margin-top: 10px;
+      margin-top: 12px;
       display:flex;
       gap:10px;
       align-items:stretch;
@@ -145,8 +141,7 @@
       background: var(--btnHover);
     }
 
-    /* ===== Hidden elements required by old JS ===== */
-
+    /* ===== JS 依赖但隐藏的元素（不要删） ===== */
     #hintText,
     #clickCount,
     #clickLimit{
@@ -157,36 +152,36 @@
 
 <body>
   <div class="wrap">
-    <div class="card">
-      <div class="content">
 
-        <!-- required but hidden for JS -->
-        <p id="hintText"></p>
-        <span id="clickCount">0</span>
-        <span id="clickLimit">27</span>
+    <!-- JS 需要但不显示 -->
+    <p id="hintText"></p>
+    <span id="clickCount">0</span>
+    <span id="clickLimit">27</span>
 
-        <div class="boardShell">
-          <div id="board" class="board"></div>
-        </div>
+    <div class="boardShell">
+      <div id="board" class="board"></div>
+    </div>
 
-        <div id="setupBar" class="setupBar">
-          <button id="btnSaveSetup">Save Setup</button>
-          <button id="btnClearSetup">Clear Saved Setup</button>
-        </div>
+    <div class="orientation-hint">
+      可以转动手机，横向操作。
+    </div>
 
-        <div class="hud">
-          <div id="message" class="msg"></div>
-          <div class="btnCol">
-            <button id="btnUndo">Undo</button>
-            <button id="btnSubmit">Submit</button>
-          </div>
-        </div>
+    <div id="setupBar" class="setupBar">
+      <button id="btnSaveSetup">Save Setup</button>
+      <button id="btnClearSetup">Clear Saved Setup</button>
+    </div>
 
+    <div class="hud">
+      <div id="message" class="msg"></div>
+      <div class="btnCol">
+        <button id="btnUndo">Undo</button>
+        <button id="btnSubmit">Submit</button>
       </div>
     </div>
+
   </div>
 
-  <!-- 强制破缓存，确保使用最新 JS -->
-  <script src="./script.js?v=white-bg-final"></script>
+  <!-- 强制破缓存 -->
+  <script src="./script.js?v=mobile-big-final"></script>
 </body>
 </html>
