@@ -1,263 +1,165 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ppl</title>
-  <style>
-    :root{
-      --c-blue:   rgb(0,112,192);
-      --c-cyan:   rgb(0,176,240);
-      --c-green:  rgb(0,176,80);
-      --c-lgreen: rgb(146,208,80);
-      --c-yellow: rgb(255,255,0);
-      --c-orange: rgb(255,192,0);
-      --c-red:    rgb(255,0,0);
-      --c-purple: rgb(112,48,160);
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ppl</title>
 
-      --rd-red: rgb(192,0,0);
-    }
+<style>
+:root{
+  --c-blue:#0070c0;
+  --c-cyan:#00b0f0;
+  --c-green:#00b050;
+  --c-lgreen:#92d050;
+  --c-yellow:#ffff00;
+  --c-orange:#ffc000;
+  --c-red:#ff0000;
+  --c-purple:#7030a0;
+}
 
-    html, body { height: 100%; }
-    body{
-      margin: 0;
-      background: #fff;
-      color: #111;
-      font-family: "Noto Sans SC","Microsoft YaHei","PingFang SC",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    }
+body{
+  margin:0;
+  background:#fff;
+  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+}
 
-    .wrap{
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 18px 14px 28px;
-    }
+.wrap{
+  max-width:980px;
+  margin:0 auto;
+  padding:20px;
+}
 
-    .figure{
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-top: 8px;
-    }
+img{
+  width:100%;
+  display:block;
+}
 
-    img#puzzle{
-      width: min(980px, 100%);
-      height: auto;
-      display: block;
-      border: 0;
-      user-select: none;
-      -webkit-user-drag: none;
-    }
+.code{
+  margin-top:18px;
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  font-size:18px;
+}
 
-    .code-row{
-      margin-top: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+.slot{
+  height:46px;
+  line-height:44px;
+  border:2px solid #000;
+  font-size:22px;
+  font-weight:700;
+  text-align:center;
+  resize:none;
+  outline:none;
+  padding:0 6px;
+  box-sizing:border-box;
+}
 
-    .label{
-      font-size: 18px;
-      line-height: 1;
-      white-space: nowrap;
-    }
+.w1{ width:50px; }
+.w2{ width:84px; }
 
-    .slots{
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
+textarea{ overflow:hidden; }
 
-    .slot{
-      border: 2px solid rgba(0,0,0,0.65);
-      border-radius: 0;
-      height: 44px;
-      box-sizing: border-box;
-      text-align: center;
-      font-size: 22px;
-      font-weight: 700;
-      color: #000;
-      outline: none;
-      padding: 0 6px;
-      line-height: 40px;
-    }
+.rd{
+  height:46px;
+  width:60px;
+  border:3px solid #c00000;
+  color:#c00000;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+}
 
-    .w1{ width: 48px; }
-    .w2{ width: 78px; }
+.buttons{
+  margin-top:20px;
+  display:flex;
+  gap:18px;
+}
 
-    .slot::placeholder{ color: rgba(0,0,0,0.35); font-weight: 600; }
+button{
+  flex:1;
+  height:64px;
+  border-radius:32px;
+  border:none;
+  background:#111;
+  color:#fff;
+  font-size:22px;
+  font-weight:700;
+  cursor:pointer;
+}
 
-    .rd{
-      height: 44px;
-      width: 58px;
-      box-sizing: border-box;
-      border: 3px solid var(--rd-red);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 22px;
-      color: var(--rd-red);
-      background: #fff;
-      letter-spacing: 0.5px;
-      user-select: none;
-    }
+button:active{
+  transform:scale(0.98);
+}
 
-    .actions{
-      margin-top: 14px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    button{
-      appearance: none;
-      border: 2px solid #000;
-      background: #000;
-      color: #fff;
-      height: 44px;
-      padding: 0 16px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    button:active{ transform: translateY(1px); }
-    button:disabled{ opacity: 0.5; cursor: not-allowed; }
-
-    .msg{
-      margin-top: 10px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: 800;
-      min-height: 24px;
-    }
-
-    .ok{ color: #0a7a1f; }
-    .bad{ color: #b00020; }
-  </style>
+.msg{
+  margin-top:14px;
+  font-size:20px;
+  font-weight:700;
+}
+.success{ color:#1a7f37; }
+.fail{ color:#b00020; }
+</style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="figure">
-      <!--
-        把你发的第一张大图保存为：puzzle.png
-        并与本 index.html 放在同一个 /playground/ppl/ 目录下
-      -->
-      <img id="puzzle" src="puzzle.png" alt="puzzle" />
-    </div>
+<div class="wrap">
 
-    <div class="code-row">
-      <div class="label">暗号：</div>
+  <img src="puzzle.png" alt="puzzle">
 
-      <div class="slots" aria-label="暗号输入">
-        <input id="s1" class="slot w1" style="background: var(--c-blue);"   maxlength="1" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
-        <input id="s2" class="slot w2" style="background: var(--c-cyan);"   maxlength="2" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
-        <input id="s3" class="slot w1" style="background: var(--c-green);"  maxlength="1" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
-        <input id="s4" class="slot w2" style="background: var(--c-lgreen);" maxlength="2" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+  <div class="code">
+    <div>暗号：</div>
 
-        <div class="rd" aria-label="固定 RD">RD</div>
+    <textarea id="s1" class="slot w1" style="background:var(--c-blue)"></textarea>
+    <textarea id="s2" class="slot w2" style="background:var(--c-cyan)"></textarea>
+    <textarea id="s3" class="slot w1" style="background:var(--c-green)"></textarea>
+    <textarea id="s4" class="slot w2" style="background:var(--c-lgreen)"></textarea>
 
-        <input id="s5" class="slot w1" style="background: var(--c-yellow);" maxlength="1" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
-        <input id="s6" class="slot w1" style="background: var(--c-orange);" maxlength="1" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
-        <input id="s7" class="slot w1" style="background: var(--c-red);"    maxlength="1" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
-        <input id="s8" class="slot w1" style="background: var(--c-purple);" maxlength="1" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
-      </div>
-    </div>
+    <div class="rd">RD</div>
 
-    <div class="actions">
-      <button id="submitBtn" type="button">Submit</button>
-      <button id="resetBtn" type="button">Reset</button>
-    </div>
-
-    <div id="msg" class="msg" aria-live="polite"></div>
+    <textarea id="s5" class="slot w1" style="background:var(--c-yellow)"></textarea>
+    <textarea id="s6" class="slot w1" style="background:var(--c-orange)"></textarea>
+    <textarea id="s7" class="slot w1" style="background:var(--c-red)"></textarea>
+    <textarea id="s8" class="slot w1" style="background:var(--c-purple)"></textarea>
   </div>
 
-  <script>
-    const ANSWER = ["四","君子","在","衡山","五","四","三","号"]; // 不包含 RD
-    const ids = ["s1","s2","s3","s4","s5","s6","s7","s8"];
-    const inputs = ids.map(id => document.getElementById(id));
-    const msgEl = document.getElementById("msg");
-    const submitBtn = document.getElementById("submitBtn");
-    const resetBtn = document.getElementById("resetBtn");
+  <div class="buttons">
+    <button onclick="resetAll()">Reset</button>
+    <button onclick="check()">Submit</button>
+  </div>
 
-    function norm(s){
-      // 去掉空格（含全角空格）与换行
-      return (s || "").replace(/[\s\u3000]/g, "");
-    }
+  <div id="msg" class="msg"></div>
+</div>
 
-    function getValues(){
-      return inputs.map(inp => norm(inp.value));
-    }
+<script>
+const ANSWER = ["四","君子","在","衡山","五","四","三","号"];
+const ids = ["s1","s2","s3","s4","s5","s6","s7","s8"];
 
-    function setMsg(text, ok){
-      msgEl.textContent = text;
-      msgEl.className = "msg " + (ok ? "ok" : "bad");
-    }
+function clean(v){
+  return v.replace(/\s/g,"");
+}
 
-    function clearMsg(){
-      msgEl.textContent = "";
-      msgEl.className = "msg";
-    }
+function check(){
+  const ok = ids.every((id,i)=>{
+    return clean(document.getElementById(id).value) === ANSWER[i];
+  });
+  const msg = document.getElementById("msg");
+  if(ok){
+    msg.textContent = "success";
+    msg.className = "msg success";
+  }else{
+    msg.textContent = "try again";
+    msg.className = "msg fail";
+  }
+}
 
-    function check(){
-      const vals = getValues();
-      const pass = vals.every((v, i) => v === ANSWER[i]);
-      if(pass){
-        setMsg("success", true);
-      }else{
-        setMsg("try again", false);
-      }
-    }
-
-    function reset(){
-      inputs.forEach(i => i.value = "");
-      clearMsg();
-      inputs[0].focus();
-    }
-
-    // 提升体验：输入满格自动跳到下一个
-    inputs.forEach((inp, idx) => {
-      inp.addEventListener("input", () => {
-        // 限制：超出 maxlength 时截断（某些输入法可能会一次性塞多个字符）
-        const max = Number(inp.getAttribute("maxlength")) || 1;
-        const v = norm(inp.value);
-        if(v.length > max){
-          inp.value = v.slice(0, max);
-        }else{
-          inp.value = v;
-        }
-
-        if(norm(inp.value).length >= max){
-          const next = inputs[idx + 1];
-          if(next) next.focus();
-        }
-      });
-
-      inp.addEventListener("keydown", (e) => {
-        // Backspace 在空框时回到上一个
-        if(e.key === "Backspace" && norm(inp.value).length === 0){
-          const prev = inputs[idx - 1];
-          if(prev){
-            prev.focus();
-            // 光标移到末尾
-            const pv = prev.value;
-            prev.value = pv;
-          }
-        }
-        if(e.key === "Enter"){
-          check();
-        }
-      });
-    });
-
-    submitBtn.addEventListener("click", check);
-    resetBtn.addEventListener("click", reset);
-
-    // 初始聚焦
-    inputs[0].focus();
-  </script>
+function resetAll(){
+  ids.forEach(id=>document.getElementById(id).value="");
+  document.getElementById("msg").textContent="";
+}
+</script>
 </body>
 </html>
