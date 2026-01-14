@@ -7,25 +7,30 @@
   <style>
     :root{
       --bg: #ffffff;
-      --text: #111;
       --stroke: #0b0f2e;
       --fill: #243B8F;
 
-      --cardMaxW: 340px;
-      --gap: 14px;
+      /* 三张牌拼接：外框与分隔线 */
+      --frameLine: 4px;     /* 外框线宽 */
+      --dividerLine: 4px;   /* 中间分隔线宽 */
+      --lineColor: #000000;
 
       /* 翻页速度（越大越慢） */
-      --flipMs: 340ms;
+      --flipMs: 360ms;
 
-      /* 按钮大小（你要求小一点） */
-      --btnSize: 62px;
+      /* 数字大小：再大一点 */
+      --digitMin: 170px;
+      --digitVW: 20vw;
+      --digitMax: 320px;
+
+      /* 按钮更小 */
+      --btnSize: 56px;
     }
 
     html,body{height:100%;}
     body{
       margin:0;
       background: var(--bg);
-      color: var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
       display:flex;
       align-items:center;
@@ -33,33 +38,37 @@
     }
 
     .wrap{
-      width:min(1100px, 94vw);
-      padding: 18px 0 22px;
+      width:min(1200px, 94vw);
+      padding: 16px 0 18px;
     }
 
-    .cards{
+    /* 让三张牌像一张长牌：外层加外框 */
+    .strip{
       display:grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: var(--gap);
-      align-items: stretch;
+      gap: 0; /* 关键：无空隙 */
+      border: var(--frameLine) solid var(--lineColor);
+      border-radius: 18px;
+      overflow:hidden; /* 让内侧圆角不会露白 */
+      background:#fff;
     }
 
     .card{
       position:relative;
-      width: 100%;
-      max-width: var(--cardMaxW);
-      margin: 0 auto;
       aspect-ratio: 718 / 1024;
-      border-radius: 18px;
-      overflow:hidden;
       background:#fff;
-      box-shadow: 0 10px 28px rgba(0,0,0,0.10);
 
-      /* 3D 透视，为翻页服务 */
+      /* 3D 透视：向上翻页 */
       perspective: 1000px;
+      overflow:hidden;
     }
 
-    /* 牌面内容层：真正做翻页的是它 */
+    /* 中间分隔线：只在第1、第2张右边加线 */
+    .card.sep{
+      border-right: var(--dividerLine) solid var(--lineColor);
+    }
+
+    /* 牌面内容层：做翻页 */
     .face{
       position:absolute;
       inset:0;
@@ -67,18 +76,15 @@
       backface-visibility: hidden;
 
       /* 默认状态 */
-      transform: rotateY(0deg);
+      transform: rotateX(0deg);
+      transform-origin: bottom center; /* 从底部向上翻 */
       transition: transform var(--flipMs) ease-in-out;
       will-change: transform;
     }
 
-    /* 翻到一半（看不见正面内容），此时换图换字不会闪 */
+    /* 先翻到 90 度（内容不可见），在这个瞬间换图换字不会闪 */
     .face.flipOut{
-      transform: rotateY(90deg);
-    }
-    /* 换完内容后翻回来 */
-    .face.flipIn{
-      transform: rotateY(0deg);
+      transform: rotateX(-90deg);
     }
 
     .pattern{
@@ -101,11 +107,10 @@
       pointer-events:none;
     }
 
-    /* 数字：再放大，并用描边避免重影 */
+    /* 数字：更大 + 干净描边（无重影） */
     .digit{
       font-family: "Cinzel", "Times New Roman", Georgia, serif;
-      /* 更大：你如果还要更大，把最大值 280px 改到 320px */
-      font-size: clamp(150px, 18.5vw, 280px);
+      font-size: clamp(var(--digitMin), var(--digitVW), var(--digitMax));
       line-height: 1;
       letter-spacing: 0.01em;
 
@@ -113,13 +118,12 @@
       -webkit-text-stroke: 7px var(--stroke);
       paint-order: stroke fill;
 
-      /* 单一阴影，避免“重影感” */
-      text-shadow: 0 6px 0 rgba(0,0,0,0.12);
+      text-shadow: 0 7px 0 rgba(0,0,0,0.12);
       user-select:none;
     }
 
     .hint{
-      margin: 14px auto 10px;
+      margin: 12px auto 10px;
       text-align:center;
       font-size: 14px;
       opacity: 0.78;
@@ -127,7 +131,7 @@
 
     .buttons{
       display:flex;
-      gap: 18px;
+      gap: 16px;
       justify-content:center;
       align-items:center;
       margin-top: 10px;
@@ -141,7 +145,7 @@
       padding:0;
       cursor:pointer;
       border-radius: 999px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.14);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.14);
     }
     .coinBtn:disabled{
       cursor:not-allowed;
@@ -158,31 +162,36 @@
     }
 
     .status{
-      margin-top: 12px;
+      margin-top: 10px;
       text-align:center;
       min-height: 22px;
       font-weight: 600;
     }
 
-    @media (max-width: 820px){
-      .cards{ grid-template-columns: 1fr; }
-      .card{ max-width: min(94vw, 440px); }
-      :root{ --btnSize: 58px; }
+    /* 手机：保证整体不超宽 */
+    @media (max-width: 900px){
+      :root{
+        --btnSize: 52px;
+        --digitMax: 300px;
+        --frameLine: 3px;
+        --dividerLine: 3px;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
-    <div class="cards">
 
-      <div class="card">
+    <div class="strip">
+      <div class="card sep">
         <div class="face" id="face1">
           <img class="pattern" id="pat1" alt="pattern-1">
           <div class="digitWrap"><div class="digit" id="dig1">1</div></div>
         </div>
       </div>
 
-      <div class="card">
+      <div class="card sep">
         <div class="face" id="face2">
           <img class="pattern" id="pat2" alt="pattern-2">
           <div class="digitWrap"><div class="digit" id="dig2">5</div></div>
@@ -195,7 +204,6 @@
           <div class="digitWrap"><div class="digit" id="dig3">7</div></div>
         </div>
       </div>
-
     </div>
 
     <div class="hint">点击下方金币切换上方牌面，组合正确后显示 success。</div>
@@ -207,6 +215,7 @@
     </div>
 
     <div class="status" id="status"></div>
+
   </div>
 
   <script>
@@ -214,12 +223,12 @@
     const patterns = ["p0.png", "p1.png", "p2.png", "p3.png"];
 
     // 数字：1..9 循环；图案：0..3 循环
-    let D = [1, 5, 7];
-    let P = [2, 1, 1];
+    let D = [1, 1, 3];     // 你现在截图类似 1 / 1 / 3，我按这个做默认
+    let P = [1, 2, 1];     // 图案初始随便给一组，你可改
 
     // 目标（你可改）
     const targetD = [4, 7, 2];
-    const targetP = [0, 2, 3]; // A=0,B=1,C=2,D=3
+    const targetP = [0, 2, 3]; // A=0,B=1,C=2,D=3（你自己定义 A/B/C/D 对应 p0..p3）
 
     const digEls  = [document.getElementById("dig1"), document.getElementById("dig2"), document.getElementById("dig3")];
     const patEls  = [document.getElementById("pat1"), document.getElementById("pat2"), document.getElementById("pat3")];
@@ -233,7 +242,10 @@
     function incDigit(x){ return (x % 9) + 1; }
     function incPattern(x){ return (x + 1) % patterns.length; }
 
-    // 按钮规则（保持之前那套）
+    // 规则：
+    // 按钮1：D1+1，P2+1
+    // 按钮2：P1+1，D2+1，D3+1
+    // 按钮3：所有数字 +1（图案不变）  —— 按你的新要求
     function applyRule(k){
       if(k === 1){
         D[0] = incDigit(D[0]);
@@ -243,9 +255,10 @@
         D[1] = incDigit(D[1]);
         D[2] = incDigit(D[2]);
       }else if(k === 3){
+        D[0] = incDigit(D[0]);
+        D[1] = incDigit(D[1]);
         D[2] = incDigit(D[2]);
-        P[1] = incPattern(P[1]);
-        P[2] = incPattern(P[2]);
+        // P 不变
       }
     }
 
@@ -278,48 +291,35 @@
       btn3.disabled = disabled;
     }
 
-    // 翻页切换：先 flipOut -> 换内容 -> flipIn
+    function getFlipMs(){
+      const v = getComputedStyle(document.documentElement).getPropertyValue("--flipMs").trim();
+      const n = parseInt(v.replace("ms",""), 10);
+      return Number.isFinite(n) ? n : 360;
+    }
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    // 向上翻页：flipOut(到-90deg) -> 换内容 -> 回到0deg
     async function pressButton(k){
       setButtonsDisabled(true);
 
-      // 1) 先翻到 90 度
-      faceEls.forEach(el => {
-        el.classList.remove("flipIn");
-        el.classList.add("flipOut");
-      });
-
+      faceEls.forEach(el => el.classList.add("flipOut"));
       const flipMs = getFlipMs();
       await sleep(flipMs);
 
-      // 2) 在“看不见内容”的瞬间换状态（不会闪）
       applyRule(k);
       renderImmediate();
 
-      // 3) 翻回来
-      faceEls.forEach(el => {
-        el.classList.remove("flipOut");
-        el.classList.add("flipIn");
-      });
-
+      faceEls.forEach(el => el.classList.remove("flipOut"));
       await sleep(flipMs);
 
       checkWin();
       setButtonsDisabled(false);
     }
 
-    function getFlipMs(){
-      const v = getComputedStyle(document.documentElement).getPropertyValue("--flipMs").trim();
-      const n = parseInt(v.replace("ms",""), 10);
-      return Number.isFinite(n) ? n : 340;
-    }
-
-    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
     btn1.addEventListener("click", ()=>pressButton(1));
     btn2.addEventListener("click", ()=>pressButton(2));
     btn3.addEventListener("click", ()=>pressButton(3));
 
-    // 首次渲染
     renderImmediate();
   </script>
 </body>
