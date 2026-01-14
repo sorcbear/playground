@@ -7,77 +7,99 @@
 
 <style>
 :root{
-  --lineColor:#000;
+  --bg:#ffffff;
+
+  /* 外框与分隔线 */
   --outerLine:4px;
   --midLine:4px;
+  --lineColor:#000000;
+  --radius:18px;
 
+  /* 数字样式 */
   --digitColor:#243B8F;
   --digitStroke:#0B0F2E;
+  --digitStrokeW:7px;
+  --digitShadow:0 6px 0 rgba(0,0,0,.15);
 
-  /* 按钮尺寸与间距（按你要求：更大、更远） */
-  --btnSize:72px;
-  --btnGap:40px;
+  /* 按钮（你要更大、更远可在这里改） */
+  --btnSize:76px;
+  --btnGap:44px;
 }
+
+*{ box-sizing:border-box; }
 
 html,body{
   margin:0;
   padding:0;
-  background:#fff;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background:var(--bg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
 }
 
 .wrap{
-  max-width:1200px;
-  margin:24px auto 20px;
-  padding:0 12px;
+  width:min(1200px, 94vw);
+  margin:24px auto 18px;
+  padding:0 10px;
 }
 
-/* ===== 三张牌拼成一体 ===== */
+/* ===== 三张卡拼接成一条：用 flex 保证三等分 ===== */
 .strip{
-  display:grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  border:var(--outerLine) solid var(--lineColor);
-  border-radius:18px;
-  overflow:hidden;
-}
-
-/* 单张卡片：不使用 aspect-ratio，靠图片自然高度 */
-.card{
   position:relative;
+  display:flex;
+  border:var(--outerLine) solid var(--lineColor);
+  border-radius:var(--radius);
+  overflow:hidden;
   background:#fff;
 }
 
-.card.sep{
-  border-right:var(--midLine) solid var(--lineColor);
+/* 单卡：不使用 border 分隔，避免宽度变化 */
+.card{
+  position:relative;
+  flex: 1 1 0;
+  background:#fff;
 }
 
-/* 图案：完全原尺寸比例 */
-.card img.pattern{
+/* 图案：按宽度等比缩放，三张等宽 => 高度必一致 => 底边必齐 */
+.pattern{
   display:block;
   width:100%;
-  height:auto;       /* 关键：让高度由图片决定 */
+  height:auto;
+  user-select:none;
+  -webkit-user-drag:none;
+  pointer-events:none;
 }
 
-/* 数字覆盖层（绝对居中） */
+/* 数字覆盖层 */
 .digit{
   position:absolute;
   left:50%;
   top:50%;
   transform:translate(-50%, -50%);
 
-  font-family:"Cinzel","Times New Roman",serif;
-  font-size:320px;          /* 明确写死，避免设备差异 */
+  font-family:"Cinzel","Times New Roman",Georgia,serif;
+  font-size:320px;              /* 还要更大就继续加 */
   line-height:1;
   color:var(--digitColor);
 
-  -webkit-text-stroke:7px var(--digitStroke);
-  paint-order:stroke fill;
+  -webkit-text-stroke: var(--digitStrokeW) var(--digitStroke);
+  paint-order: stroke fill;
 
-  text-shadow:0 6px 0 rgba(0,0,0,.15);
+  text-shadow: var(--digitShadow);
   user-select:none;
 }
 
-/* ===== 按钮区 ===== */
+/* 中间两条黑线：覆盖绘制，不参与布局 */
+.divider{
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:var(--midLine);
+  background:var(--lineColor);
+  z-index:5;
+  pointer-events:none;
+}
+.div1{ left: calc(33.333333% - (var(--midLine) / 2)); }
+.div2{ left: calc(66.666666% - (var(--midLine) / 2)); }
+
 .buttons{
   display:flex;
   justify-content:center;
@@ -89,7 +111,7 @@ html,body{
   width:var(--btnSize);
   height:var(--btnSize);
   border:none;
-  background:none;
+  background:transparent;
   padding:0;
   cursor:pointer;
 }
@@ -98,13 +120,27 @@ html,body{
   width:100%;
   height:100%;
   display:block;
+  user-select:none;
+  -webkit-user-drag:none;
+  pointer-events:none;
 }
 
-/* ===== 状态 ===== */
 .status{
   text-align:center;
   margin-top:14px;
+  min-height:22px;
   font-weight:600;
+}
+
+/* 手机下数字自适应：避免太大溢出 */
+@media (max-width: 900px){
+  .digit{ font-size: min(40vw, 300px); }
+  :root{
+    --btnSize:72px;
+    --btnGap:38px;
+    --outerLine:3px;
+    --midLine:3px;
+  }
 }
 </style>
 </head>
@@ -113,89 +149,102 @@ html,body{
 <div class="wrap">
 
   <div class="strip">
-    <div class="card sep">
-      <img class="pattern" id="pat1" src="p0.png">
+    <!-- 覆盖分隔线（不影响布局） -->
+    <div class="divider div1"></div>
+    <div class="divider div2"></div>
+
+    <div class="card">
+      <img class="pattern" id="pat1" src="p0.png" alt="p0">
       <div class="digit" id="dig1">1</div>
     </div>
 
-    <div class="card sep">
-      <img class="pattern" id="pat2" src="p1.png">
+    <div class="card">
+      <img class="pattern" id="pat2" src="p1.png" alt="p1">
       <div class="digit" id="dig2">1</div>
     </div>
 
     <div class="card">
-      <img class="pattern" id="pat3" src="p2.png">
+      <img class="pattern" id="pat3" src="p2.png" alt="p2">
       <div class="digit" id="dig3">3</div>
     </div>
   </div>
 
   <div class="buttons">
-    <button class="coinBtn" id="btn1"><img src="coin.png"></button>
-    <button class="coinBtn" id="btn2"><img src="coin.png"></button>
-    <button class="coinBtn" id="btn3"><img src="coin.png"></button>
+    <button class="coinBtn" id="btn1" aria-label="按钮1"><img src="coin.png" alt="coin"></button>
+    <button class="coinBtn" id="btn2" aria-label="按钮2"><img src="coin.png" alt="coin"></button>
+    <button class="coinBtn" id="btn3" aria-label="按钮3"><img src="coin.png" alt="coin"></button>
   </div>
 
   <div class="status" id="status"></div>
+
 </div>
 
 <script>
-/* ===== 状态 ===== */
-let D = [1,1,3];
-let P = [0,1,2];
-const patterns = ["p0.png","p1.png","p2.png","p3.png"];
+/* ====== 资源 ====== */
+const patterns = ["p0.png","p1.png","p2.png","p3.png"]; // 4 图案
 
-/* 目标（示例） */
-const targetD=[4,7,2];
-const targetP=[0,2,3];
+/* ====== 状态 ====== */
+let D = [1, 1, 3];     // 位置1/2/3 数字（1..9）
+let P = [0, 1, 2];     // 位置1/2/3 图案（0..3）
 
-const digEls=[
+/* 目标（示例：你可改） */
+const targetD = [4, 7, 2];
+const targetP = [0, 2, 3];
+
+const digEls = [
   document.getElementById("dig1"),
   document.getElementById("dig2"),
   document.getElementById("dig3")
 ];
-const patEls=[
+const patEls = [
   document.getElementById("pat1"),
   document.getElementById("pat2"),
   document.getElementById("pat3")
 ];
 
-function incDigit(x){ return (x%9)+1; }
-function incPattern(x){ return (x+1)%patterns.length; }
+function incDigit(x){ return (x % 9) + 1; }
+function incPattern(x){ return (x + 1) % patterns.length; }
 
-/* 规则 */
+/* ====== 规则（按你最新要求） ======
+按钮1：控制 位置1数字 + 位置2图案
+按钮2：控制 位置2数字 + 位置3图案
+按钮3：所有数字统一 +1（图案不变）
+*/
 function applyRule(k){
-  if(k===1){
-    D[0]=incDigit(D[0]);
-    P[1]=incPattern(P[1]);
-  }else if(k===2){
-    P[0]=incPattern(P[0]);
-    D[1]=incDigit(D[1]);
-    D[2]=incDigit(D[2]);
-  }else if(k===3){
-    D[0]=incDigit(D[0]);
-    D[1]=incDigit(D[1]);
-    D[2]=incDigit(D[2]);
+  if(k === 1){
+    D[0] = incDigit(D[0]);     // 位置1数字
+    P[1] = incPattern(P[1]);   // 位置2图案
+  }else if(k === 2){
+    D[1] = incDigit(D[1]);     // 位置2数字
+    P[2] = incPattern(P[2]);   // 位置3图案
+  }else if(k === 3){
+    D[0] = incDigit(D[0]);
+    D[1] = incDigit(D[1]);
+    D[2] = incDigit(D[2]);
   }
 }
 
 function render(){
   for(let i=0;i<3;i++){
-    digEls[i].textContent=D[i];
-    patEls[i].src=patterns[P[i]];
+    digEls[i].textContent = String(D[i]);
+    patEls[i].src = patterns[P[i]];
   }
 }
 
-function check(){
+function checkWin(){
   for(let i=0;i<3;i++){
-    if(D[i]!==targetD[i]||P[i]!==targetP[i]) return;
+    if(D[i] !== targetD[i]) return;
+    if(P[i] !== targetP[i]) return;
   }
-  document.getElementById("status").textContent="success";
+  document.getElementById("status").textContent = "success";
 }
 
-btn1.onclick=()=>{applyRule(1);render();check();};
-btn2.onclick=()=>{applyRule(2);render();check();};
-btn3.onclick=()=>{applyRule(3);render();check();};
+/* 绑定按钮 */
+document.getElementById("btn1").onclick = () => { applyRule(1); render(); checkWin(); };
+document.getElementById("btn2").onclick = () => { applyRule(2); render(); checkWin(); };
+document.getElementById("btn3").onclick = () => { applyRule(3); render(); checkWin(); };
 
+/* 初次渲染 */
 render();
 </script>
 </body>
