@@ -11,10 +11,14 @@
       --stroke: #0b0f2e;
       --fill: #243B8F;
 
-      --cardMaxW: 340px;     /* 单张牌最大宽度 */
+      --cardMaxW: 340px;
       --gap: 14px;
 
-      --fadeMs: 260ms;       /* 切换渐进速度：越大越慢 */
+      /* 翻页速度（越大越慢） */
+      --flipMs: 340ms;
+
+      /* 按钮大小（你要求小一点） */
+      --btnSize: 62px;
     }
 
     html,body{height:100%;}
@@ -50,18 +54,31 @@
       overflow:hidden;
       background:#fff;
       box-shadow: 0 10px 28px rgba(0,0,0,0.10);
+
+      /* 3D 透视，为翻页服务 */
+      perspective: 1000px;
     }
 
-    /* 过渡层：用于淡入淡出 */
-    .layer{
+    /* 牌面内容层：真正做翻页的是它 */
+    .face{
       position:absolute;
       inset:0;
-      opacity: 1;
-      transition: opacity var(--fadeMs) ease;
-      will-change: opacity;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+
+      /* 默认状态 */
+      transform: rotateY(0deg);
+      transition: transform var(--flipMs) ease-in-out;
+      will-change: transform;
     }
-    .layer.fading{
-      opacity: 0;
+
+    /* 翻到一半（看不见正面内容），此时换图换字不会闪 */
+    .face.flipOut{
+      transform: rotateY(90deg);
+    }
+    /* 换完内容后翻回来 */
+    .face.flipIn{
+      transform: rotateY(0deg);
     }
 
     .pattern{
@@ -75,7 +92,6 @@
       pointer-events:none;
     }
 
-    /* 数字层：改为描边，不用多重阴影，避免重影 */
     .digitWrap{
       position:absolute;
       inset:0;
@@ -85,20 +101,20 @@
       pointer-events:none;
     }
 
+    /* 数字：再放大，并用描边避免重影 */
     .digit{
       font-family: "Cinzel", "Times New Roman", Georgia, serif;
-      /* 放大：你可以继续加大，比如把最大值从 230px 调到 260px */
-      font-size: clamp(130px, 16vw, 230px);
+      /* 更大：你如果还要更大，把最大值 280px 改到 320px */
+      font-size: clamp(150px, 18.5vw, 280px);
       line-height: 1;
       letter-spacing: 0.01em;
 
       color: var(--fill);
-      -webkit-text-stroke: 6px var(--stroke);
+      -webkit-text-stroke: 7px var(--stroke);
       paint-order: stroke fill;
 
-      /* 轻微立体感（单一阴影，不会产生重影） */
-      text-shadow: 0 5px 0 rgba(0,0,0,0.12);
-
+      /* 单一阴影，避免“重影感” */
+      text-shadow: 0 6px 0 rgba(0,0,0,0.12);
       user-select:none;
     }
 
@@ -111,21 +127,21 @@
 
     .buttons{
       display:flex;
-      gap: 22px;
+      gap: 18px;
       justify-content:center;
       align-items:center;
       margin-top: 10px;
     }
 
     .coinBtn{
-      width: 78px;
-      height: 78px;
+      width: var(--btnSize);
+      height: var(--btnSize);
       border:none;
       background: transparent;
       padding:0;
       cursor:pointer;
       border-radius: 999px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.14);
     }
     .coinBtn:disabled{
       cursor:not-allowed;
@@ -151,7 +167,7 @@
     @media (max-width: 820px){
       .cards{ grid-template-columns: 1fr; }
       .card{ max-width: min(94vw, 440px); }
-      .coinBtn{ width: 74px; height: 74px; }
+      :root{ --btnSize: 58px; }
     }
   </style>
 </head>
@@ -159,33 +175,24 @@
   <div class="wrap">
     <div class="cards">
 
-      <!-- Card 1 -->
       <div class="card">
-        <div class="layer" id="layer1">
+        <div class="face" id="face1">
           <img class="pattern" id="pat1" alt="pattern-1">
-          <div class="digitWrap">
-            <div class="digit" id="dig1">1</div>
-          </div>
+          <div class="digitWrap"><div class="digit" id="dig1">1</div></div>
         </div>
       </div>
 
-      <!-- Card 2 -->
       <div class="card">
-        <div class="layer" id="layer2">
+        <div class="face" id="face2">
           <img class="pattern" id="pat2" alt="pattern-2">
-          <div class="digitWrap">
-            <div class="digit" id="dig2">5</div>
-          </div>
+          <div class="digitWrap"><div class="digit" id="dig2">5</div></div>
         </div>
       </div>
 
-      <!-- Card 3 -->
       <div class="card">
-        <div class="layer" id="layer3">
+        <div class="face" id="face3">
           <img class="pattern" id="pat3" alt="pattern-3">
-          <div class="digitWrap">
-            <div class="digit" id="dig3">7</div>
-          </div>
+          <div class="digitWrap"><div class="digit" id="dig3">7</div></div>
         </div>
       </div>
 
@@ -194,49 +201,40 @@
     <div class="hint">点击下方金币切换上方牌面，组合正确后显示 success。</div>
 
     <div class="buttons">
-      <button class="coinBtn" id="btn1" aria-label="按钮1">
-        <img src="coin.png" alt="coin">
-      </button>
-      <button class="coinBtn" id="btn2" aria-label="按钮2">
-        <img src="coin.png" alt="coin">
-      </button>
-      <button class="coinBtn" id="btn3" aria-label="按钮3">
-        <img src="coin.png" alt="coin">
-      </button>
+      <button class="coinBtn" id="btn1" aria-label="按钮1"><img src="coin.png" alt="coin"></button>
+      <button class="coinBtn" id="btn2" aria-label="按钮2"><img src="coin.png" alt="coin"></button>
+      <button class="coinBtn" id="btn3" aria-label="按钮3"><img src="coin.png" alt="coin"></button>
     </div>
 
     <div class="status" id="status"></div>
   </div>
 
   <script>
-    // ====== 资源 ======
-    const patterns = ["p0.png", "p1.png", "p2.png", "p3.png"]; // 4 张图案
+    // 4 张图案（按顺序循环）
+    const patterns = ["p0.png", "p1.png", "p2.png", "p3.png"];
 
-    // ====== 状态 ======
     // 数字：1..9 循环；图案：0..3 循环
-    let D = [1, 5, 7];     // D1 D2 D3
-    let P = [2, 1, 1];     // P1 P2 P3
+    let D = [1, 5, 7];
+    let P = [2, 1, 1];
 
     // 目标（你可改）
     const targetD = [4, 7, 2];
     const targetP = [0, 2, 3]; // A=0,B=1,C=2,D=3
 
-    // ====== DOM ======
-    const digEls = [document.getElementById("dig1"), document.getElementById("dig2"), document.getElementById("dig3")];
-    const patEls = [document.getElementById("pat1"), document.getElementById("pat2"), document.getElementById("pat3")];
-    const layerEls = [document.getElementById("layer1"), document.getElementById("layer2"), document.getElementById("layer3")];
+    const digEls  = [document.getElementById("dig1"), document.getElementById("dig2"), document.getElementById("dig3")];
+    const patEls  = [document.getElementById("pat1"), document.getElementById("pat2"), document.getElementById("pat3")];
+    const faceEls = [document.getElementById("face1"), document.getElementById("face2"), document.getElementById("face3")];
     const statusEl = document.getElementById("status");
 
-    const btnEls = [null, document.getElementById("btn1"), document.getElementById("btn2"), document.getElementById("btn3")];
+    const btn1 = document.getElementById("btn1");
+    const btn2 = document.getElementById("btn2");
+    const btn3 = document.getElementById("btn3");
 
     function incDigit(x){ return (x % 9) + 1; }
     function incPattern(x){ return (x + 1) % patterns.length; }
 
-    // ====== 按钮规则（保持你之前那套“交叉 + 纠偏”）======
-    function pressButton(k){
-      // 防止疯狂连点导致过渡被打断
-      disableButtons(true);
-
+    // 按钮规则（保持之前那套）
+    function applyRule(k){
       if(k === 1){
         D[0] = incDigit(D[0]);
         P[1] = incPattern(P[1]);
@@ -249,45 +247,6 @@
         P[1] = incPattern(P[1]);
         P[2] = incPattern(P[2]);
       }
-
-      renderWithFade().then(() => {
-        checkWin();
-        disableButtons(false);
-      });
-    }
-
-    function disableButtons(disabled){
-      for(let i=1;i<=3;i++){
-        btnEls[i].disabled = disabled;
-      }
-    }
-
-    // ====== 渐进切换：先淡出 -> 换内容 -> 淡入 ======
-    function renderWithFade(){
-      const fadeMs = getFadeMs();
-
-      // 1) 淡出
-      layerEls.forEach(el => el.classList.add("fading"));
-
-      return new Promise((resolve) => {
-        // 2) 等淡出结束后换内容，再淡入
-        window.setTimeout(() => {
-          renderImmediate();
-          // 触发回流，确保淡入生效
-          void document.body.offsetHeight;
-          layerEls.forEach(el => el.classList.remove("fading"));
-
-          // 3) 等淡入结束
-          window.setTimeout(() => resolve(), fadeMs);
-        }, fadeMs);
-      });
-    }
-
-    function getFadeMs(){
-      // 从 CSS 变量读取（不写死）
-      const v = getComputedStyle(document.documentElement).getPropertyValue("--fadeMs").trim();
-      const n = parseInt(v.replace("ms",""), 10);
-      return Number.isFinite(n) ? n : 260;
     }
 
     function renderImmediate(){
@@ -309,17 +268,58 @@
     function checkWin(){
       if(isWin()){
         statusEl.textContent = "success";
-        // 成功后跳转下一关（需要就开启并改路径）
         // window.location.href = "../nextpage/";
       }
     }
 
-    // 绑定按钮
-    document.getElementById("btn1").addEventListener("click", ()=>pressButton(1));
-    document.getElementById("btn2").addEventListener("click", ()=>pressButton(2));
-    document.getElementById("btn3").addEventListener("click", ()=>pressButton(3));
+    function setButtonsDisabled(disabled){
+      btn1.disabled = disabled;
+      btn2.disabled = disabled;
+      btn3.disabled = disabled;
+    }
 
-    // 初次渲染
+    // 翻页切换：先 flipOut -> 换内容 -> flipIn
+    async function pressButton(k){
+      setButtonsDisabled(true);
+
+      // 1) 先翻到 90 度
+      faceEls.forEach(el => {
+        el.classList.remove("flipIn");
+        el.classList.add("flipOut");
+      });
+
+      const flipMs = getFlipMs();
+      await sleep(flipMs);
+
+      // 2) 在“看不见内容”的瞬间换状态（不会闪）
+      applyRule(k);
+      renderImmediate();
+
+      // 3) 翻回来
+      faceEls.forEach(el => {
+        el.classList.remove("flipOut");
+        el.classList.add("flipIn");
+      });
+
+      await sleep(flipMs);
+
+      checkWin();
+      setButtonsDisabled(false);
+    }
+
+    function getFlipMs(){
+      const v = getComputedStyle(document.documentElement).getPropertyValue("--flipMs").trim();
+      const n = parseInt(v.replace("ms",""), 10);
+      return Number.isFinite(n) ? n : 340;
+    }
+
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    btn1.addEventListener("click", ()=>pressButton(1));
+    btn2.addEventListener("click", ()=>pressButton(2));
+    btn3.addEventListener("click", ()=>pressButton(3));
+
+    // 首次渲染
     renderImmediate();
   </script>
 </body>
