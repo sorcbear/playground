@@ -9,20 +9,18 @@
 :root{
   --bg:#ffffff;
 
-  /* 外框与分隔线 */
   --outerLine:4px;
   --midLine:4px;
-  --lineColor:#000000;
+  --lineColor:#000;
   --radius:18px;
 
-  /* 数字样式（再小一点） */
-  --digitSize: 220px;
+  /* 字体再小一点 */
+  --digitSize:220px;
   --digitColor:#243B8F;
   --digitStroke:#0B0F2E;
   --digitStrokeW:6px;
   --digitShadow:0 4px 0 rgba(0,0,0,.14);
 
-  /* 按钮 */
   --btnSize:76px;
   --btnGap:44px;
 }
@@ -33,10 +31,10 @@ html,body{
   margin:0;
   padding:0;
   background:var(--bg);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
-/* 关闭移动端点击高亮（按钮不闪） */
+/* 防止手机按钮闪一下 */
 body{ -webkit-tap-highlight-color: transparent; }
 
 .wrap{
@@ -45,64 +43,56 @@ body{ -webkit-tap-highlight-color: transparent; }
   padding:0 10px;
 }
 
-/* 三张卡拼成一体：flex 三等分 */
+/* ===== 三张拼成一体 ===== */
 .strip{
   position:relative;
   display:flex;
   border:var(--outerLine) solid var(--lineColor);
   border-radius:var(--radius);
   overflow:hidden;
-  background:#fff;
 }
 
 .card{
   position:relative;
-  flex: 1 1 0;
-  background:#fff;
+  flex:1 1 0;
 }
 
 .pattern{
   display:block;
   width:100%;
-  height:auto; /* 等宽等比 -> 底边必齐 */
+  height:auto;
   user-select:none;
-  -webkit-user-drag:none;
   pointer-events:none;
 }
 
-/* 分隔线覆盖绘制，不参与布局 */
+/* 黑色分隔线（不参与布局） */
 .divider{
   position:absolute;
-  top:0;
-  bottom:0;
+  top:0; bottom:0;
   width:var(--midLine);
   background:var(--lineColor);
-  z-index:5;
   pointer-events:none;
 }
-.div1{ left:33.333333%; transform:translateX(-50%); }
-.div2{ left:66.666666%; transform:translateX(-50%); }
+.div1{ left:33.3333%; transform:translateX(-50%); }
+.div2{ left:66.6666%; transform:translateX(-50%); }
 
-/* 数字覆盖层 */
+/* 数字 */
 .digit{
   position:absolute;
   left:50%;
   top:50%;
-  transform:translate(-50%, -50%);
-
-  font-family:"Cinzel","Times New Roman",Georgia,serif;
-  font-size: var(--digitSize);
+  transform:translate(-50%,-50%);
+  font-family:"Cinzel","Times New Roman",serif;
+  font-size:var(--digitSize);
   line-height:1;
   color:var(--digitColor);
-
-  -webkit-text-stroke: var(--digitStrokeW) var(--digitStroke);
-  paint-order: stroke fill;
-
-  text-shadow: var(--digitShadow);
+  -webkit-text-stroke:var(--digitStrokeW) var(--digitStroke);
+  paint-order:stroke fill;
+  text-shadow:var(--digitShadow);
   user-select:none;
 }
 
-/* 按钮区 */
+/* 按钮 */
 .buttons{
   display:flex;
   justify-content:center;
@@ -114,25 +104,15 @@ body{ -webkit-tap-highlight-color: transparent; }
   width:var(--btnSize);
   height:var(--btnSize);
   border:none;
-  background:transparent;
+  background:none;
   padding:0;
   cursor:pointer;
-
-  outline:none;
-  -webkit-appearance:none;
   appearance:none;
-  touch-action: manipulation;
 }
-.coinBtn:focus,
-.coinBtn:focus-visible{ outline:none; }
-.coinBtn:active{ transform:none; filter:none; }
-
 .coinBtn img{
   width:100%;
   height:100%;
   display:block;
-  user-select:none;
-  -webkit-user-drag:none;
   pointer-events:none;
 }
 
@@ -144,9 +124,9 @@ body{ -webkit-tap-highlight-color: transparent; }
 }
 
 /* 手机适配 */
-@media (max-width: 900px){
+@media (max-width:900px){
   :root{
-    --digitSize: min(30vw, 210px);
+    --digitSize:min(30vw,210px);
     --btnSize:72px;
     --btnGap:38px;
     --outerLine:3px;
@@ -164,25 +144,25 @@ body{ -webkit-tap-highlight-color: transparent; }
     <div class="divider div2"></div>
 
     <div class="card">
-      <img class="pattern" id="pat1" src="p0.png" alt="p0">
+      <img class="pattern" id="pat1" src="p0.png">
       <div class="digit" id="dig1">1</div>
     </div>
 
     <div class="card">
-      <img class="pattern" id="pat2" src="p1.png" alt="p1">
+      <img class="pattern" id="pat2" src="p1.png">
       <div class="digit" id="dig2">1</div>
     </div>
 
     <div class="card">
-      <img class="pattern" id="pat3" src="p2.png" alt="p2">
+      <img class="pattern" id="pat3" src="p2.png">
       <div class="digit" id="dig3">3</div>
     </div>
   </div>
 
   <div class="buttons">
-    <button class="coinBtn" id="btn1" aria-label="按钮1"><img src="coin.png" alt="coin"></button>
-    <button class="coinBtn" id="btn2" aria-label="按钮2"><img src="coin.png" alt="coin"></button>
-    <button class="coinBtn" id="btn3" aria-label="按钮3"><img src="coin.png" alt="coin"></button>
+    <button class="coinBtn" id="btn1"><img src="coin.png"></button>
+    <button class="coinBtn" id="btn2"><img src="coin.png"></button>
+    <button class="coinBtn" id="btn3"><img src="coin.png"></button>
   </div>
 
   <div class="status" id="status"></div>
@@ -190,20 +170,23 @@ body{ -webkit-tap-highlight-color: transparent; }
 </div>
 
 <script>
-/* 3 种图案 */
+/* ===== 资源 ===== */
 const patterns = ["p0.png","p1.png","p2.png"];
 
-/* 状态：数字 0..9；图案 0..2 */
-let D = [1, 1, 3];
-let P = [0, 1, 2];
+/* ===== 当前状态 ===== */
+let D = [1, 1, 3];   // 数字 0–9
+let P = [0, 1, 2];   // 图案 0–2
 
-/* 正确答案：p0 / p0 / p0 + 105 */
-const targetP = [0, 0, 0];
-const targetD = [1, 0, 5];
+/* ===== 正确答案 ===== */
+const targetD = [1, 0, 5];   // 105
+const targetP = [0, 0, 0];   // 全 p0
 
+/* ===== DOM ===== */
 const digEls = [dig1, dig2, dig3];
 const patEls = [pat1, pat2, pat3];
+const statusEl = document.getElementById("status");
 
+/* ===== 工具 ===== */
 function incDigit(x){ return (x + 1) % 10; }
 function incPattern(x){ return (x + 1) % patterns.length; }
 
@@ -229,25 +212,30 @@ function applyRule(k){
   }
 }
 
+/* ===== 判定 ===== */
+function checkWin(){
+  for(let i=0;i<3;i++){
+    if(D[i] !== targetD[i]) return false;
+    if(P[i] !== targetP[i]) return false;
+  }
+  return true;
+}
+
+/* ===== 渲染（每次都检查 success） ===== */
 function render(){
   for(let i=0;i<3;i++){
     digEls[i].textContent = String(D[i]);
     patEls[i].src = patterns[P[i]];
   }
+  statusEl.textContent = checkWin() ? "success" : "";
 }
 
-function checkWin(){
-  for(let i=0;i<3;i++){
-    if(D[i] !== targetD[i]) return;
-    if(P[i] !== targetP[i]) return;
-  }
-  status.textContent = "success";
-}
+/* ===== 按钮 ===== */
+btn1.onclick = () => { applyRule(1); render(); };
+btn2.onclick = () => { applyRule(2); render(); };
+btn3.onclick = () => { applyRule(3); render(); };
 
-btn1.onclick = () => { applyRule(1); render(); checkWin(); };
-btn2.onclick = () => { applyRule(2); render(); checkWin(); };
-btn3.onclick = () => { applyRule(3); render(); checkWin(); };
-
+/* 初始化 */
 render();
 </script>
 </body>
