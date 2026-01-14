@@ -14,7 +14,7 @@
   --lineColor:#000;
   --radius:18px;
 
-  /* 字体再小一点 */
+  /* 数字大小（你想再调就改这里） */
   --digitSize:220px;
   --digitColor:#243B8F;
   --digitStroke:#0B0F2E;
@@ -34,7 +34,7 @@ html,body{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
-/* 防止手机按钮闪一下 */
+/* 防止手机点击按钮闪影 */
 body{ -webkit-tap-highlight-color: transparent; }
 
 .wrap{
@@ -50,11 +50,13 @@ body{ -webkit-tap-highlight-color: transparent; }
   border:var(--outerLine) solid var(--lineColor);
   border-radius:var(--radius);
   overflow:hidden;
+  background:#fff;
 }
 
 .card{
   position:relative;
   flex:1 1 0;
+  background:#fff;
 }
 
 .pattern{
@@ -65,7 +67,7 @@ body{ -webkit-tap-highlight-color: transparent; }
   pointer-events:none;
 }
 
-/* 黑色分隔线（不参与布局） */
+/* 分隔线覆盖绘制，不参与布局 */
 .divider{
   position:absolute;
   top:0; bottom:0;
@@ -108,19 +110,28 @@ body{ -webkit-tap-highlight-color: transparent; }
   padding:0;
   cursor:pointer;
   appearance:none;
+  outline:none;
+  touch-action: manipulation;
 }
+.coinBtn:focus,
+.coinBtn:focus-visible{ outline:none; }
+.coinBtn:active{ transform:none; filter:none; }
+
 .coinBtn img{
   width:100%;
   height:100%;
   display:block;
   pointer-events:none;
+  user-select:none;
 }
 
 .status{
   text-align:center;
   margin-top:14px;
-  min-height:22px;
-  font-weight:600;
+  min-height:28px;
+  font-weight:800;
+  font-size:24px;
+  color:#000; /* 固定黑色，避免看不见 */
 }
 
 /* 手机适配 */
@@ -132,6 +143,7 @@ body{ -webkit-tap-highlight-color: transparent; }
     --outerLine:3px;
     --midLine:3px;
   }
+  .status{ font-size:22px; }
 }
 </style>
 </head>
@@ -144,25 +156,25 @@ body{ -webkit-tap-highlight-color: transparent; }
     <div class="divider div2"></div>
 
     <div class="card">
-      <img class="pattern" id="pat1" src="p0.png">
+      <img class="pattern" id="pat1" src="p0.png" alt="p0">
       <div class="digit" id="dig1">1</div>
     </div>
 
     <div class="card">
-      <img class="pattern" id="pat2" src="p1.png">
+      <img class="pattern" id="pat2" src="p1.png" alt="p1">
       <div class="digit" id="dig2">1</div>
     </div>
 
     <div class="card">
-      <img class="pattern" id="pat3" src="p2.png">
+      <img class="pattern" id="pat3" src="p2.png" alt="p2">
       <div class="digit" id="dig3">3</div>
     </div>
   </div>
 
   <div class="buttons">
-    <button class="coinBtn" id="btn1"><img src="coin.png"></button>
-    <button class="coinBtn" id="btn2"><img src="coin.png"></button>
-    <button class="coinBtn" id="btn3"><img src="coin.png"></button>
+    <button class="coinBtn" id="btn1" aria-label="按钮1"><img src="coin.png" alt="coin"></button>
+    <button class="coinBtn" id="btn2" aria-label="按钮2"><img src="coin.png" alt="coin"></button>
+    <button class="coinBtn" id="btn3" aria-label="按钮3"><img src="coin.png" alt="coin"></button>
   </div>
 
   <div class="status" id="status"></div>
@@ -171,48 +183,58 @@ body{ -webkit-tap-highlight-color: transparent; }
 
 <script>
 /* ===== 资源 ===== */
-const patterns = ["p0.png","p1.png","p2.png"];
+const patterns = ["p0.png","p1.png","p2.png"]; // 3种图案
+
+/* ===== 数字范围：0..6（更简单） ===== */
+const DIGIT_MOD = 7;
 
 /* ===== 当前状态 ===== */
-let D = [1, 1, 3];   // 数字 0–9
-let P = [0, 1, 2];   // 图案 0–2
+let D = [1, 1, 3];   // D1 D2 D3  (0..6)
+let P = [0, 1, 2];   // P1 P2 P3  (0..2)
 
-/* ===== 正确答案 ===== */
-const targetD = [1, 0, 5];   // 105
-const targetP = [0, 0, 0];   // 全 p0
+/* ===== 正确答案：全 p0 + 105 ===== */
+const targetD = [1, 0, 5];
+const targetP = [0, 0, 0];
 
-/* ===== DOM ===== */
-const digEls = [dig1, dig2, dig3];
-const patEls = [pat1, pat2, pat3];
+/* ===== DOM（全部显式获取，避免某些浏览器不生成全局变量） ===== */
+const digEls = [
+  document.getElementById("dig1"),
+  document.getElementById("dig2"),
+  document.getElementById("dig3"),
+];
+const patEls = [
+  document.getElementById("pat1"),
+  document.getElementById("pat2"),
+  document.getElementById("pat3"),
+];
 const statusEl = document.getElementById("status");
 
-/* ===== 工具 ===== */
-function incDigit(x){ return (x + 1) % 10; }
+const btn1 = document.getElementById("btn1");
+const btn2 = document.getElementById("btn2");
+const btn3 = document.getElementById("btn3");
+
+function incDigit(x){ return (x + 1) % DIGIT_MOD; }
 function incPattern(x){ return (x + 1) % patterns.length; }
 
-/* ===== 有纠缠但不难的规则 =====
-按钮1：P1+1, P2+1；D1+1, D2+1
-按钮2：P2+1, P3+1；D2+1, D3+1
-按钮3：P3+1；D3+1
+/* ===== 新规则（你指定的纠缠版）=====
+按钮1：控制 位置1的数字 + 位置2的图案
+按钮2：控制 位置1的图案 + 位置2的数字 + 位置3的数字
+按钮3：控制 位置3的数字 + 位置3的图案
 */
 function applyRule(k){
   if(k === 1){
-    P[0] = incPattern(P[0]);
-    P[1] = incPattern(P[1]);
-    D[0] = incDigit(D[0]);
-    D[1] = incDigit(D[1]);
+    D[0] = incDigit(D[0]);       // D1
+    P[1] = incPattern(P[1]);     // P2
   }else if(k === 2){
-    P[1] = incPattern(P[1]);
-    P[2] = incPattern(P[2]);
-    D[1] = incDigit(D[1]);
-    D[2] = incDigit(D[2]);
+    P[0] = incPattern(P[0]);     // P1
+    D[1] = incDigit(D[1]);       // D2
+    D[2] = incDigit(D[2]);       // D3
   }else if(k === 3){
-    P[2] = incPattern(P[2]);
-    D[2] = incDigit(D[2]);
+    D[2] = incDigit(D[2]);       // D3
+    P[2] = incPattern(P[2]);     // P3
   }
 }
 
-/* ===== 判定 ===== */
 function checkWin(){
   for(let i=0;i<3;i++){
     if(D[i] !== targetD[i]) return false;
@@ -221,7 +243,6 @@ function checkWin(){
   return true;
 }
 
-/* ===== 渲染（每次都检查 success） ===== */
 function render(){
   for(let i=0;i<3;i++){
     digEls[i].textContent = String(D[i]);
@@ -230,12 +251,12 @@ function render(){
   statusEl.textContent = checkWin() ? "success" : "";
 }
 
-/* ===== 按钮 ===== */
+/* 绑定按钮 */
 btn1.onclick = () => { applyRule(1); render(); };
 btn2.onclick = () => { applyRule(2); render(); };
 btn3.onclick = () => { applyRule(3); render(); };
 
-/* 初始化 */
+/* 初始化：也检查 success */
 render();
 </script>
 </body>
