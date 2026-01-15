@@ -6,39 +6,91 @@
 <title>Piano Puzzle</title>
 
 <style>
-  html,body{
-    margin:0;background:#fff;color:#111;
-    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
-    user-select:none;-webkit-tap-highlight-color:transparent;
-  }
-  .wrap{max-width:1100px;margin:0 auto;padding:6px 8px;box-sizing:border-box;}
-  .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 4px;}
-  .status{font-size:14px;min-height:18px;line-height:18px;flex:1 1 240px;margin:0;}
-  .btns{display:flex;gap:8px;flex:0 0 auto;}
-  button{border:none;border-radius:10px;background:#111;color:#fff;padding:8px 10px;font-size:14px;cursor:pointer;}
-  button:active{transform:translateY(1px)}
-  .ok{background:#12b76a;color:#052;font-weight:700}
-  .hint{font-size:14px;line-height:1.35;margin:0 0 6px;}
-  .small{font-size:12px;opacity:.75;margin-top:2px;line-height:1.25;}
+html,body{
+  margin:0;
+  background:#fff;
+  color:#111;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.wrap{
+  max-width:1100px;
+  margin:0 auto;
+  padding:6px 8px;
+  box-sizing:border-box;
+}
+.topbar{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  margin-bottom:4px;
+}
+.status{
+  font-size:14px;
+  min-height:18px;
+  flex:1 1 240px;
+}
+.btns{display:flex;gap:8px;}
+button{
+  border:none;
+  border-radius:10px;
+  background:#111;
+  color:#fff;
+  padding:8px 10px;
+  font-size:14px;
+}
+.ok{background:#12b76a;font-weight:700;color:#052;}
+.hint{font-size:14px;margin-bottom:6px;}
+.small{font-size:12px;opacity:.7;}
 
-  .kbd{position:relative;width:100%;overflow:hidden;background:#fff;box-shadow:none;touch-action:none;margin:0;}
-  .kbd::before{content:"";display:block;padding-top:34%;}
-  .kbd-inner{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;}
-  #kbdImg{width:100%;height:100%;object-fit:contain;object-position:center top;display:block;pointer-events:none;background:#fff;}
+.kbd{
+  position:relative;
+  width:100%;
+  overflow:hidden;
+  background:#fff;
+  touch-action:none;
+}
+.kbd::before{content:"";display:block;padding-top:34%;}
+.kbd-inner{
+  position:absolute;inset:0;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+}
+#kbdImg{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center top;
+  pointer-events:none;
+}
 
-  .overlay{position:absolute;inset:0;pointer-events:none;}
-  .segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,150,80,.60);background:rgba(0,150,80,.06);display:none;}
-  .debug .segbox{display:block;}
-  .flash{position:absolute;top:56%;height:44%;background:rgba(0,0,0,0.10);border-radius:10px;opacity:0;transition:opacity 70ms linear;}
-  .flash.on{opacity:1;}
+.overlay{position:absolute;inset:0;pointer-events:none;}
+.seg{
+  position:absolute;top:0;bottom:0;
+  outline:1px solid rgba(0,160,90,.7);
+  background:rgba(0,160,90,.06);
+  display:none;
+}
+.debug .seg{display:block;}
 
-  @media (orientation: landscape){
-    .wrap{padding:4px 8px;}
-    .topbar{margin-bottom:3px;}
-    .hint{margin-bottom:4px;}
-    button{padding:7px 10px;}
-    .kbd::before{padding-top:26%;}
-  }
+.flash{
+  position:absolute;
+  top:55%;
+  height:45%;
+  background:rgba(0,0,0,.12);
+  border-radius:10px;
+  opacity:0;
+  transition:opacity 80ms;
+}
+.flash.on{opacity:1;}
+
+@media (orientation:landscape){
+  .kbd::before{padding-top:26%;}
+}
 </style>
 </head>
 
@@ -54,417 +106,211 @@
   </div>
 
   <div class="hint">
-    建议横屏操作。只要按对音符顺序即可；相邻两次点击间隔必须 ≤ 5 秒（超时则重置）。
-    <div class="small">iPhone：先点一次“启用声音”。</div>
+    建议横屏操作；相邻两次点击间隔 ≤ 5 秒。
+    <div class="small">iPhone：需先点击“启用声音”。</div>
   </div>
 
   <div class="kbd" id="kbd">
     <div class="kbd-inner">
-      <img id="kbdImg" src="./keyboard.png" alt="keyboard" />
+      <img id="kbdImg" src="./keyboard.png">
     </div>
     <div class="overlay" id="overlay"></div>
   </div>
 </div>
 
 <script>
-(() => {
-  /* =========================
-     固定：你这张图就是 12 键；最左是 green si
-  ========================= */
-  const FIX_N = 12;
-  const FIX_OFFSET = 2; // green so(0) green la(1) green si(2) —— 你的图从 si 开始
+(()=>{
+/* ================= 固定配置 ================= */
+const KEY_COUNT = 12;
+const OFFSET = 2; // 最左是 green si
+const MAX_GAP = 5;
 
-  /* =========================
-     16 键总模板（完整键盘）
-  ========================= */
-  const KEYS = [
-    {c:"green",n:"so",m:55},
-    {c:"green",n:"la",m:57},
-    {c:"green",n:"si",m:59},
-    {c:"red",n:"do",m:60},
-    {c:"red",n:"re",m:62},
-    {c:"red",n:"mi",m:64},
-    {c:"red",n:"fa",m:65},
-    {c:"red",n:"so",m:67},
-    {c:"red",n:"la",m:69},
-    {c:"red",n:"si",m:71},
-    {c:"blue",n:"do",m:72},
-    {c:"blue",n:"re",m:74},
-    {c:"blue",n:"mi",m:76},
-    {c:"blue",n:"fa",m:77},
-    {c:"blue",n:"so",m:79},
-    {c:"blue",n:"la",m:81},
-  ];
+/* ================ 键映射 ================= */
+const KEYS = [
+  ["green","so",55],["green","la",57],["green","si",59],
+  ["red","do",60],["red","re",62],["red","mi",64],["red","fa",65],
+  ["red","so",67],["red","la",69],["red","si",71],
+  ["blue","do",72],["blue","re",74],["blue","mi",76],["blue","fa",77],
+  ["blue","so",79],["blue","la",81]
+];
 
-  const target = [
-    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
-    ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
-    ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
-    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
-  ];
+const TARGET = [
+  ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
+  ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
+  ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
+  ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"]
+];
 
-  const MAX_GAP = 5.0;
+/* ================ DOM ================= */
+const img=document.getElementById("kbdImg");
+const kbd=document.getElementById("kbd");
+const overlay=document.getElementById("overlay");
+const statusEl=document.getElementById("status");
 
-  /* =========================
-     WebAudio
-  ========================= */
-  let audioCtx=null, audioEnabled=false;
-  function ensureAudioCtx(){
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if(!audioCtx) audioCtx = new AC();
-    return audioCtx;
+const audioBtn=document.getElementById("audioBtn");
+const resetBtn=document.getElementById("resetBtn");
+const debugBtn=document.getElementById("debugBtn");
+
+/* ================ Audio ================= */
+let ctx=null, audioOn=false;
+async function enableAudio(){
+  ctx ||= new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state==="suspended") await ctx.resume();
+  audioOn=true;
+}
+function freq(m){return 440*Math.pow(2,(m-69)/12);}
+function play(m){
+  if(!audioOn) return;
+  const o=ctx.createOscillator();
+  const g=ctx.createGain();
+  o.type="sine";
+  o.frequency.value=freq(m);
+  g.gain.setValueAtTime(.0001,ctx.currentTime);
+  g.gain.linearRampToValueAtTime(.3,ctx.currentTime+.02);
+  g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+1.2);
+  o.connect(g).connect(ctx.destination);
+  o.start(); o.stop(ctx.currentTime+1.25);
+}
+
+/* ================ 定位核心 ================= */
+let bounds=null, segs=[], flash=null;
+
+function detectBoundaries(){
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  const cvs=document.createElement("canvas");
+  cvs.width=iw; cvs.height=ih;
+  const c=cvs.getContext("2d",{willReadFrequently:true});
+  c.drawImage(img,0,0);
+  const y0=Math.floor(ih*0.66), y1=Math.floor(ih*0.9);
+  const h=y1-y0;
+  const d=c.getImageData(0,y0,iw,h).data;
+  const col=new Float32Array(iw);
+  for(let x=0;x<iw;x++){
+    let s=0;
+    for(let y=0;y<h;y++){
+      const i=(y*iw+x)*4;
+      if(d[i]<60 && d[i+1]<60 && d[i+2]<60) s++;
+    }
+    col[x]=s;
   }
-  async function enableAudio(){
-    const ctx = ensureAudioCtx();
-    if(ctx.state==="suspended") await ctx.resume();
-    audioEnabled = true;
-  }
-  function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
-  function playTone(freq, duration=1.20){
-    if(!audioEnabled || !audioCtx) return;
-    const now = audioCtx.currentTime;
+  const base=[...col].sort((a,b)=>a-b)[iw>>1];
+  for(let i=0;i<iw;i++) col[i]=Math.max(0,col[i]-base);
 
-    const o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), o3=audioCtx.createOscillator();
-    o1.type="sine"; o2.type="triangle"; o3.type="square";
-    o1.frequency.setValueAtTime(freq, now);
-    o2.frequency.setValueAtTime(freq*2, now);
-    o3.frequency.setValueAtTime(freq*4, now);
-
-    const g1=audioCtx.createGain(); g1.gain.value=1.0;
-    const g2=audioCtx.createGain(); g2.gain.value=0.55;
-    const g3=audioCtx.createGain(); g3.gain.value=0.07;
-
-    const amp=audioCtx.createGain();
-    amp.gain.setValueAtTime(0.0001, now);
-    amp.gain.linearRampToValueAtTime(0.32, now+0.015);
-    amp.gain.exponentialRampToValueAtTime(0.0001, now+duration);
-
-    const lp=audioCtx.createBiquadFilter();
-    lp.type="lowpass";
-    lp.frequency.setValueAtTime(Math.min(freq*6, 9000), now);
-    lp.Q.value=0.85;
-
-    o1.connect(g1); g1.connect(amp);
-    o2.connect(g2); g2.connect(amp);
-    o3.connect(g3); g3.connect(amp);
-    amp.connect(lp); lp.connect(audioCtx.destination);
-
-    o1.start(now); o2.start(now); o3.start(now);
-    const stopAt = now+duration+0.12;
-    o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
-  }
-
-  /* =========================
-     DOM
-  ========================= */
-  const kbd=document.getElementById("kbd");
-  const img=document.getElementById("kbdImg");
-  const overlay=document.getElementById("overlay");
-  const statusEl=document.getElementById("status");
-  const audioBtn=document.getElementById("audioBtn");
-  const resetBtn=document.getElementById("resetBtn");
-  const debugBtn=document.getElementById("debugBtn");
-
-  let debug=false;
-  let boundaries=null; // length FIX_N+1
-  let segBoxes=[];
-  let flashEl=null;
-
-  function getImageDrawRect(){
-    const cr = kbd.getBoundingClientRect();
-    const cw=cr.width, ch=cr.height;
-    const iw=img.naturalWidth||1024, ih=img.naturalHeight||461;
-    const scale=Math.min(cw/iw, ch/ih);
-    const dw=iw*scale, dh=ih*scale;
-    const dx=cr.left+(cw-dw)/2;
-    const dy=cr.top +(ch-dh)/2;
-    return {dx,dy,dw,dh,iw,ih,cw,ch};
+  const smooth=new Float32Array(iw);
+  for(let x=0;x<iw;x++){
+    let s=0,cnt=0;
+    for(let k=-5;k<=5;k++){
+      if(col[x+k]!=null){s+=col[x+k];cnt++;}
+    }
+    smooth[x]=s/cnt;
   }
 
-  function fallbackEqualBoundaries(n){
-    const iw = img.naturalWidth || 1024;
-    const bds=[0];
-    for(let i=1;i<n;i++) bds.push(Math.round(iw*i/n));
-    bds.push(iw);
-    return bds;
-  }
-
-  /* =========================
-     关键修复：用“黑色竖分隔线”检测 12 键边界
-     - 在白键区域（中下部）取一条横向带状区域
-     - 统计每个 x 上的“黑像素数量”
-     - 找出 11 条最强峰（即 12 键的分隔线）
-  ========================= */
-  function detectBoundaries12BySeparators(){
-    const iw=img.naturalWidth, ih=img.naturalHeight;
-    if(!iw||!ih) return null;
-
-    const canvas=document.createElement("canvas");
-    canvas.width=iw; canvas.height=ih;
-    const ctx=canvas.getContext("2d",{willReadFrequently:true});
-    ctx.drawImage(img,0,0,iw,ih);
-
-    // 选白键分隔线最明显的区域：大约 62% ~ 98%
-    const y0=Math.floor(ih*0.62);
-    const y1=Math.floor(ih*0.98);
-    const h=Math.max(1,y1-y0);
-    const data=ctx.getImageData(0,y0,iw,h).data;
-
-    // darkScore[x] = 该竖列中“黑像素”的数量
-    const darkScore=new Float32Array(iw);
-    for(let x=0;x<iw;x++){
-      let s=0;
-      for(let y=0;y<h;y++){
-        const i=(y*iw+x)*4;
-        const r=data[i], g=data[i+1], b=data[i+2];
-        // 分隔线是接近纯黑：阈值可稍宽
-        if(r<60 && g<60 && b<60) s++;
-      }
-      darkScore[x]=s;
-    }
-
-    // 平滑一下
-    const smooth=new Float32Array(iw);
-    const W=6;
-    let maxv=0;
-    for(let x=0;x<iw;x++){
-      let sum=0,cnt=0;
-      for(let k=-W;k<=W;k++){
-        const xx=x+k;
-        if(xx>=0 && xx<iw){ sum+=darkScore[xx]; cnt++; }
-      }
-      const v=sum/cnt;
-      smooth[x]=v;
-      if(v>maxv) maxv=v;
-    }
-    if(maxv < h*0.12) return null;
-
-    // 找局部峰值
-    const thresh = maxv*0.45; // 只取明显分隔线
-    const peaks=[];
-    for(let x=2;x<iw-2;x++){
-      const v=smooth[x];
-      if(v < thresh) continue;
-      if(v>=smooth[x-1] && v>=smooth[x+1] && v>=smooth[x-2] && v>=smooth[x+2]){
-        peaks.push([x,v]);
-      }
-    }
-    if(peaks.length < 6) return null;
-
-    // 按峰值强度排序，做“最小间距抑制”，取 11 条分隔线
-    peaks.sort((a,b)=>b[1]-a[1]);
-
-    const need = FIX_N-1; // 11
-    const minDist = Math.floor(iw / (FIX_N*1.25)); // 大概每键宽的 0.8 倍
-    const chosen=[];
-
-    for(const [x,v] of peaks){
-      let ok=true;
-      for(const cx of chosen){
-        if(Math.abs(x-cx) < minDist){ ok=false; break; }
-      }
-      if(!ok) continue;
-      // 避免贴边（外框）
-      if(x < iw*0.02 || x > iw*0.98) continue;
-      chosen.push(x);
-      if(chosen.length===need) break;
-    }
-
-    if(chosen.length !== need){
-      // 如果没选满，说明阈值太高或图异常，兜底失败
-      return null;
-    }
-
-    chosen.sort((a,b)=>a-b);
-
-    // 边界：0 + 11条分隔线 + iw
-    const bds=[0, ...chosen, iw];
-
-    // 单调修正
-    for(let i=1;i<bds.length;i++){
-      if(bds[i]<=bds[i-1]) bds[i]=bds[i-1]+1;
-    }
-
-    return bds;
-  }
-
-  function buildOverlay(){
-    overlay.innerHTML="";
-    segBoxes=[];
-    flashEl=null;
-
-    if(!boundaries) return;
-
-    for(let i=0;i<FIX_N;i++){
-      const box=document.createElement("div");
-      box.className="segbox";
-      overlay.appendChild(box);
-      segBoxes.push(box);
-    }
-    flashEl=document.createElement("div");
-    flashEl.className="flash";
-    overlay.appendChild(flashEl);
-
-    layoutOverlay();
-  }
-
-  function layoutOverlay(){
-    if(!boundaries || segBoxes.length!==FIX_N) return;
-    const r = getImageDrawRect();
-    const leftPad = (r.cw - r.dw)/2;
-
-    for(let i=0;i<FIX_N;i++){
-      const x0 = boundaries[i]   / r.iw * r.dw + leftPad;
-      const x1 = boundaries[i+1] / r.iw * r.dw + leftPad;
-      segBoxes[i].style.left = x0 + "px";
-      segBoxes[i].style.width = Math.max(0, x1-x0) + "px";
+  const peaks=[];
+  const max=Math.max(...smooth);
+  for(let x=2;x<iw-2;x++){
+    if(smooth[x]>max*0.45 &&
+       smooth[x]>=smooth[x-1] &&
+       smooth[x]>=smooth[x+1]){
+      peaks.push(x);
     }
   }
 
-  function flashKey(localIdx){
-    if(!flashEl || !boundaries) return;
-    const r = getImageDrawRect();
-    const leftPad = (r.cw - r.dw)/2;
-
-    const x0 = boundaries[localIdx]   / r.iw * r.dw + leftPad;
-    const x1 = boundaries[localIdx+1] / r.iw * r.dw + leftPad;
-    flashEl.style.left = x0 + "px";
-    flashEl.style.width = Math.max(6, x1-x0) + "px";
-    flashEl.classList.add("on");
-    setTimeout(()=>flashEl.classList.remove("on"), 90);
+  const need=11;
+  const chosen=[];
+  const minDist=iw/(KEY_COUNT*1.1);
+  for(const x of peaks){
+    if(chosen.every(v=>Math.abs(v-x)>minDist)) chosen.push(x);
+    if(chosen.length===need) break;
   }
+  chosen.sort((a,b)=>a-b);
 
-  function pointToLocalIndex(clientX, clientY){
-    const r = getImageDrawRect();
-    if(clientX<r.dx || clientX>r.dx+r.dw || clientY<r.dy || clientY>r.dy+r.dh) return null;
-
-    const yNat = (clientY-r.dy)/r.dh*r.ih;
-    if(yNat < r.ih*0.52) return null;
-
-    const xNat = (clientX-r.dx)/r.dw*r.iw;
-    const bds = boundaries || fallbackEqualBoundaries(FIX_N);
-
-    let lo=0, hi=FIX_N-1;
-    while(lo<=hi){
-      const mid=(lo+hi)>>1;
-      if(xNat < bds[mid]) hi=mid-1;
-      else if(xNat >= bds[mid+1]) lo=mid+1;
-      else return mid;
-    }
-    return null;
-  }
-
-  /* =========================
-     判定：globalIdx = FIX_OFFSET + localIdx
-  ========================= */
-  let step=0;
-  let lastTime=null;
-
-  function reset(msg="未开始"){
-    step=0; lastTime=null;
-    statusEl.textContent=msg;
-    statusEl.style.color="#111";
-  }
-  function fail(msg){
-    reset("失败：" + msg + "（已重置）");
-    statusEl.style.color="#b42318";
-  }
-  function timeoutReset(){
-    reset("已超时，请重新完整弹奏。");
-    statusEl.style.color="#b42318";
-  }
-
-  function pressLocal(localIdx){
-    const globalIdx = FIX_OFFSET + localIdx;
-    if(globalIdx < 0 || globalIdx >= 16) return;
-
-    flashKey(localIdx);
-
-    const key = KEYS[globalIdx];
-    if(audioEnabled) playTone(midiToFreq(key.m), 1.20);
-
-    const now = performance.now()/1000;
-    if(lastTime !== null && (now-lastTime) > MAX_GAP){
-      timeoutReset();
-      return;
-    }
-    lastTime = now;
-
-    if(step >= target.length) return;
-
-    const [tc, tn] = target[step];
-    const needIdx = KEYS.findIndex(k => k.c===tc && k.n===tn);
-    if(needIdx < 0){ fail("内部配置错误"); return; }
-
-    if(needIdx < FIX_OFFSET || needIdx >= FIX_OFFSET + FIX_N){
-      fail("当前键盘图片缺少必要琴键，请使用包含该音的键盘图");
-      return;
-    }
-
-    if(globalIdx !== needIdx){
-      fail(`音符错误：应为 ${tc}${tn}`);
-      return;
-    }
-
-    step++;
-    if(step === target.length){
-      statusEl.textContent="success";
-      statusEl.style.color="#067647";
-    } else {
-      statusEl.textContent=`进度 ${step}/${target.length}`;
-      statusEl.style.color="#111";
-    }
-  }
-
-  /* =========================
-     事件：pointerdown + 去抖
-  ========================= */
-  let lastDownAt = 0;
-  function handlePointerDown(ev){
-    const t = performance.now();
-    if(t - lastDownAt < 50) return;
-    lastDownAt = t;
-
-    ev.preventDefault();
-    const localIdx = pointToLocalIndex(ev.clientX, ev.clientY);
-    if(localIdx === null) return;
-    pressLocal(localIdx);
-  }
-  kbd.addEventListener("pointerdown", handlePointerDown, {passive:false});
-  window.addEventListener("resize", ()=>layoutOverlay());
-
-  /* =========================
-     按钮
-  ========================= */
-  audioBtn.addEventListener("click", async ()=>{
-    try{
-      await enableAudio();
-      audioBtn.textContent="声音已启用";
-      audioBtn.disabled=true;
-      statusEl.textContent="声音已启用，开始弹奏";
-      statusEl.style.color="#067647";
-    }catch(e){
-      statusEl.textContent="启用声音失败（请再点一次）";
-      statusEl.style.color="#b42318";
-    }
-  });
-  resetBtn.addEventListener("click", ()=>reset("已重置"));
-  debugBtn.addEventListener("click", ()=>{
-    debug = !debug;
-    document.body.classList.toggle("debug", debug);
-    debugBtn.textContent = debug ? "Debug On" : "Debug";
+  const refined=chosen.map(x=>{
+    let l=x,r=x;
+    while(smooth[l]>smooth[x]*.5) l--;
+    while(smooth[r]>smooth[x]*.5) r++;
+    return Math.round((l+r)/2);
   });
 
-  /* =========================
-     图片加载 -> 用黑分隔线取边界（更精确）
-  ========================= */
-  img.addEventListener("load", ()=>{
-    boundaries = detectBoundaries12BySeparators() || fallbackEqualBoundaries(FIX_N);
-    buildOverlay();
-    reset("未开始");
-  });
+  return [0,...refined,iw];
+}
 
-  reset("未开始");
+function layout(){
+  overlay.innerHTML="";
+  segs=[];
+  const r=kbd.getBoundingClientRect();
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  const scale=Math.min(r.width/iw,r.height/ih);
+  const dw=iw*scale;
+  const pad=(r.width-dw)/2;
+  for(let i=0;i<KEY_COUNT;i++){
+    const s=document.createElement("div");
+    s.className="seg";
+    s.style.left=(bounds[i]/iw*dw+pad)+"px";
+    s.style.width=((bounds[i+1]-bounds[i])/iw*dw)+"px";
+    overlay.appendChild(s);
+    segs.push(s);
+  }
+  flash=document.createElement("div");
+  flash.className="flash";
+  overlay.appendChild(flash);
+}
+
+function locate(x,y){
+  const r=kbd.getBoundingClientRect();
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  const scale=Math.min(r.width/iw,r.height/ih);
+  const dw=iw*scale, dh=ih*scale;
+  const dx=(r.width-dw)/2;
+  if(x<dx||x>dx+dw) return null;
+  const nx=(x-dx)/dw*iw;
+  for(let i=0;i<KEY_COUNT;i++){
+    if(nx>=bounds[i]&&nx<bounds[i+1]) return i;
+  }
+  return null;
+}
+
+/* ================ 判定 ================= */
+let step=0,lastT=null;
+function reset(msg="未开始"){
+  step=0; lastT=null;
+  statusEl.textContent=msg;
+}
+function press(i){
+  const g=i+OFFSET;
+  flash.style.left=segs[i].style.left;
+  flash.style.width=segs[i].style.width;
+  flash.classList.add("on");
+  setTimeout(()=>flash.classList.remove("on"),80);
+  play(KEYS[g][2]);
+
+  const now=performance.now()/1000;
+  if(lastT&&now-lastT>MAX_GAP) return reset("已超时，请重新完整弹奏");
+  lastT=now;
+
+  const [c,n]=TARGET[step];
+  const idx=KEYS.findIndex(k=>k[0]===c&&k[1]===n);
+  if(g!==idx) return reset(`失败：应为 ${c}${n}`);
+  step++;
+  statusEl.textContent=step===TARGET.length?"success":`进度 ${step}/${TARGET.length}`;
+}
+
+/* ================ 事件 ================= */
+kbd.addEventListener("pointerdown",e=>{
+  const i=locate(e.clientX,e.clientY);
+  if(i!=null) press(i);
+},{passive:false});
+
+audioBtn.onclick=async()=>{
+  await enableAudio();
+  audioBtn.textContent="声音已启用";
+};
+resetBtn.onclick=()=>reset("已重置");
+debugBtn.onclick=()=>document.body.classList.toggle("debug");
+
+img.onload=()=>{
+  bounds=detectBoundaries();
+  layout();
+};
 })();
 </script>
 </body>
