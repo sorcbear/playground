@@ -1,426 +1,262 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Piano Puzzle</title>
-  <style>
-    :root{
-      --panel-w: 1100px;
-      --radius: 12px;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #000;
-      color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Segoe UI", Roboto, Arial, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Piano Puzzle</title>
 
-    .wrap{
-      max-width: var(--panel-w);
-      margin: 0 auto;
-      padding: 14px 12px 24px;
-      box-sizing: border-box;
-    }
+<style>
+html,body{
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  user-select:none;
+}
 
-    .hint{
-      font-size: 14px;
-      line-height: 1.5;
-      opacity: 0.9;
-      margin: 4px 2px 10px;
-    }
+.wrap{
+  max-width:1100px;
+  margin:0 auto;
+  padding:14px;
+}
 
-    .kbd{
-      position: relative;
-      width: 100%;
-      border-radius: var(--radius);
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.55);
-      background: #111;
-    }
+.hint{
+  font-size:14px;
+  opacity:.9;
+  margin-bottom:10px;
+}
 
-    /* 让容器按图片比例显示：你的图大约 1024x461，宽高比约 2.22 */
-    .kbd::before{
-      content: "";
-      display: block;
-      padding-top: 45.1%; /* 约等于 461/1024 */
-    }
+.kbd{
+  position:relative;
+  width:100%;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);
+}
+.kbd::before{
+  content:"";
+  display:block;
+  padding-top:45.1%;
+}
+.kbd-bg{
+  position:absolute;
+  inset:0;
+  background:url("./keyboard.png") center/cover no-repeat;
+}
 
-    .kbd-bg{
-      position:absolute;
-      inset:0;
-      background: url("./keyboard.png") center/cover no-repeat;
-    }
+/* 16 个白键点击区 */
+.keys{
+  position:absolute;
+  inset:0;
+  display:flex;
+}
+.key{
+  flex:1;
+}
+.key.active{
+  background:rgba(255,255,255,.08);
+}
 
-    /* 白键点击区：16 个等分（3绿 + 7红 + 6蓝） */
-    .keys{
-      position:absolute;
-      inset:0;
-      display:flex;
-    }
-    .key{
-      flex:1;
-      position:relative;
-      cursor:pointer;
-      /* 点击区透明，但需要能点到 */
-      background: rgba(255,255,255,0.0);
-    }
-
-    /* 只让底部区域更容易点中（靠近标签），上方黑键区域也能点，但主要命中白键 */
-    .key::after{
-      content:"";
-      position:absolute;
-      left:0; right:0;
-      top:35%;
-      bottom:0;
-      background: rgba(255,255,255,0.0);
-    }
-
-    .key.pressed{
-      background: rgba(255,255,255,0.08);
-    }
-
-    .panel{
-      margin-top: 10px;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-
-    .status{
-      font-size: 14px;
-      line-height: 1.5;
-      opacity: 0.95;
-      min-height: 22px;
-      flex: 1 1 220px;
-    }
-
-    .btns{
-      display:flex;
-      gap:10px;
-      flex: 0 0 auto;
-    }
-    button{
-      appearance:none;
-      border:none;
-      border-radius: 10px;
-      background:#222;
-      color:#fff;
-      padding: 10px 14px;
-      font-size: 14px;
-      cursor:pointer;
-    }
-    button:active{
-      transform: translateY(1px);
-    }
-    .ok{
-      background:#0b5;
-      color:#021;
-      font-weight: 700;
-    }
-    .bad{
-      background:#a22;
-      color:#fff;
-      font-weight: 700;
-    }
-
-    .small{
-      opacity:0.75;
-      font-size:12px;
-    }
-  </style>
+.panel{
+  margin-top:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.status{
+  font-size:14px;
+  min-height:22px;
+}
+button{
+  border:none;
+  border-radius:10px;
+  background:#222;
+  color:#fff;
+  padding:10px 14px;
+  font-size:14px;
+}
+button:active{transform:translateY(1px)}
+</style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="hint">
-      点击白键发声。需要按指定顺序完成整段旋律，并保持节奏均匀（第1-2音间隔作为基准）。
-      <div class="small">提示：手机上首次点击会自动解锁声音。</div>
-    </div>
-
-    <div class="kbd" id="kbd">
-      <div class="kbd-bg"></div>
-      <div class="keys" id="keys"></div>
-    </div>
-
-    <div class="panel">
-      <div class="status" id="status">未开始</div>
-      <div class="btns">
-        <button id="resetBtn">Reset</button>
-        <button id="showBtn">显示目标序列</button>
-      </div>
-    </div>
+<div class="wrap">
+  <div class="hint">
+    按正确顺序弹奏旋律，并保持节奏均匀（第1–2音间隔作为基准）。
   </div>
 
+  <div class="kbd">
+    <div class="kbd-bg"></div>
+    <div class="keys" id="keys"></div>
+  </div>
+
+  <div class="panel">
+    <div class="status" id="status">未开始</div>
+    <div>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div>
+</div>
+
 <script>
-(() => {
-  // =========================
-  // 1) 键盘映射（16 个白键等分）
-  //    图片从左到右：绿 so la si | 红 do re mi fa so la si | 蓝 do re mi fa so la
-  //    红 do = C4（中央C）
-  //    绿 so/la/si = G3/A3/B3
-  //    蓝 do~la = C5~A5
-  // =========================
-  const KEY_ORDER = [
-    {color:"green", note:"so", midi:55}, // G3
-    {color:"green", note:"la", midi:57}, // A3
-    {color:"green", note:"si", midi:59}, // B3
+/* =========================
+   1. 键位定义（16 白键）
+========================= */
+const KEYS = [
+  {c:"green",n:"so",m:55},
+  {c:"green",n:"la",m:57},
+  {c:"green",n:"si",m:59},
 
-    {color:"red", note:"do", midi:60},   // C4 (middle C)
-    {color:"red", note:"re", midi:62},   // D4
-    {color:"red", note:"mi", midi:64},   // E4
-    {color:"red", note:"fa", midi:65},   // F4
-    {color:"red", note:"so", midi:67},   // G4
-    {color:"red", note:"la", midi:69},   // A4
-    {color:"red", note:"si", midi:71},   // B4
+  {c:"red",n:"do",m:60},
+  {c:"red",n:"re",m:62},
+  {c:"red",n:"mi",m:64},
+  {c:"red",n:"fa",m:65},
+  {c:"red",n:"so",m:67},
+  {c:"red",n:"la",m:69},
+  {c:"red",n:"si",m:71},
 
-    {color:"blue", note:"do", midi:72},  // C5
-    {color:"blue", note:"re", midi:74},  // D5
-    {color:"blue", note:"mi", midi:76},  // E5
-    {color:"blue", note:"fa", midi:77},  // F5
-    {color:"blue", note:"so", midi:79},  // G5
-    {color:"blue", note:"la", midi:81},  // A5
-  ];
+  {c:"blue",n:"do",m:72},
+  {c:"blue",n:"re",m:74},
+  {c:"blue",n:"mi",m:76},
+  {c:"blue",n:"fa",m:77},
+  {c:"blue",n:"so",m:79},
+  {c:"blue",n:"la",m:81},
+];
 
-  // MIDI -> Frequency
-  function midiToFreq(midi){
-    return 440 * Math.pow(2, (midi - 69) / 12);
+const keyIndex = new Map();
+KEYS.forEach((k,i)=>keyIndex.set(`${k.c}|${k.n}`,i));
+
+/* =========================
+   2. 正确答案（32 音）
+========================= */
+const target = [
+  // A
+  ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
+  // B
+  ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
+  // C
+  ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
+  // D (=A)
+  ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
+];
+
+/* =========================
+   3. 节奏判定参数
+========================= */
+const ABS_TOL = 0.08;   // 80ms
+const REL_TOL = 0.18;
+const DT_MIN = 0.16;
+const DT_MAX = 1.20;
+
+/* =========================
+   4. WebAudio（银色钢琴）
+========================= */
+let audioCtx=null;
+function ensureAudio(){
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||webkitAudioContext)();
   }
+  if(audioCtx.state==="suspended") return audioCtx.resume();
+}
 
-  // =========================
-  // 2) 目标序列（按你给的文本原样展开）
-  // =========================
-  const target = [
-    // 1
-    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
-    ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
-    // 2
-    ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
-    // 3
-    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
-  ];
+function midiToFreq(m){
+  return 440*Math.pow(2,(m-69)/12);
+}
 
-  // =========================
-  // 3) 节奏“平均”判定参数
-  //    dt0 = 第1-2音间隔（秒）
-  //    后续每个间隔 dt 必须满足 |dt - dt0| <= tol
-  // =========================
-  const ABS_TOL = 0.08;      // 绝对容差 80ms（移动端友好）
-  const REL_TOL = 0.18;      // 相对容差 18%
-  const DT_MIN  = 0.16;      // 防止过快（160ms）
-  const DT_MAX  = 1.20;      // 防止过慢（1200ms）
+function playTone(freq,duration=0.32){
+  if(!audioCtx) return;
+  const now=audioCtx.currentTime;
 
-  function calcTol(dt0){
-    return Math.max(ABS_TOL, dt0 * REL_TOL);
-  }
+  const o1=audioCtx.createOscillator();
+  const o2=audioCtx.createOscillator();
+  const o3=audioCtx.createOscillator();
 
-  // =========================
-  // 4) 音频：无音频文件，合成电子音（带简单包络）
-  // =========================
-  let audioCtx = null;
+  o1.type="sine";
+  o2.type="triangle";
+  o3.type="square";
 
-  function ensureAudio(){
-    if (!audioCtx){
-      const AC = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AC();
-    }
-    if (audioCtx.state === "suspended"){
-      return audioCtx.resume();
-    }
-    return Promise.resolve();
-  }
+  o1.frequency.value=freq;
+  o2.frequency.value=freq*2;
+  o3.frequency.value=freq*4;
 
-  function playTone(freq, duration=0.16){
-    if (!audioCtx) return;
+  const g=audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001,now);
+  g.gain.linearRampToValueAtTime(0.32,now+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,now+duration);
 
-    const now = audioCtx.currentTime;
+  const f=audioCtx.createBiquadFilter();
+  f.type="lowpass";
+  f.frequency.value=Math.min(freq*6,12000);
 
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+  o1.connect(g);o2.connect(g);o3.connect(g);
+  g.connect(f);f.connect(audioCtx.destination);
 
-    // 更像“键盘提示音”的轻微方波混合：用 sawtooth + 包络减弱刺耳感
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(freq, now);
+  o1.start(now);o2.start(now);o3.start(now);
+  o1.stop(now+duration+0.03);
+  o2.stop(now+duration+0.03);
+  o3.stop(now+duration+0.03);
+}
 
-    // 包络（避免咔哒）
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+/* =========================
+   5. UI & 判定
+========================= */
+const keysEl=document.getElementById("keys");
+const statusEl=document.getElementById("status");
+const resetBtn=document.getElementById("resetBtn");
 
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
+let step=0,t1=null,t2=null,dt0=null,last=null;
 
-    osc.start(now);
-    osc.stop(now + duration + 0.02);
-  }
+function reset(msg="已重置"){
+  step=0;t1=t2=dt0=last=null;
+  statusEl.textContent=msg;
+}
 
-  // =========================
-  // 5) UI：生成 16 个透明点击区
-  // =========================
-  const keysEl = document.getElementById("keys");
-  const statusEl = document.getElementById("status");
-  const resetBtn = document.getElementById("resetBtn");
-  const showBtn  = document.getElementById("showBtn");
-
-  const keyIndexByColorNote = new Map();
-  KEY_ORDER.forEach((k, idx) => {
-    keyIndexByColorNote.set(`${k.color}|${k.note}`, idx);
-  });
-
-  KEY_ORDER.forEach((k, idx) => {
-    const div = document.createElement("div");
-    div.className = "key";
-    div.dataset.idx = String(idx);
-    div.dataset.color = k.color;
-    div.dataset.note = k.note;
-
-    // 触摸与鼠标
-    const onDown = async (ev) => {
-      ev.preventDefault();
-      await ensureAudio();
-      pressKey(idx);
-    };
-
-    div.addEventListener("pointerdown", onDown, {passive:false});
-    keysEl.appendChild(div);
-  });
-
-  function flashKey(idx){
-    const el = keysEl.querySelector(`.key[data-idx="${idx}"]`);
-    if (!el) return;
-    el.classList.add("pressed");
-    setTimeout(() => el.classList.remove("pressed"), 90);
-  }
-
-  // =========================
-  // 6) 判定逻辑
-  // =========================
-  let progress = 0;          // 已正确输入的音数
-  let t1 = null;             // 第1音时间
-  let t2 = null;             // 第2音时间
-  let dt0 = null;            // 基准间隔
-  let lastTime = null;       // 上一次命中的时间
-
-  function resetState(msg="已重置"){
-    progress = 0;
-    t1 = t2 = dt0 = lastTime = null;
-    statusEl.textContent = msg + "（等待第1个音）";
-    statusEl.style.color = "#fff";
-  }
-
-  function fail(msg){
-    statusEl.textContent = "失败：" + msg + "（已重置）";
-    statusEl.style.color = "#ff6b6b";
-    progress = 0;
-    t1 = t2 = dt0 = lastTime = null;
-  }
-
-  function success(){
-    statusEl.textContent = "success";
-    statusEl.style.color = "#00ff99";
-  }
-
-  function pressKey(idx){
-    const k = KEY_ORDER[idx];
-    flashKey(idx);
-
-    // 发声
-    const freq = midiToFreq(k.midi);
-    playTone(freq, 0.15);
-
-    // 若已经成功，就不再继续判定
-    if (progress >= target.length){
-      return;
-    }
-
-    // 当前应该按的目标
-    const [tc, tn] = target[progress];
-    const needIdx = keyIndexByColorNote.get(`${tc}|${tn}`);
-
-    if (needIdx === undefined){
-      fail("内部配置错误：目标键不存在");
-      return;
-    }
-
-    if (idx !== needIdx){
-      const needName = `${tc}${tn}`;
-      const gotName  = `${k.color}${k.note}`;
-      fail(`按键不正确，应为 ${needName}，你按了 ${gotName}`);
-      return;
-    }
-
-    // 时间记录（用高精度计时）
-    const now = performance.now() / 1000;
-
-    if (progress === 0){
-      t1 = now;
-      lastTime = now;
-      progress++;
-      statusEl.textContent = `已命中 1 / ${target.length}（请保持节奏均匀）`;
-      statusEl.style.color = "#fff";
-      return;
-    }
-
-    if (progress === 1){
-      t2 = now;
-      dt0 = t2 - t1;
-
-      if (!(dt0 >= DT_MIN && dt0 <= DT_MAX)){
-        fail(`第1-2音间隔 dt0=${dt0.toFixed(3)}s 不在允许范围（${DT_MIN}-${DT_MAX}s）`);
-        return;
-      }
-
-      lastTime = now;
-      progress++;
-      statusEl.textContent = `已命中 2 / ${target.length}（基准间隔 dt0=${dt0.toFixed(3)}s，容差 ±${calcTol(dt0).toFixed(3)}s）`;
-      statusEl.style.color = "#fff";
-      return;
-    }
-
-    // 之后每一音都检查与 dt0 的一致性
-    const dt = now - lastTime;
-    const tol = calcTol(dt0);
-
-    if (Math.abs(dt - dt0) > tol){
-      fail(`节奏不均匀：本次间隔 dt=${dt.toFixed(3)}s，基准 dt0=${dt0.toFixed(3)}s（容差 ±${tol.toFixed(3)}s）`);
-      return;
-    }
-
-    lastTime = now;
-    progress++;
-
-    if (progress >= target.length){
-      success();
-    } else {
-      statusEl.textContent = `已命中 ${progress} / ${target.length}（dt0=${dt0.toFixed(3)}s，容差 ±${calcTol(dt0).toFixed(3)}s）`;
-      statusEl.style.color = "#fff";
-    }
-  }
-
-  // =========================
-  // 7) 控件
-  // =========================
-  resetBtn.addEventListener("click", async () => {
+KEYS.forEach((k,i)=>{
+  const d=document.createElement("div");
+  d.className="key";
+  d.onpointerdown=async e=>{
+    e.preventDefault();
     await ensureAudio();
-    resetState("已重置");
-  });
+    press(i);
+  };
+  keysEl.appendChild(d);
+});
 
-  showBtn.addEventListener("click", () => {
-    const pretty = target.map(([c,n]) => `${c[0].toUpperCase()}-${n}`).join(" ");
-    alert("目标序列（从左到右）：\n\n" + pretty);
-  });
+function press(i){
+  const k=KEYS[i];
+  playTone(midiToFreq(k.m));
+  const need=target[step];
+  if(!need||i!==keyIndex.get(`${need[0]}|${need[1]}`)){
+    reset("失败：音符错误");
+    return;
+  }
 
-  // 初始
-  resetState("未开始");
+  const now=performance.now()/1000;
 
-  // 防止双击缩放干扰
-  document.addEventListener('dblclick', (e) => e.preventDefault(), {passive:false});
-})();
+  if(step===0){t1=now;last=now;}
+  else if(step===1){
+    t2=now;dt0=t2-t1;
+    if(dt0<DT_MIN||dt0>DT_MAX){reset("失败：节奏不合理");return;}
+    last=now;
+  }else{
+    const dt=now-last;
+    const tol=Math.max(ABS_TOL,dt0*REL_TOL);
+    if(Math.abs(dt-dt0)>tol){reset("失败：节奏不均匀");return;}
+    last=now;
+  }
+
+  step++;
+  statusEl.textContent=`进度 ${step}/${target.length}`;
+
+  if(step===target.length){
+    statusEl.textContent="success";
+  }
+}
+
+resetBtn.onclick=()=>reset("已重置");
+reset("未开始");
 </script>
 </body>
 </html>
