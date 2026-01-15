@@ -2,207 +2,335 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
 <title>音符解谜</title>
 
 <style>
-body{
-  margin:0;
-  background:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-  color:#000;
-}
-.container{
-  max-width:980px;
-  margin:0 auto;
-  padding:12px 12px 20px;
-}
-.status{
-  font-size:18px;
-  font-weight:600;
-  margin-bottom:6px;
-}
-.status.error{color:#c00;}
-.status.ok{color:#0a7;}
-.controls{
-  display:flex;
-  gap:10px;
-  margin:6px 0 6px;
-}
-button{
-  border:none;
-  border-radius:10px;
-  padding:10px 16px;
-  font-size:16px;
-  cursor:pointer;
-}
-.btn-audio{background:#1bb35e;color:#fff;}
-.btn{background:#000;color:#fff;}
-.hint{
-  font-size:15px;
-  line-height:1.5;
-  margin:6px 0 8px;
-}
-.keyboard-wrap{
-  position:relative;
-  margin-top:6px;
-}
-.keyboard-wrap img{
-  width:100%;
-  height:auto;
-  display:block;
-  user-select:none;
-  -webkit-user-drag:none;
-}
-.overlay{
-  position:absolute;
-  left:0;top:0;right:0;bottom:0;
-}
-.key{
-  position:absolute;
-  top:0;
-  bottom:0;
-}
+  body{
+    margin:0;
+    background:#fff;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:#000;
+  }
+  .container{
+    max-width:980px;
+    margin:0 auto;
+    padding:10px 12px 16px;
+    box-sizing:border-box;
+  }
+  .status{
+    font-size:16px;
+    font-weight:600;
+    margin:0 0 6px 0;
+    min-height:20px;
+  }
+  .status.error{color:#c00;}
+  .status.ok{color:#0a7;}
+  .controls{
+    display:flex;
+    gap:10px;
+    margin:6px 0 6px 0;
+  }
+  button{
+    border:none;
+    border-radius:10px;
+    padding:9px 14px;
+    font-size:15px;
+    cursor:pointer;
+    background:#000;
+    color:#fff;
+  }
+  .btn-audio{background:#1bb35e;}
+  .hint{
+    font-size:14px;
+    line-height:1.45;
+    margin:6px 0 8px 0;
+  }
+  .keyboard-wrap{
+    position:relative;
+    margin-top:4px;
+    background:#fff;
+  }
+  .keyboard-wrap img{
+    width:100%;
+    height:auto;
+    display:block;
+    user-select:none;
+    -webkit-user-drag:none;
+    background:#fff;
+  }
+  .overlay{
+    position:absolute;
+    left:0;top:0;right:0;bottom:0;
+    /* 让 iOS 更稳定地触发 pointer 事件 */
+    touch-action:manipulation;
+  }
+  .key{
+    position:absolute;
+    top:0;bottom:0;
+    /* 不显示任何视觉效果 */
+    background:transparent;
+  }
+
+  @media (orientation:landscape){
+    .container{padding:6px 10px 12px;}
+    .hint{margin-bottom:6px;}
+    button{padding:8px 12px;font-size:14px;}
+    .status{font-size:15px;}
+  }
 </style>
 </head>
 
 <body>
 <div class="container">
-
   <div id="status" class="status">请按正确音符顺序弹奏。</div>
 
   <div class="controls">
     <button id="audioBtn" class="btn-audio">启用声音</button>
-    <button id="resetBtn" class="btn">Reset</button>
+    <button id="resetBtn">Reset</button>
   </div>
 
   <div class="hint">
     建议横屏操作。只要按对音符顺序即可；相邻两次点击间隔 ≤ 5 秒（超时重置）。<br>
-    iPhone：需先点击一次“启用声音”。
+    iPhone：首次需一次用户点击来解锁声音（点“启用声音”或直接点琴键都可以）。
   </div>
 
   <div class="keyboard-wrap" id="kbWrap">
-    <!-- 你的键盘图片 -->
-    <img src="keyboard.png" alt="keyboard">
+    <img id="kbImg" src="keyboard.png" alt="keyboard">
     <div class="overlay" id="overlay"></div>
   </div>
-
 </div>
 
 <script>
-/* ================= 音符定义 ================= */
+(() => {
+  /* ================= 12键（从左到右） =================
+     你确认“强制12，不再裁剪”，所以直接12等分最稳。
+  ====================================================== */
+  const KEYS = [
+    "greensi",
+    "reddo","redre","redmi","redfa","redso","redla","redsi",
+    "bluedo","bluere","bluemi","bluefa"
+  ];
 
-// 固定 12 键（从左到右）
-const KEYS = [
-  "greensi",
-  "reddo","redre","redmi","redfa","redso","redla","redsi",
-  "bluedo","bluere","bluemi","bluefa"
-];
+  /* ================= 正确答案序列 ================= */
+  const ANSWER = [
+    "reddo","redmi","redso","bluedo","bluemi","redso","bluedo","bluemi",
+    "reddo","redre","redla","bluere","bluefa","redla","bluere","bluefa",
+    "greensi","redre","redso","bluere","bluefa","redso","bluere","bluefa",
+    "reddo","redmi","redso","bluedo","bluemi","redso","bluedo","bluemi"
+  ];
 
-// 正确答案序列（你给的那一整串）
-const ANSWER = [
-  "reddo","redmi","redso","bluedo","bluemi","redso","bluedo","bluemi",
-  "reddo","redre","redla","bluere","bluefa","redla","bluere","bluefa",
-  "greensi","redre","redso","bluere","bluefa","redso","bluere","bluefa",
-  "reddo","redmi","redso","bluedo","bluemi","redso","bluedo","bluemi"
-];
+  const MAX_GAP_MS = 5000;
 
-let idx = 0;
-let lastTime = 0;
+  let idx = 0;
+  let lastTime = 0;
 
-/* ================= 音频 ================= */
+  /* ================= iPhone 音频解锁（关键） ================= */
+  let audioCtx = null;
+  let audioReady = false;
 
-let audioCtx = null;
-
-function enableAudio(){
-  if(!audioCtx){
-    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  function getAudioCtx(){
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+    }
+    return audioCtx;
   }
-  document.getElementById("status").textContent="声音已启用";
-  document.getElementById("status").className="status ok";
-}
 
-function playNote(key){
-  if(!audioCtx) return;
-  const freqMap={
+  async function unlockAudio(){
+    const ctx = getAudioCtx();
+
+    // iOS Safari 常见：state = "suspended"
+    if(ctx.state === "suspended"){
+      try{ await ctx.resume(); } catch(e){}
+    }
+
+    // 额外兜底：播放一个几乎听不见的超短音，让 iOS 真正打开音频通道
+    // 这一招对部分机型很关键
+    try{
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = 440;
+      g.gain.value = 0.00001;
+      o.connect(g).connect(ctx.destination);
+      const t = ctx.currentTime;
+      o.start(t);
+      o.stop(t + 0.02);
+    } catch(e){}
+
+    audioReady = (ctx.state === "running");
+    return audioReady;
+  }
+
+  /* ================= 发声（电子钢琴味） ================= */
+  const freqMap = {
     greensi:246.94,
-    reddo:261.63,redre:293.66,redmi:329.63,redfa:349.23,redso:392.00,redla:440.00,redsi:493.88,
-    bluedo:523.25,bluere:587.33,bluemi:659.25,bluefa:698.46
+    reddo:261.63, redre:293.66, redmi:329.63, redfa:349.23, redso:392.00, redla:440.00, redsi:493.88,
+    bluedo:523.25, bluere:587.33, bluemi:659.25, bluefa:698.46
   };
-  const o=audioCtx.createOscillator();
-  const g=audioCtx.createGain();
-  o.type="sine";
-  o.frequency.value=freqMap[key];
-  o.connect(g);g.connect(audioCtx.destination);
-  const t=audioCtx.currentTime;
-  g.gain.setValueAtTime(0,t);
-  g.gain.linearRampToValueAtTime(0.4,t+0.02);
-  g.gain.exponentialRampToValueAtTime(0.001,t+0.9);
-  o.start(t);o.stop(t+0.95);
-}
 
-/* ================= 判定 ================= */
+  function playNote(key){
+    if(!audioReady) return;
 
-function reset(msg){
-  idx=0;
-  lastTime=0;
-  if(msg){
-    const s=document.getElementById("status");
-    s.textContent=msg;
-    s.className="status error";
+    const ctx = getAudioCtx();
+    const freq = freqMap[key];
+    if(!freq) return;
+
+    const now = ctx.currentTime;
+
+    // 简易“更像钢琴”的叠加（比单纯sine更饱满）
+    const o1 = ctx.createOscillator();
+    const o2 = ctx.createOscillator();
+    const o3 = ctx.createOscillator();
+    o1.type="sine";      o1.frequency.setValueAtTime(freq, now);
+    o2.type="triangle";  o2.frequency.setValueAtTime(freq*2, now);
+    o3.type="square";    o3.frequency.setValueAtTime(freq*4, now);
+
+    const g1 = ctx.createGain(); g1.gain.value = 1.0;
+    const g2 = ctx.createGain(); g2.gain.value = 0.55;
+    const g3 = ctx.createGain(); g3.gain.value = 0.06;
+
+    const amp = ctx.createGain();
+    amp.gain.setValueAtTime(0.0001, now);
+    amp.gain.linearRampToValueAtTime(0.35, now + 0.015);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + 1.15);
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(Math.min(freq*6, 9000), now);
+    lp.Q.value = 0.85;
+
+    o1.connect(g1); g1.connect(amp);
+    o2.connect(g2); g2.connect(amp);
+    o3.connect(g3); g3.connect(amp);
+
+    amp.connect(lp);
+    lp.connect(ctx.destination);
+
+    o1.start(now); o2.start(now); o3.start(now);
+    const stopAt = now + 1.25;
+    o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
   }
-}
 
-function press(key){
-  const now=Date.now();
-  if(lastTime && now-lastTime>5000){
-    reset("已超时，请重新完整弹奏。");
-    return;
+  /* ================= UI & 判定 ================= */
+  const statusEl = document.getElementById("status");
+  const audioBtn = document.getElementById("audioBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const overlay = document.getElementById("overlay");
+  const img = document.getElementById("kbImg");
+
+  function setStatus(text, cls=""){
+    statusEl.textContent = text;
+    statusEl.className = "status" + (cls ? " " + cls : "");
   }
-  playNote(key);
-  if(key!==ANSWER[idx]){
-    reset(`失败：音符错误：应为 ${ANSWER[idx]}`);
-    return;
+
+  function reset(msg="已重置。"){
+    idx = 0;
+    lastTime = 0;
+    setStatus(msg, "");
   }
-  idx++;
-  lastTime=now;
-  if(idx===ANSWER.length){
-    const s=document.getElementById("status");
-    s.textContent="🎉 成功！";
-    s.className="status ok";
+
+  function fail(msg){
+    idx = 0;
+    lastTime = 0;
+    setStatus(msg, "error");
   }
-}
 
-/* ================= 键盘区域（12 等分，最稳定） ================= */
-
-function buildKeys(){
-  const overlay=document.getElementById("overlay");
-  overlay.innerHTML="";
-  const w=overlay.clientWidth;
-  const h=overlay.clientHeight;
-  const keyW=w/12;
-  for(let i=0;i<12;i++){
-    const d=document.createElement("div");
-    d.className="key";
-    d.style.left=(i*keyW)+"px";
-    d.style.width=keyW+"px";
-    d.addEventListener("pointerdown",e=>{
-      e.preventDefault();
-      press(KEYS[i]);
-    });
-    overlay.appendChild(d);
+  function success(){
+    setStatus("success", "ok");
   }
-}
 
-window.addEventListener("resize",buildKeys);
+  function press(key){
+    const now = Date.now();
 
-/* ================= 事件 ================= */
+    if(lastTime && (now - lastTime) > MAX_GAP_MS){
+      fail("已超时，请重新完整弹奏。");
+      return;
+    }
 
-document.getElementById("audioBtn").onclick=enableAudio;
-document.getElementById("resetBtn").onclick=()=>reset("已重置。");
+    // 声音：如果未解锁，先尝试解锁（用户点击琴键也是手势）
+    // 解锁成功后再播放
+    if(!audioReady){
+      unlockAudio().then(() => {
+        playNote(key);
+      });
+    }else{
+      playNote(key);
+    }
 
-window.addEventListener("load",buildKeys);
+    // 判定顺序
+    if(key !== ANSWER[idx]){
+      fail(`音符错误：应为 ${ANSWER[idx]}`);
+      return;
+    }
+
+    idx++;
+    lastTime = now;
+
+    if(idx === ANSWER.length){
+      success();
+    }else{
+      setStatus(`进度 ${idx}/${ANSWER.length}`);
+    }
+  }
+
+  /* ================= 12等分点击区（最稳定） ================= */
+  function buildKeys(){
+    overlay.innerHTML = "";
+
+    // 等待 overlay 有尺寸
+    const w = overlay.clientWidth;
+    const h = overlay.clientHeight;
+    if(!w || !h) return;
+
+    const keyW = w / 12;
+
+    for(let i=0;i<12;i++){
+      const d = document.createElement("div");
+      d.className = "key";
+      d.style.left = (i * keyW) + "px";
+      d.style.width = keyW + "px";
+
+      // pointerdown：PC+iOS 都兼容
+      d.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        press(KEYS[i]);
+      }, {passive:false});
+
+      // 兜底：某些 iOS 版本 pointer 事件怪异，额外加 touchstart
+      d.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        press(KEYS[i]);
+      }, {passive:false});
+
+      overlay.appendChild(d);
+    }
+  }
+
+  window.addEventListener("resize", buildKeys);
+  img.addEventListener("load", buildKeys);
+
+  /* ================= 按钮 ================= */
+  audioBtn.addEventListener("click", async () => {
+    const ok = await unlockAudio();
+    if(ok){
+      setStatus("声音已启用，开始弹奏", "ok");
+      audioBtn.textContent = "声音已启用";
+      audioBtn.disabled = true;
+    }else{
+      setStatus("启用声音失败（请再点一次）", "error");
+    }
+  });
+
+  resetBtn.addEventListener("click", () => reset("已重置。"));
+
+  // 初始
+  reset("请按正确音符顺序弹奏。");
+
+  // 如果图片很快加载不到，也尝试先建一次（后面 load 会再建）
+  buildKeys();
+})();
 </script>
-
 </body>
 </html>
