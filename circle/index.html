@@ -74,6 +74,7 @@
       width:50%;
     }
     button:active{ transform:translateY(1px); }
+    button:disabled{ opacity:0.5; }
 
     .msg{
       margin-top:12px;
@@ -88,7 +89,7 @@
 <div class="wrap">
 
   <!-- 标题区 -->
-  <div class="title">一些实用的地方</div>
+  <div class="title">请寻找你的起点</div>
   <div class="subtitle">
     请走到老吉士马路对面，然后往左边方向前进，留意100米范围内的墙面信息，找到线索解题。
   </div>
@@ -132,8 +133,10 @@ const ANSWER_POINTS = [
   {x:303,y:718},{x:644,y:827},{x:433,y:878}
 ];
 
-const R_DOT=10, SNAP_DIST=36, EPS=10;
 const NEXT_URL = "https://sorcbear.github.io/playground/track/";
+const REDIRECT_DELAY = 600;
+
+const R_DOT=10, SNAP_DIST=36, EPS=10;
 
 const svg=document.getElementById("svg");
 const catcher=document.getElementById("catcher");
@@ -167,9 +170,13 @@ function userPts(){return selected.map((v,i)=>v?CIRCLES[i]:null).filter(Boolean)
 function render(){
   svg.querySelectorAll(".hit,.dot").forEach(n=>n.remove());
   CIRCLES.forEach((c,i)=>{
-    const h=el("circle",{cx:c.x,cy:c.y,r:20});h.classList.add("hit");if(selected[i])h.classList.add("selected");
-    const d=el("circle",{cx:c.x,cy:c.y,r:R_DOT});d.classList.add("dot");
-    svg.insertBefore(h,catcher);svg.insertBefore(d,catcher);
+    const h=el("circle",{cx:c.x,cy:c.y,r:20});
+    h.classList.add("hit");
+    if(selected[i])h.classList.add("selected");
+    const d=el("circle",{cx:c.x,cy:c.y,r:R_DOT});
+    d.classList.add("dot");
+    svg.insertBefore(h,catcher);
+    svg.insertBefore(d,catcher);
   });
 }
 
@@ -191,7 +198,13 @@ undoBtn.onclick=()=>{
 
 submitBtn.onclick=()=>{
   if(sameSet(userPts(),ANSWER_POINTS)){
-    window.location.href = NEXT_URL;
+    msg.textContent="Success";
+    submitBtn.disabled=true;
+    undoBtn.disabled=true;
+
+    setTimeout(()=>{
+      location.href=NEXT_URL;
+    },REDIRECT_DELAY);
   }else{
     msg.textContent="Please try again";
   }
@@ -201,4 +214,3 @@ render();
 </script>
 </body>
 </html>
-
