@@ -1,9 +1,52 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="refresh" content="0; url=/playground/circle/" />
-    <title>playground</title>
-  </head>
-  <body></body>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button {
+      padding: 16px 36px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      background: #ffffff;
+      color: #000000;
+      border: 2px solid #000000;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #000000;
+      color: #ffffff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <button onclick="location.href='./rotate/'">
+      START GAME
+    </button>
+  </div>
+</body>
 </html>
