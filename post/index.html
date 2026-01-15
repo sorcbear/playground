@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Post Puzzle</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #ffffff;
+      color: #111;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+                   "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.8;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .text {
+      font-size: 16px;
+      margin-bottom: 32px;
+      white-space: pre-wrap;
+    }
+
+    .answer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      margin-bottom: 24px;
+    }
+
+    .answer input {
+      width: 80px;
+      padding: 6px 8px;
+      font-size: 16px;
+      border: 1px solid #000;
+      outline: none;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .answer input.month,
+    .answer input.day {
+      width: 60px;
+    }
+
+    button {
+      padding: 8px 20px;
+      font-size: 16px;
+      border: none;
+      background: #000;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:active {
+      opacity: 0.8;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="text">
+这里的时光仿佛走得特别慢，不光是刚才的门牌，就连街角伫立的那个绿色大邮筒，也满是旧日的气息。已经十多年没寄过信了，最后那次，用的还是吴冠英大师在上海签售的珍藏版。那是我第一次参加签售会，好像是从某个公众号上获知的活动讯息，我到底是哪一天参加的签售活动呢？
+    </div>
+
+    <div class="answer">
+      <input type="number" id="year" placeholder="年" />
+      年
+      <input type="number" id="month" class="month" placeholder="月" />
+      月
+      <input type="number" id="day" class="day" placeholder="日" />
+      日
+    </div>
+
+    <button onclick="checkAnswer()">Submit</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function checkAnswer() {
+      const year = document.getElementById('year').value.trim();
+      const month = document.getElementById('month').value.trim();
+      const day = document.getElementById('day').value.trim();
+      const result = document.getElementById('result');
+
+      if (year === '2015' && month === '2' && day === '14') {
+        result.textContent = 'success';
+      } else {
+        result.textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>
