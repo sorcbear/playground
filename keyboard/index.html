@@ -4,50 +4,122 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 <title>Piano Puzzle</title>
+
 <style>
-  html,body{margin:0;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;user-select:none;-webkit-tap-highlight-color:transparent;}
-  .wrap{max-width:1100px;margin:0 auto;padding:14px;box-sizing:border-box;}
-  .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px;}
-  .status{font-size:14px;min-height:22px;flex:1 1 260px;opacity:.95;}
-  .btns{display:flex;gap:10px;flex:0 0 auto;}
-  button{border:none;border-radius:10px;background:#222;color:#fff;padding:10px 14px;font-size:14px;cursor:pointer;}
+  html,body{
+    margin:0;
+    background:#fff;
+    color:#111;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    padding:12px;
+    box-sizing:border-box;
+  }
+
+  /* 顶部区域尽量紧凑，减少拖屏 */
+  .topbar{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    margin-bottom:8px;
+  }
+  .status{
+    font-size:14px;
+    min-height:20px;
+    flex:1 1 260px;
+  }
+  .btns{
+    display:flex;
+    gap:8px;
+    flex:0 0 auto;
+  }
+  button{
+    border:none;
+    border-radius:10px;
+    background:#111;
+    color:#fff;
+    padding:9px 12px;
+    font-size:14px;
+    cursor:pointer;
+  }
   button:active{transform:translateY(1px)}
-  .ok{background:#0b5;color:#021;font-weight:700}
-  .hint{font-size:14px;opacity:.9;line-height:1.5;margin:6px 0 10px;}
-  .small{opacity:.75;font-size:12px;margin-top:4px;line-height:1.4;}
+  .ok{background:#12b76a;color:#052;font-weight:700}
+
+  .hint{
+    font-size:14px;
+    line-height:1.5;
+    margin:0 0 8px;
+  }
+  .small{
+    font-size:12px;
+    opacity:.75;
+    margin-top:4px;
+    line-height:1.4;
+  }
 
   .kbd{
-    position:relative;width:100%;
-    border-radius:12px;overflow:hidden;
-    box-shadow:0 10px 30px rgba(0,0,0,.6);
-    background:#111;
-    touch-action:none; /* 关键：配合 pointer 事件，避免手势导致额外事件/滚动 */
+    position:relative;
+    width:100%;
+    border-radius:12px;
+    overflow:hidden;
+    background:#f3f4f6;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+    touch-action:none;
   }
+  /* 你的图约 1024x461 */
   .kbd::before{content:"";display:block;padding-top:45.1%;}
-  .kbd-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .kbd-inner{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
   #kbdImg{
-    width:100%;height:100%;
+    width:100%;
+    height:100%;
     object-fit:contain;
     object-position:center;
     display:block;
     pointer-events:none;
   }
 
+  /* Debug 叠加层 */
   .overlay{position:absolute;inset:0;pointer-events:none;}
   .segbox{
     position:absolute;top:0;bottom:0;
-    outline:1px solid rgba(0,255,153,0.45);
-    background:rgba(0,255,153,0.06);
+    outline:1px solid rgba(0,150,80,.55);
+    background:rgba(0,150,80,.06);
     display:none;
   }
   .debug .segbox{display:block;}
+
   .flash{
-    position:absolute;top:56%;height:44%;
-    background:rgba(255,255,255,0.12);
+    position:absolute;
+    top:56%;
+    height:44%;
+    background:rgba(0,0,0,0.10);
     border-radius:10px;
-    opacity:0;transition:opacity 70ms linear;
+    opacity:0;
+    transition:opacity 70ms linear;
   }
   .flash.on{opacity:1;}
+
+  /* 横屏：进一步压缩间距，让键盘更靠上 */
+  @media (orientation: landscape){
+    .wrap{padding:10px;}
+    .topbar{margin-bottom:6px;}
+    .hint{margin-bottom:6px;}
+    button{padding:8px 11px;}
+  }
 </style>
 </head>
 
@@ -63,7 +135,7 @@
   </div>
 
   <div class="hint">
-    只要按对音符顺序即可；相邻两次点击间隔必须 ≤ 2 秒（超时则失败重置）。
+    建议横屏操作。只要按对音符顺序即可；相邻两次点击间隔必须 ≤ 5 秒（超时则重置）。
     <div class="small">iPhone：先点一次“启用声音”。</div>
   </div>
 
@@ -114,12 +186,12 @@
   ];
 
   /* =========================
-     3) 时间规则：≤ 2s
+     3) 时间规则：≤ 5s + 超时提示
   ========================= */
-  const MAX_GAP = 2.0;
+  const MAX_GAP = 5.0;
 
   /* =========================
-     4) WebAudio：银色 + 更长
+     4) WebAudio：较长音
   ========================= */
   let audioCtx=null, audioEnabled=false;
   function ensureAudioCtx(){
@@ -188,7 +260,7 @@
   const debugBtn = document.getElementById("debugBtn");
 
   let debug=false;
-  let boundaries=null; // length 17, in image pixels
+  let boundaries=null; // length 17
   let segBoxes=[];
   let flashEl=null;
 
@@ -221,6 +293,7 @@
     const ctx = canvas.getContext("2d", { willReadFrequently:true });
     ctx.drawImage(img, 0, 0, iw, ih);
 
+    // 色块带：底部 82%~96%
     const y0 = Math.floor(ih * 0.82);
     const y1 = Math.floor(ih * 0.96);
     const h  = Math.max(1, y1-y0);
@@ -238,7 +311,6 @@
       score[x]=s;
     }
 
-    // smooth
     const smooth = new Float32Array(iw);
     const W=9;
     let maxv=0;
@@ -347,7 +419,6 @@
     const xNat = (clientX-r.dx)/r.dw*r.iw;
     const bds = boundaries || fallbackEqualBoundaries();
 
-    // binary search in bds
     let lo=0, hi=15;
     while(lo<=hi){
       const mid=(lo+hi)>>1;
@@ -359,7 +430,7 @@
   }
 
   /* =========================
-     6) 判定：只要 gap ≤ 2s 且音符正确
+     6) 判定：≤ 5s 且音符正确；超时文案
   ========================= */
   let step=0;
   let lastTime=null;
@@ -367,11 +438,15 @@
   function reset(msg="未开始"){
     step=0; lastTime=null;
     statusEl.textContent=msg;
-    statusEl.style.color="#fff";
+    statusEl.style.color="#111";
   }
   function fail(msg){
     reset("失败：" + msg + "（已重置）");
-    statusEl.style.color="#ff6b6b";
+    statusEl.style.color="#b42318";
+  }
+  function timeoutReset(){
+    reset("已超时，请重新完整弹奏。");
+    statusEl.style.color="#b42318";
   }
 
   function pressKey(idx){
@@ -382,7 +457,7 @@
 
     const now = performance.now()/1000;
     if(lastTime !== null && (now-lastTime) > MAX_GAP){
-      fail(`间隔超过 ${MAX_GAP}s`);
+      timeoutReset();
       return;
     }
     lastTime = now;
@@ -391,7 +466,7 @@
 
     const [tc, tn] = target[step];
     const needIdx = keyIndex.get(`${tc}|${tn}`);
-    if(needIdx === undefined){ fail("内部配置错误（目标键不存在）"); return; }
+    if(needIdx === undefined){ fail("内部配置错误"); return; }
 
     if(idx !== needIdx){
       fail(`音符错误：应为 ${tc}${tn}`);
@@ -401,20 +476,18 @@
     step++;
     if(step === target.length){
       statusEl.textContent="success";
-      statusEl.style.color="#00ff99";
+      statusEl.style.color="#067647";
     } else {
       statusEl.textContent=`进度 ${step}/${target.length}`;
-      statusEl.style.color="#fff";
+      statusEl.style.color="#111";
     }
   }
 
   /* =========================
-     7) 事件：只用 pointerdown + 去抖（关键修复 iPhone 双触发）
+     7) 事件：只用 pointerdown + 去抖（防重复触发）
   ========================= */
   let lastDownAt = 0;
-
   function handlePointerDown(ev){
-    // 去抖：同一次点按若被重复触发，忽略后续（50ms 内）
     const t = performance.now();
     if(t - lastDownAt < 50) return;
     lastDownAt = t;
@@ -424,10 +497,8 @@
     if(idx === null) return;
     pressKey(idx);
   }
-
   kbd.addEventListener("pointerdown", handlePointerDown, {passive:false});
   window.addEventListener("resize", ()=>layoutOverlay());
-  document.addEventListener("dblclick", (e)=>e.preventDefault(), {passive:false});
 
   /* =========================
      8) 按钮
@@ -438,10 +509,10 @@
       audioBtn.textContent="声音已启用";
       audioBtn.disabled=true;
       statusEl.textContent="声音已启用，开始弹奏";
-      statusEl.style.color="#00ff99";
+      statusEl.style.color="#067647";
     }catch(e){
       statusEl.textContent="启用声音失败（请再点一次）";
-      statusEl.style.color="#ff6b6b";
+      statusEl.style.color="#b42318";
     }
   });
 
