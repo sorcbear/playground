@@ -18,8 +18,10 @@ html,body{
 button{border:none;border-radius:10px;background:#111;color:#fff;padding:8px 10px;font-size:14px;cursor:pointer;}
 button:active{transform:translateY(1px)}
 .ok{background:#12b76a;color:#052;font-weight:700}
-.hint{font-size:14px;line-height:1.35;margin:0 0 6px;}
-.small{font-size:12px;opacity:.75;margin-top:2px;line-height:1.25;}
+
+/* 提示字小一点 */
+.hint{font-size:12px;line-height:1.35;margin:0 0 6px;}
+.small{font-size:11px;opacity:.75;margin-top:2px;line-height:1.25;}
 
 .kbd{position:relative;width:100%;overflow:hidden;background:#fff;touch-action:none;margin:0;}
 .kbd::before{content:"";display:block;padding-top:34%;}
@@ -29,8 +31,6 @@ button:active{transform:translateY(1px)}
 .overlay{position:absolute;inset:0;pointer-events:none;}
 .segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,160,90,.70);background:rgba(0,160,90,.06);display:none;}
 .debug .segbox{display:block;}
-.flash{position:absolute;top:56%;height:44%;background:rgba(0,0,0,0.10);border-radius:10px;opacity:0;transition:opacity 70ms linear;}
-.flash.on{opacity:1;}
 
 @media (orientation: landscape){
   .wrap{padding:4px 8px;}
@@ -76,6 +76,11 @@ button:active{transform:translateY(1px)}
 
   // 如果你仍觉得“整体偏 1px”，改这里：0 / +1 / -1
   const GLOBAL_NUDGE = 0;
+
+  // Debug 绿线间隔略大：对分割线做轻微“向中间压缩”
+  // 值 < 1 会压缩（间隔变小），值 > 1 会展开（间隔变大）
+  // 你觉得还偏大：把它调更小一点（例如 0.9982）
+  const BOUNDARY_SCALE = 0.9986;
 
   /* =========================
      16 键总模板（完整键盘）
@@ -168,7 +173,6 @@ button:active{transform:translateY(1px)}
 
   let boundaries=null; // length FIX_N+1
   let segBoxes=[];
-  let flashEl=null;
 
   function getImageDrawRect(){
     const cr = kbd.getBoundingClientRect();
@@ -194,6 +198,7 @@ button:active{transform:translateY(1px)}
      - 先吸附到黑线带中心
      - 再做等间距线性拟合校正
      - 再小半径二次吸附
+     - 最后对整体做轻微缩放（修正“间隔略大”）
   ========================= */
   function detectBoundaries12BySeparators(){
     const iw=img.naturalWidth, ih=img.naturalHeight;
@@ -302,14 +307,14 @@ button:active{transform:translateY(1px)}
     const n=need;
     const denom = (n*sumkk - sumk*sumk) || 1;
     const d = (n*sumkx - sumk*sumx) / denom;
-    const a = (sumx - d*sumk) / n;
+    const a0 = (sumx - d*sumk) / n;
 
     const fitted=[];
     for(let k=1;k<=need;k++){
-      fitted.push(Math.round(a + d*k));
+      fitted.push(Math.round(a0 + d*k));
     }
 
-    // 3) 小半径二次吸附（把拟合点再次压回黑线中心）
+    // 3) 小半径二次吸附
     function snapSmall(x0){
       const R = 4;
       const L = Math.max(2, x0 - R);
@@ -331,6 +336,11 @@ button:active{transform:translateY(1px)}
 
     refined = fitted.map(x => snapSmall(x) + GLOBAL_NUDGE);
 
+    // 4) 轻微缩放校正：向中心压缩/展开
+    // 让“间隔略大”的绿线与黑线更贴合
+    const center = iw * 0.5;
+    refined = refined.map(x => Math.round(center + (x - center) * BOUNDARY_SCALE));
+
     const bds=[0, ...refined, iw];
 
     for(let i=1;i<bds.length;i++){
@@ -342,7 +352,6 @@ button:active{transform:translateY(1px)}
   function buildOverlay(){
     overlay.innerHTML="";
     segBoxes=[];
-    flashEl=null;
 
     if(!boundaries) return;
 
@@ -352,9 +361,6 @@ button:active{transform:translateY(1px)}
       overlay.appendChild(box);
       segBoxes.push(box);
     }
-    flashEl=document.createElement("div");
-    flashEl.className="flash";
-    overlay.appendChild(flashEl);
 
     layoutOverlay();
   }
@@ -370,19 +376,6 @@ button:active{transform:translateY(1px)}
       segBoxes[i].style.left = x0 + "px";
       segBoxes[i].style.width = Math.max(0, x1-x0) + "px";
     }
-  }
-
-  function flashKey(localIdx){
-    if(!flashEl || !boundaries) return;
-    const r = getImageDrawRect();
-    const leftPad = (r.cw - r.dw)/2;
-
-    const x0 = boundaries[localIdx]   / r.iw * r.dw + leftPad;
-    const x1 = boundaries[localIdx+1] / r.iw * r.dw + leftPad;
-    flashEl.style.left = x0 + "px";
-    flashEl.style.width = Math.max(6, x1-x0) + "px";
-    flashEl.classList.add("on");
-    setTimeout(()=>flashEl.classList.remove("on"), 90);
   }
 
   function pointToLocalIndex(clientX, clientY){
@@ -429,8 +422,6 @@ button:active{transform:translateY(1px)}
     const globalIdx = FIX_OFFSET + localIdx;
     if(globalIdx < 0 || globalIdx >= 16) return;
 
-    flashKey(localIdx);
-
     const key = KEYS[globalIdx];
     if(audioEnabled) playTone(midiToFreq(key.m), 1.25);
 
@@ -453,7 +444,8 @@ button:active{transform:translateY(1px)}
     }
 
     if(globalIdx !== needIdx){
-      fail(`音符错误：应为 ${tc}${tn}`);
+      // 简化错误提示
+      fail("音符错误，请再弹一次。");
       return;
     }
 
