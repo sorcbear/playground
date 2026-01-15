@@ -27,10 +27,8 @@
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
-      -webkit-tap-highlight-color: transparent;
     }
 
-    /* ===== 页面整体容器：手机端尽量贴边 ===== */
     .wrap{
       max-width: 1200px;
       margin: 10px auto;
@@ -43,17 +41,15 @@
       }
     }
 
-    /* ===== 顶部一句话 ===== */
+    /* ===== 新增：标题 ===== */
     .title{
-      margin: 6px 0 10px;
-      text-align: center;
       font-size: 16px;
       font-weight: 500;
-      letter-spacing: .5px;
       color: var(--text);
+      text-align: left;
+      margin-bottom: 2.2em; /* 空两行 */
     }
 
-    /* ===== 拼图区域 ===== */
     .boardShell{
       border: 1px solid var(--line2);
       border-radius: var(--radius);
@@ -76,7 +72,6 @@
       border-bottom: 1px solid var(--line);
       overflow:hidden;
       cursor:pointer;
-      background:#fff;
     }
     .tile[data-last-col="1"]{ border-right:none; }
     .tile[data-last-row="1"]{ border-bottom:none; }
@@ -90,7 +85,6 @@
       user-select:none;
     }
 
-    /* ===== 横屏提示 ===== */
     .orientation-hint{
       margin-top: 8px;
       font-size: 12px;
@@ -98,17 +92,6 @@
       text-align: center;
     }
 
-    /* ===== Setup Bar（保留，默认隐藏） ===== */
-    .setupBar{
-      margin-top: 10px;
-      padding: 8px;
-      border: 1px dashed var(--line2);
-      border-radius: 14px;
-      display:none;
-      gap:10px;
-    }
-
-    /* ===== 底部操作区 ===== */
     .hud{
       margin-top: 12px;
       display:flex;
@@ -124,9 +107,6 @@
       font-size: 14px;
       color: var(--muted);
       background: #ffffff;
-      display:flex;
-      align-items:center;
-      min-height: 46px;
     }
     .msg.ok{ color: var(--ok); }
     .msg.bad{ color: var(--bad); }
@@ -152,12 +132,6 @@
       background: var(--btnHover);
     }
 
-    button:disabled{
-      opacity: .45;
-      cursor: not-allowed;
-    }
-
-    /* ===== JS 依赖但隐藏的元素（不要删） ===== */
     #hintText,
     #clickCount,
     #clickLimit{
@@ -169,9 +143,9 @@
 <body>
   <div class="wrap">
 
+    <!-- 新增标题 -->
     <div class="title">寻找你的起点</div>
 
-    <!-- JS 需要但不显示 -->
     <p id="hintText"></p>
     <span id="clickCount">0</span>
     <span id="clickLimit">27</span>
@@ -184,11 +158,6 @@
       可以转动手机，横向操作。
     </div>
 
-    <div id="setupBar" class="setupBar">
-      <button id="btnSaveSetup">Save Setup</button>
-      <button id="btnClearSetup">Clear Saved Setup</button>
-    </div>
-
     <div class="hud">
       <div id="message" class="msg"></div>
       <div class="btnCol">
@@ -199,7 +168,6 @@
 
   </div>
 
-  <!-- 强制破缓存 -->
-  <script src="./script.js?v=rotate-success-to-circle-1"></script>
+  <script src="./script.js"></script>
 </body>
 </html>
