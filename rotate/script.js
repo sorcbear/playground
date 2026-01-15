@@ -8,6 +8,9 @@
   // 成功后跳转目标（从 /rotate/ 跳到 /circle/）
   const NEXT_URL = "../circle/";
 
+  // 统一叙事性跳转延迟：0.6s
+  const REDIRECT_DELAY = 600;
+
   const params = new URLSearchParams(location.search);
   const isSetup = params.get("setup") === "1";
 
@@ -57,8 +60,6 @@
   function resetToSeed() {
     curSteps = seedSteps.slice();
     applyAllRotations();
-    // 你之前要求这里提示语简化成“已重置”，我保持你原来的写法不动的话会冲突；
-    // 但你本轮需求没提这个点，这里仍维持原句。
     setMessage("已重置到起始状态。");
   }
 
@@ -118,11 +119,14 @@
       // 仅在展示层做改变：成功输出 success（小写），失败仍 try again
       setMessage(solved ? "success" : "try again", solved ? "ok" : "bad");
 
-      // 成功后跳转到下一关（非 setup 模式才跳）
+      // 成功后叙事性跳转：success -> 锁定交互 -> 0.6s -> redirect（非 setup 模式才跳）
       if (solved && !isSetup) {
+        btnSubmit.disabled = true;
+        btnUndo.disabled = true;
+
         setTimeout(() => {
           location.href = NEXT_URL;
-        }, 600);
+        }, REDIRECT_DELAY);
       }
     };
 
