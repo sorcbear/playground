@@ -5,14 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Circle Puzzle</title>
   <style>
-    :root { --maxw: 720px; }
+    :root { 
+      --maxw: 720px;
+      --text: #111;
+    }
     body{
       margin:0;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;
       background:#fff;
-      color:#111;
+      color:var(--text);
     }
     .wrap{ max-width:var(--maxw); margin:0 auto; padding:12px; }
+
+    /* 标题 */
+    .title{
+      font-size:20px;
+      font-weight:500;
+      color:var(--text);
+      text-align:left;
+      margin-bottom:0.6em;
+    }
+    .subtitle{
+      font-size:13px;
+      line-height:1.6;
+      color:#444;
+      margin-bottom:2.2em;
+    }
 
     .stage{
       width:100%;
@@ -30,7 +48,6 @@
     .dot{ fill:transparent; pointer-events:none; }
     .hit.selected + .dot{ fill:rgba(220,0,0,0.92); }
 
-    /* 上方提示：纯白，无色块 */
     .hint{
       margin-top:12px;
       padding:0;
@@ -58,7 +75,6 @@
     }
     button:active{ transform:translateY(1px); }
 
-    /* 下方结果提示：纯白，无色块 */
     .msg{
       margin-top:12px;
       padding:0;
@@ -70,6 +86,12 @@
 </head>
 <body>
 <div class="wrap">
+
+  <!-- 标题区 -->
+  <div class="title">请寻找你的起点</div>
+  <div class="subtitle">
+    请走到老吉士马路对面，然后往左边方向前进，留意100米范围内的墙面信息，找到线索解题。
+  </div>
 
   <div class="stage">
     <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg"
@@ -88,18 +110,15 @@
     </svg>
   </div>
 
-  <!-- 提示文案（白底） -->
   <div class="hint">
     请结合环境信息，在上图中点击正确位置的圆圈后提交。
   </div>
 
-  <!-- 按钮 -->
   <div class="panel">
     <button id="undoBtn">Undo</button>
     <button id="submitBtn">Submit</button>
   </div>
 
-  <!-- 结果提示（白底） -->
   <div class="msg" id="msg"></div>
 
 </div>
@@ -114,6 +133,7 @@ const ANSWER_POINTS = [
 ];
 
 const R_DOT=10, SNAP_DIST=36, EPS=10;
+const NEXT_URL = "https://sorcbear.github.io/playground/track/";
 
 const svg=document.getElementById("svg");
 const catcher=document.getElementById("catcher");
@@ -170,7 +190,11 @@ undoBtn.onclick=()=>{
 };
 
 submitBtn.onclick=()=>{
-  msg.textContent=sameSet(userPts(),ANSWER_POINTS)?"Success":"Please try again";
+  if(sameSet(userPts(),ANSWER_POINTS)){
+    window.location.href = NEXT_URL;
+  }else{
+    msg.textContent="Please try again";
+  }
 };
 
 render();
