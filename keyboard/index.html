@@ -68,12 +68,15 @@ button:active{transform:translateY(1px)}
 <script>
 (() => {
   /* =========================
-     固定：你这张图 12 键；最左是 green si
+     你这张图：固定 12 键；最左为 green si
   ========================= */
   const FIX_N = 12;
-  const FIX_OFFSET = 2; // green so(0), green la(1), green si(2)
-
+  const FIX_OFFSET = 2;   // green so(0), green la(1), green si(2)
   const MAX_GAP = 5.0;
+
+  // 如果你仍觉得“整体偏左/偏右”，只改这一个：
+  // 0 = 默认；+1 往右吸；-1 往左吸
+  const GLOBAL_NUDGE = 0;
 
   /* =========================
      16 键总模板（完整键盘）
@@ -105,7 +108,7 @@ button:active{transform:translateY(1px)}
   ];
 
   /* =========================
-     WebAudio（简易钢琴味）
+     WebAudio（简易钢琴味，稍长音）
   ========================= */
   let audioCtx=null, audioEnabled=false;
   function ensureAudioCtx(){
@@ -119,7 +122,7 @@ button:active{transform:translateY(1px)}
     audioEnabled = true;
   }
   function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
-  function playTone(freq, duration=1.20){
+  function playTone(freq, duration=1.25){
     if(!audioEnabled || !audioCtx) return;
     const now = audioCtx.currentTime;
 
@@ -135,7 +138,7 @@ button:active{transform:translateY(1px)}
 
     const amp=audioCtx.createGain();
     amp.gain.setValueAtTime(0.0001, now);
-    amp.gain.linearRampToValueAtTime(0.32, now+0.015);
+    amp.gain.linearRampToValueAtTime(0.33, now+0.015);
     amp.gain.exponentialRampToValueAtTime(0.0001, now+duration);
 
     const lp=audioCtx.createBiquadFilter();
@@ -189,12 +192,7 @@ button:active{transform:translateY(1px)}
   }
 
   /* =========================
-     核心：用“白键之间黑色竖分隔线”检测 11 条线（12 段）
-     - 先算每列黑像素数量
-     - 平滑
-     - 取局部峰（带强度）
-     - 按强度排序 + NMS 去重
-     - 半高点中心化 refine（修掉你说的“差一点”）
+     核心：检测黑色竖分隔线 + 半高点中心化 + 最黑列吸附
   ========================= */
   function detectBoundaries12BySeparators(){
     const iw=img.naturalWidth, ih=img.naturalHeight;
@@ -205,12 +203,13 @@ button:active{transform:translateY(1px)}
     const ctx=canvas.getContext("2d",{willReadFrequently:true});
     ctx.drawImage(img,0,0,iw,ih);
 
-    // 采样带：避开底部黑横线与阴影
+    // 采样带：避开底部黑横线
     const y0=Math.floor(ih*0.66);
     const y1=Math.floor(ih*0.90);
     const h=Math.max(1,y1-y0);
     const data=ctx.getImageData(0,y0,iw,h).data;
 
+    // raw[x]：此列黑像素数量
     const raw=new Float32Array(iw);
     for(let x=0;x<iw;x++){
       let s=0;
@@ -255,13 +254,11 @@ button:active{transform:translateY(1px)}
     }
     if(peaks.length < 11) return null;
 
-    // 按强度排序，NMS 去重，选 11 条
+    // 强度排序 + NMS 去重 选 11 条
     peaks.sort((a,b)=>b.v-a.v);
-
     const need=FIX_N-1; // 11
-    const minDist=Math.floor(iw/(FIX_N*1.20)); // 经验值：避免同一条线被重复选中
+    const minDist=Math.floor(iw/(FIX_N*1.20));
     const chosen=[];
-
     for(const p of peaks){
       if(p.x < iw*0.02 || p.x > iw*0.98) continue;
       let ok=true;
@@ -273,16 +270,14 @@ button:active{transform:translateY(1px)}
       if(chosen.length===need) break;
     }
     if(chosen.length!==need) return null;
-
     chosen.sort((a,b)=>a.x-b.x);
 
-    // refine：半高点左右交点中点
+    // 半高点中心化 refine
     function refineCenter(x0){
       const R=10;
       const left=Math.max(2, x0-R);
       const right=Math.min(iw-3, x0+R);
 
-      // 找窗口内真正最大值点
       let xm=x0, vm=-1;
       for(let x=left;x<=right;x++){
         const v=smooth[x];
@@ -302,7 +297,25 @@ button:active{transform:translateY(1px)}
       return Math.round((xl+xr)/2);
     }
 
-    const refined=chosen.map(p=>refineCenter(p.x));
+    // 最黑列吸附（±6px 内找 raw 最大）
+    function snapToDarkColumn(x0){
+      const R=6;
+      let bestX=x0, bestV=-1;
+      const L=Math.max(1, x0-R);
+      const Rr=Math.min(iw-2, x0+R);
+      for(let x=L;x<=Rr;x++){
+        const v=raw[x];
+        if(v>bestV){ bestV=v; bestX=x; }
+      }
+      return bestX;
+    }
+
+    let refined=chosen.map(p=>refineCenter(p.x));
+    refined=refined.map(x=>snapToDarkColumn(x));
+
+    // 全局微调（通常不需要；你若觉得整体偏 1px，改 GLOBAL_NUDGE）
+    refined=refined.map(x=>x+GLOBAL_NUDGE);
+
     const bds=[0, ...refined, iw];
 
     // 单调修正
@@ -405,7 +418,7 @@ button:active{transform:translateY(1px)}
     flashKey(localIdx);
 
     const key = KEYS[globalIdx];
-    if(audioEnabled) playTone(midiToFreq(key.m), 1.20);
+    if(audioEnabled) playTone(midiToFreq(key.m), 1.25);
 
     const now = performance.now()/1000;
     if(lastTime !== null && (now-lastTime) > MAX_GAP){
@@ -487,7 +500,6 @@ button:active{transform:translateY(1px)}
   img.addEventListener("load", ()=>{
     boundaries = detectBoundaries12BySeparators();
     if(!boundaries || boundaries.length !== FIX_N+1){
-      // 兜底：仍然保证 12 段
       boundaries = fallbackEqualBoundaries(FIX_N);
     }
     buildOverlay();
