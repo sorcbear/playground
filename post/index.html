@@ -29,15 +29,13 @@
 
     .answer {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 16px;
+      gap: 12px;
       margin-bottom: 24px;
     }
 
     .answer input {
-      width: 80px;
-      padding: 6px 8px;
+      width: 90px;
+      padding: 8px;
       font-size: 16px;
       border: 1px solid #000;
       outline: none;
@@ -45,13 +43,12 @@
       box-sizing: border-box;
     }
 
-    .answer input.month,
-    .answer input.day {
+    .answer input.short {
       width: 60px;
     }
 
     button {
-      padding: 8px 20px;
+      padding: 8px 24px;
       font-size: 16px;
       border: none;
       background: #000;
@@ -78,12 +75,9 @@
     </div>
 
     <div class="answer">
-      <input type="number" id="year" placeholder="年" />
-      年
-      <input type="number" id="month" class="month" placeholder="月" />
-      月
-      <input type="number" id="day" class="day" placeholder="日" />
-      日
+      <input id="year" placeholder="YYYY" inputmode="numeric" />
+      <input id="month" class="short" placeholder="MM" inputmode="numeric" />
+      <input id="day" class="short" placeholder="DD" inputmode="numeric" />
     </div>
 
     <button onclick="checkAnswer()">Submit</button>
