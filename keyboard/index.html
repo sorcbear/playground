@@ -21,16 +21,13 @@
   .hint{font-size:14px;line-height:1.35;margin:0 0 6px;}
   .small{font-size:12px;opacity:.75;margin-top:2px;line-height:1.25;}
 
-  .kbd{
-    position:relative;width:100%;
-    overflow:hidden;background:#fff;box-shadow:none;touch-action:none;margin:0;
-  }
+  .kbd{position:relative;width:100%;overflow:hidden;background:#fff;box-shadow:none;touch-action:none;margin:0;}
   .kbd::before{content:"";display:block;padding-top:34%;}
   .kbd-inner{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;}
   #kbdImg{width:100%;height:100%;object-fit:contain;object-position:center top;display:block;pointer-events:none;background:#fff;}
 
   .overlay{position:absolute;inset:0;pointer-events:none;}
-  .segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,150,80,.55);background:rgba(0,150,80,.06);display:none;}
+  .segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,150,80,.60);background:rgba(0,150,80,.06);display:none;}
   .debug .segbox{display:block;}
   .flash{position:absolute;top:56%;height:44%;background:rgba(0,0,0,0.10);border-radius:10px;opacity:0;transition:opacity 70ms linear;}
   .flash.on{opacity:1;}
@@ -72,11 +69,10 @@
 <script>
 (() => {
   /* =========================
-     固定：你这张图就是 12 键
-     且从完整 16 键模板的 index=2 开始（green si 起）
+     固定：你这张图就是 12 键；最左是 green si
   ========================= */
   const FIX_N = 12;
-  const FIX_OFFSET = 2; // 0: green so, 1: green la, 2: green si（你的图最左就是 si）
+  const FIX_OFFSET = 2; // green so(0) green la(1) green si(2) —— 你的图从 si 开始
 
   /* =========================
      16 键总模板（完整键盘）
@@ -85,7 +81,6 @@
     {c:"green",n:"so",m:55},
     {c:"green",n:"la",m:57},
     {c:"green",n:"si",m:59},
-
     {c:"red",n:"do",m:60},
     {c:"red",n:"re",m:62},
     {c:"red",n:"mi",m:64},
@@ -93,7 +88,6 @@
     {c:"red",n:"so",m:67},
     {c:"red",n:"la",m:69},
     {c:"red",n:"si",m:71},
-
     {c:"blue",n:"do",m:72},
     {c:"blue",n:"re",m:74},
     {c:"blue",n:"mi",m:76},
@@ -195,8 +189,13 @@
     return bds;
   }
 
-  // 仍用色块检测边界，但最终强制只取 12 段（更稳定）
-  function detectBoundaries12(){
+  /* =========================
+     关键修复：用“黑色竖分隔线”检测 12 键边界
+     - 在白键区域（中下部）取一条横向带状区域
+     - 统计每个 x 上的“黑像素数量”
+     - 找出 11 条最强峰（即 12 键的分隔线）
+  ========================= */
+  function detectBoundaries12BySeparators(){
     const iw=img.naturalWidth, ih=img.naturalHeight;
     if(!iw||!ih) return null;
 
@@ -205,72 +204,87 @@
     const ctx=canvas.getContext("2d",{willReadFrequently:true});
     ctx.drawImage(img,0,0,iw,ih);
 
-    const y0=Math.floor(ih*0.82), y1=Math.floor(ih*0.96);
+    // 选白键分隔线最明显的区域：大约 62% ~ 98%
+    const y0=Math.floor(ih*0.62);
+    const y1=Math.floor(ih*0.98);
     const h=Math.max(1,y1-y0);
     const data=ctx.getImageData(0,y0,iw,h).data;
 
-    const score=new Float32Array(iw);
+    // darkScore[x] = 该竖列中“黑像素”的数量
+    const darkScore=new Float32Array(iw);
     for(let x=0;x<iw;x++){
       let s=0;
       for(let y=0;y<h;y++){
         const i=(y*iw+x)*4;
         const r=data[i], g=data[i+1], b=data[i+2];
-        const isWhite=(r>240 && g>240 && b>240);
-        if(!isWhite) s++;
+        // 分隔线是接近纯黑：阈值可稍宽
+        if(r<60 && g<60 && b<60) s++;
       }
-      score[x]=s;
+      darkScore[x]=s;
     }
 
+    // 平滑一下
     const smooth=new Float32Array(iw);
-    const W=9;
+    const W=6;
     let maxv=0;
     for(let x=0;x<iw;x++){
       let sum=0,cnt=0;
       for(let k=-W;k<=W;k++){
         const xx=x+k;
-        if(xx>=0&&xx<iw){sum+=score[xx];cnt++;}
+        if(xx>=0 && xx<iw){ sum+=darkScore[xx]; cnt++; }
       }
-      smooth[x]=sum/cnt;
-      if(smooth[x]>maxv) maxv=smooth[x];
+      const v=sum/cnt;
+      smooth[x]=v;
+      if(v>maxv) maxv=v;
     }
-    if(maxv < h*0.10) return null;
+    if(maxv < h*0.12) return null;
 
-    const thresh=maxv*0.35;
-    const inBlock=new Array(iw).fill(false);
-    for(let x=0;x<iw;x++) inBlock[x]=smooth[x]>thresh;
-
-    const runs=[];
-    let s=null;
-    for(let x=0;x<iw;x++){
-      if(inBlock[x] && s===null) s=x;
-      if(!inBlock[x] && s!==null){
-        const e=x-1;
-        if(e-s>12) runs.push([s,e]);
-        s=null;
+    // 找局部峰值
+    const thresh = maxv*0.45; // 只取明显分隔线
+    const peaks=[];
+    for(let x=2;x<iw-2;x++){
+      const v=smooth[x];
+      if(v < thresh) continue;
+      if(v>=smooth[x-1] && v>=smooth[x+1] && v>=smooth[x-2] && v>=smooth[x+2]){
+        peaks.push([x,v]);
       }
     }
-    if(s!==null){
-      const e=iw-1;
-      if(e-s>12) runs.push([s,e]);
+    if(peaks.length < 6) return null;
+
+    // 按峰值强度排序，做“最小间距抑制”，取 11 条分隔线
+    peaks.sort((a,b)=>b[1]-a[1]);
+
+    const need = FIX_N-1; // 11
+    const minDist = Math.floor(iw / (FIX_N*1.25)); // 大概每键宽的 0.8 倍
+    const chosen=[];
+
+    for(const [x,v] of peaks){
+      let ok=true;
+      for(const cx of chosen){
+        if(Math.abs(x-cx) < minDist){ ok=false; break; }
+      }
+      if(!ok) continue;
+      // 避免贴边（外框）
+      if(x < iw*0.02 || x > iw*0.98) continue;
+      chosen.push(x);
+      if(chosen.length===need) break;
     }
-    if(runs.length < FIX_N) return null;
 
-    // 取最长的 12 段当作色块（避免噪声小段）
-    runs.sort((a,b)=> (b[1]-b[0])-(a[1]-a[0]));
-    const picked = runs.slice(0, FIX_N).sort((a,b)=>a[0]-b[0]);
-    if(picked.length !== FIX_N) return null;
-
-    const bds=[];
-    bds.push(0);
-    for(let i=1;i<FIX_N;i++){
-      const prev=picked[i-1], cur=picked[i];
-      bds.push(Math.floor((prev[1]+cur[0])/2));
+    if(chosen.length !== need){
+      // 如果没选满，说明阈值太高或图异常，兜底失败
+      return null;
     }
-    bds.push(iw);
 
+    chosen.sort((a,b)=>a-b);
+
+    // 边界：0 + 11条分隔线 + iw
+    const bds=[0, ...chosen, iw];
+
+    // 单调修正
     for(let i=1;i<bds.length;i++){
       if(bds[i]<=bds[i-1]) bds[i]=bds[i-1]+1;
     }
+
     return bds;
   }
 
@@ -382,7 +396,6 @@
     const needIdx = KEYS.findIndex(k => k.c===tc && k.n===tn);
     if(needIdx < 0){ fail("内部配置错误"); return; }
 
-    // 若目标键不在这张 12 键图可弹范围内，直接提示无解
     if(needIdx < FIX_OFFSET || needIdx >= FIX_OFFSET + FIX_N){
       fail("当前键盘图片缺少必要琴键，请使用包含该音的键盘图");
       return;
@@ -404,7 +417,7 @@
   }
 
   /* =========================
-     事件
+     事件：pointerdown + 去抖
   ========================= */
   let lastDownAt = 0;
   function handlePointerDown(ev){
@@ -435,9 +448,7 @@
       statusEl.style.color="#b42318";
     }
   });
-
   resetBtn.addEventListener("click", ()=>reset("已重置"));
-
   debugBtn.addEventListener("click", ()=>{
     debug = !debug;
     document.body.classList.toggle("debug", debug);
@@ -445,10 +456,10 @@
   });
 
   /* =========================
-     图片加载 -> 取 12 段边界
+     图片加载 -> 用黑分隔线取边界（更精确）
   ========================= */
   img.addEventListener("load", ()=>{
-    boundaries = detectBoundaries12() || fallbackEqualBoundaries(FIX_N);
+    boundaries = detectBoundaries12BySeparators() || fallbackEqualBoundaries(FIX_N);
     buildOverlay();
     reset("未开始");
   });
