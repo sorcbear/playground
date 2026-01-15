@@ -92,18 +92,15 @@
       const day = Number(document.getElementById('day').value.trim());
       const result = document.getElementById('result');
 
-      if (
+      const isCorrect =
         !Number.isNaN(year) &&
         !Number.isNaN(month) &&
         !Number.isNaN(day) &&
         year === 2015 &&
         month === 2 &&
-        day === 14
-      ) {
-        result.textContent = 'success';
-      } else {
-        result.textContent = '';
-      }
+        day === 14;
+
+      result.textContent = isCorrect ? 'success' : 'try again';
     }
   </script>
 </body>
