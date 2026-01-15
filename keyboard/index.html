@@ -67,24 +67,15 @@ button:active{transform:translateY(1px)}
 
 <script>
 (() => {
-  /* =========================
-     固定：12 键；最左为 green si
-  ========================= */
   const FIX_N = 12;
-  const FIX_OFFSET = 2;   // green so(0), green la(1), green si(2)
+  const FIX_OFFSET = 2;
   const MAX_GAP = 5.0;
 
-  // 如果你仍觉得“整体偏 1px”，改这里：0 / +1 / -1
   const GLOBAL_NUDGE = 0;
 
-  // Debug 绿线间隔略大：对分割线做轻微“向中间压缩”
-  // 值 < 1 会压缩（间隔变小），值 > 1 会展开（间隔变大）
-  // 你觉得还偏大：把它调更小一点（例如 0.9982）
-  const BOUNDARY_SCALE = 0.8;
+  // 这里你改 0.8 应该会“明显压缩”，如果你看不到变化，一定是旧文件/缓存 或 fallback 未应用
+  const BOUNDARY_SCALE = 0.9986;
 
-  /* =========================
-     16 键总模板（完整键盘）
-  ========================= */
   const KEYS = [
     {c:"green",n:"so",m:55},
     {c:"green",n:"la",m:57},
@@ -111,9 +102,6 @@ button:active{transform:translateY(1px)}
     ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
   ];
 
-  /* =========================
-     WebAudio（简易钢琴味，稍长音）
-  ========================= */
   let audioCtx=null, audioEnabled=false;
   function ensureAudioCtx(){
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -160,9 +148,6 @@ button:active{transform:translateY(1px)}
     o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
   }
 
-  /* =========================
-     DOM
-  ========================= */
   const kbd=document.getElementById("kbd");
   const img=document.getElementById("kbdImg");
   const overlay=document.getElementById("overlay");
@@ -173,6 +158,7 @@ button:active{transform:translateY(1px)}
 
   let boundaries=null; // length FIX_N+1
   let segBoxes=[];
+  let boundarySource=""; // "detected" | "fallback"
 
   function getImageDrawRect(){
     const cr = kbd.getBoundingClientRect();
@@ -193,13 +179,31 @@ button:active{transform:translateY(1px)}
     return bds;
   }
 
-  /* =========================
-     核心：检测黑竖分隔线
-     - 先吸附到黑线带中心
-     - 再做等间距线性拟合校正
-     - 再小半径二次吸附
-     - 最后对整体做轻微缩放（修正“间隔略大”）
-  ========================= */
+  // 关键：无论 detected / fallback，都统一在这里做缩放
+  function applyScaleToBoundaries(bds, scale){
+    const iw = img.naturalWidth || 1024;
+    const center = iw * 0.5;
+    const out = bds.slice();
+
+    for(let i=1;i<out.length-1;i++){
+      out[i] = Math.round(center + (out[i]-center) * scale);
+    }
+
+    // 保证严格递增
+    out[0]=0; out[out.length-1]=iw;
+    for(let i=1;i<out.length;i++){
+      if(out[i] <= out[i-1]) out[i] = out[i-1] + 1;
+      if(out[i] > iw) out[i] = iw;
+    }
+    // 再从右往左修正，避免尾部挤爆
+    for(let i=out.length-2;i>=0;i--){
+      if(out[i] >= out[i+1]) out[i] = out[i+1] - 1;
+      if(out[i] < 0) out[i] = 0;
+    }
+    out[0]=0; out[out.length-1]=iw;
+    return out;
+  }
+
   function detectBoundaries12BySeparators(){
     const iw=img.naturalWidth, ih=img.naturalHeight;
     if(!iw||!ih) return null;
@@ -291,18 +295,13 @@ button:active{transform:translateY(1px)}
       return Math.round((a+b)/2);
     }
 
-    // 1) 初次吸附
     let refined = chosen.map(p => snapToDarkRunCenter(p.x));
 
-    // 2) 等间距线性拟合（最小二乘） x ≈ a + k*d, k=1..11
     let sumk=0, sumx=0, sumkk=0, sumkx=0;
     for(let i=0;i<need;i++){
       const k=i+1;
       const x=refined[i];
-      sumk += k;
-      sumx += x;
-      sumkk += k*k;
-      sumkx += k*x;
+      sumk += k; sumx += x; sumkk += k*k; sumkx += k*x;
     }
     const n=need;
     const denom = (n*sumkk - sumk*sumk) || 1;
@@ -310,11 +309,8 @@ button:active{transform:translateY(1px)}
     const a0 = (sumx - d*sumk) / n;
 
     const fitted=[];
-    for(let k=1;k<=need;k++){
-      fitted.push(Math.round(a0 + d*k));
-    }
+    for(let k=1;k<=need;k++) fitted.push(Math.round(a0 + d*k));
 
-    // 3) 小半径二次吸附
     function snapSmall(x0){
       const R = 4;
       const L = Math.max(2, x0 - R);
@@ -335,12 +331,6 @@ button:active{transform:translateY(1px)}
     }
 
     refined = fitted.map(x => snapSmall(x) + GLOBAL_NUDGE);
-
-    // 4) 轻微缩放校正：向中心压缩/展开
-    // 让“间隔略大”的绿线与黑线更贴合
-    const center = iw * 0.5;
-    refined = refined.map(x => Math.round(center + (x - center) * BOUNDARY_SCALE));
-
     const bds=[0, ...refined, iw];
 
     for(let i=1;i<bds.length;i++){
@@ -352,7 +342,6 @@ button:active{transform:translateY(1px)}
   function buildOverlay(){
     overlay.innerHTML="";
     segBoxes=[];
-
     if(!boundaries) return;
 
     for(let i=0;i<FIX_N;i++){
@@ -361,7 +350,6 @@ button:active{transform:translateY(1px)}
       overlay.appendChild(box);
       segBoxes.push(box);
     }
-
     layoutOverlay();
   }
 
@@ -398,11 +386,7 @@ button:active{transform:translateY(1px)}
     return null;
   }
 
-  /* =========================
-     判定逻辑
-  ========================= */
-  let step=0;
-  let lastTime=null;
+  let step=0, lastTime=null;
 
   function reset(msg="未开始"){
     step=0; lastTime=null;
@@ -444,7 +428,6 @@ button:active{transform:translateY(1px)}
     }
 
     if(globalIdx !== needIdx){
-      // 简化错误提示
       fail("音符错误，请再弹一次。");
       return;
     }
@@ -459,9 +442,6 @@ button:active{transform:translateY(1px)}
     }
   }
 
-  /* =========================
-     事件
-  ========================= */
   let lastDownAt = 0;
   function handlePointerDown(ev){
     const t = performance.now();
@@ -476,9 +456,6 @@ button:active{transform:translateY(1px)}
   kbd.addEventListener("pointerdown", handlePointerDown, {passive:false});
   window.addEventListener("resize", ()=>layoutOverlay());
 
-  /* =========================
-     按钮
-  ========================= */
   audioBtn.addEventListener("click", async ()=>{
     try{
       await enableAudio();
@@ -497,16 +474,25 @@ button:active{transform:translateY(1px)}
   debugBtn.addEventListener("click", ()=>{
     const on = document.body.classList.toggle("debug");
     debugBtn.textContent = on ? "Debug On" : "Debug";
+    if(on){
+      // 打开 debug 时告诉你当前到底是 detected 还是 fallback，以及 scale 值
+      statusEl.textContent = `Debug: ${boundarySource || "?"}, scale=${BOUNDARY_SCALE}`;
+      statusEl.style.color="#111";
+    }
   });
 
-  /* =========================
-     图片加载 -> 一定生成 12 段
-  ========================= */
   img.addEventListener("load", ()=>{
-    boundaries = detectBoundaries12BySeparators();
-    if(!boundaries || boundaries.length !== FIX_N+1){
-      boundaries = fallbackEqualBoundaries(FIX_N);
+    let bds = detectBoundaries12BySeparators();
+    if(!bds || bds.length !== FIX_N+1){
+      boundarySource = "fallback";
+      bds = fallbackEqualBoundaries(FIX_N);
+    }else{
+      boundarySource = "detected";
     }
+
+    // 关键：无论 detected / fallback，都应用 scale
+    boundaries = applyScaleToBoundaries(bds, BOUNDARY_SCALE);
+
     buildOverlay();
     reset("未开始");
   });
