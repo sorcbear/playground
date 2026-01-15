@@ -4,24 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 <title>Piano Puzzle</title>
-
 <style>
-  html,body{
-    margin:0;
-    background:#000;
-    color:#fff;
-    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
-    user-select:none;
-    -webkit-tap-highlight-color: transparent;
-  }
+  html,body{margin:0;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;user-select:none;-webkit-tap-highlight-color:transparent;}
   .wrap{max-width:1100px;margin:0 auto;padding:14px;box-sizing:border-box;}
   .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px;}
-  .status{font-size:14px;min-height:22px;flex:1 1 240px;opacity:.95;}
+  .status{font-size:14px;min-height:22px;flex:1 1 260px;opacity:.95;}
   .btns{display:flex;gap:10px;flex:0 0 auto;}
-  button{
-    border:none;border-radius:10px;background:#222;color:#fff;
-    padding:10px 14px;font-size:14px;cursor:pointer;
-  }
+  button{border:none;border-radius:10px;background:#222;color:#fff;padding:10px 14px;font-size:14px;cursor:pointer;}
   button:active{transform:translateY(1px)}
   .ok{background:#0b5;color:#021;font-weight:700}
   .hint{font-size:14px;opacity:.9;line-height:1.5;margin:6px 0 10px;}
@@ -33,31 +22,38 @@
     box-shadow:0 10px 30px rgba(0,0,0,.6);
     background:#111;
   }
-  /* 你的图大约 1024x461，约 45.1% */
+  /* 你的图约 1024x461 */
   .kbd::before{content:"";display:block;padding-top:45.1%;}
   .kbd-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
   #kbdImg{
     width:100%;height:100%;
-    object-fit:contain; /* 关键：不裁切 */
+    object-fit:contain; /* 不裁切 */
     object-position:center;
     display:block;
     pointer-events:none;
   }
 
-  /* Debug：显示自动识别的键边界 */
+  /* Debug 叠加层 */
   .overlay{position:absolute;inset:0;pointer-events:none;}
-  .vline{
-    position:absolute;top:0;bottom:0;width:2px;
-    background:rgba(0,255,153,0.45);
-  }
-  .seg{
+  .segbox{
     position:absolute;
-    top:56%; height:44%;
-    background:rgba(255,255,255,0.10);
-    opacity:0; transition:opacity 70ms linear;
-    border-radius:8px;
+    top:0;bottom:0;
+    outline:1px solid rgba(0,255,153,0.45);
+    background:rgba(0,255,153,0.06);
+    display:none;
   }
-  .seg.on{opacity:1;}
+  .debug .segbox{display:block;}
+  .flash{
+    position:absolute;
+    top:56%;
+    height:44%;
+    background:rgba(255,255,255,0.12);
+    border-radius:10px;
+    opacity:0;
+    transition:opacity 70ms linear;
+    pointer-events:none;
+  }
+  .flash.on{opacity:1;}
 </style>
 </head>
 
@@ -73,8 +69,8 @@
   </div>
 
   <div class="hint">
-    按正确顺序弹奏旋律，并保持节奏均匀（第 1–2 音间隔作为基准）。节奏判定已放宽。
-    <div class="small">如果没有声音：先点一次“启用声音”。</div>
+    只要按对音符顺序即可；相邻两次点击间隔必须 ≤ 2 秒（超过则失败重置）。
+    <div class="small">iPhone：先点一次“启用声音”。</div>
   </div>
 
   <div class="kbd" id="kbd">
@@ -88,31 +84,31 @@
 <script>
 (() => {
   /* =========================
-     1) 键位定义（16 白键）
+     1) 16 个键的音高定义（红 do = C4）
   ========================= */
   const KEYS = [
-    {c:"green",n:"so",m:55}, // G3
-    {c:"green",n:"la",m:57}, // A3
-    {c:"green",n:"si",m:59}, // B3
+    {c:"green",n:"so",m:55},
+    {c:"green",n:"la",m:57},
+    {c:"green",n:"si",m:59},
 
-    {c:"red",n:"do",m:60},   // C4
-    {c:"red",n:"re",m:62},   // D4
-    {c:"red",n:"mi",m:64},   // E4
-    {c:"red",n:"fa",m:65},   // F4
-    {c:"red",n:"so",m:67},   // G4
-    {c:"red",n:"la",m:69},   // A4
-    {c:"red",n:"si",m:71},   // B4
+    {c:"red",n:"do",m:60},
+    {c:"red",n:"re",m:62},
+    {c:"red",n:"mi",m:64},
+    {c:"red",n:"fa",m:65},
+    {c:"red",n:"so",m:67},
+    {c:"red",n:"la",m:69},
+    {c:"red",n:"si",m:71},
 
-    {c:"blue",n:"do",m:72},  // C5
-    {c:"blue",n:"re",m:74},  // D5
-    {c:"blue",n:"mi",m:76},  // E5
-    {c:"blue",n:"fa",m:77},  // F5
-    {c:"blue",n:"so",m:79},  // G5
-    {c:"blue",n:"la",m:81},  // A5
+    {c:"blue",n:"do",m:72},
+    {c:"blue",n:"re",m:74},
+    {c:"blue",n:"mi",m:76},
+    {c:"blue",n:"fa",m:77},
+    {c:"blue",n:"so",m:79},
+    {c:"blue",n:"la",m:81},
   ];
 
   const keyIndex = new Map();
-  KEYS.forEach((k,i)=> keyIndex.set(`${k.c}|${k.n}`, i));
+  KEYS.forEach((k,i)=>keyIndex.set(`${k.c}|${k.n}`, i));
 
   /* =========================
      2) 正确答案（32 音）
@@ -129,16 +125,12 @@
   ];
 
   /* =========================
-     3) 节奏判定（更宽松）
+     3) 时间规则：仅要求相邻间隔 ≤ 2s
   ========================= */
-  const ABS_TOL = 0.20;  // 200ms
-  const REL_TOL = 0.45;  // 45%
-  const DT_MIN  = 0.12;
-  const DT_MAX  = 2.20;
-  const tolFor = (dt0) => Math.max(ABS_TOL, dt0 * REL_TOL);
+  const MAX_GAP = 2.0; // 秒
 
   /* =========================
-     4) WebAudio：更接近“明亮/银色”，且更长
+     4) WebAudio：更长、更“银色”
   ========================= */
   let audioCtx=null, audioEnabled=false;
   function ensureAudioCtx(){
@@ -153,8 +145,8 @@
   }
   function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
 
-  // 音更长：默认 0.95s
-  function playTone(freq, duration=0.95){
+  // 更长：默认 1.2s
+  function playTone(freq, duration=1.20){
     if(!audioEnabled || !audioCtx) return;
     const now = audioCtx.currentTime;
 
@@ -172,12 +164,11 @@
 
     const g1 = audioCtx.createGain(); g1.gain.value = 1.0;
     const g2 = audioCtx.createGain(); g2.gain.value = 0.55;
-    const g3 = audioCtx.createGain(); g3.gain.value = 0.08;
+    const g3 = audioCtx.createGain(); g3.gain.value = 0.07;
 
     const amp = audioCtx.createGain();
     amp.gain.setValueAtTime(0.0001, now);
     amp.gain.linearRampToValueAtTime(0.32, now + 0.015);
-    // 更慢的衰减
     amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
     const lp = audioCtx.createBiquadFilter();
@@ -193,13 +184,15 @@
     lp.connect(audioCtx.destination);
 
     o1.start(now); o2.start(now); o3.start(now);
-    const stopAt = now + duration + 0.10;
+    const stopAt = now + duration + 0.12;
     o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
   }
 
   /* =========================
-     5) 自动识别键边界（扫描黑色竖分隔线）
-     - 用图片原始像素扫描，不受缩放影响
+     5) 关键：用“色块区域”自动分割 16 个键边界
+     - 不靠等分
+     - 不靠 OCR
+     - 通过像素“非白”密度找出每个彩色块的左右边界
   ========================= */
   const kbd = document.getElementById("kbd");
   const img = document.getElementById("kbdImg");
@@ -209,9 +202,10 @@
   const resetBtn = document.getElementById("resetBtn");
   const debugBtn = document.getElementById("debugBtn");
 
-  let debug = false;
-  let boundaries = null; // 长度应为 17： [0, b1, b2, ... , w]
-  let segEls = [];       // 16 个底部闪烁段
+  let debug=false;
+  let boundaries=null; // 长度 17，图片像素坐标：0..iw
+  let segBoxes=[];
+  let flashEl=null;
 
   function getImageDrawRect(){
     const cr = kbd.getBoundingClientRect();
@@ -226,192 +220,238 @@
   }
 
   function buildOverlay(){
-    overlay.innerHTML = "";
-    segEls = [];
+    overlay.innerHTML="";
+    segBoxes=[];
+    flashEl=null;
 
-    // 16 个底部闪烁段（仅视觉反馈）
-    for(let i=0;i<16;i++){
-      const seg = document.createElement("div");
-      seg.className = "seg";
-      seg.style.left = (i*100/16) + "%";
-      seg.style.width = (100/16) + "%";
-      overlay.appendChild(seg);
-      segEls.push(seg);
+    if(boundaries){
+      // 画每个段的盒子（debug 观察偏移）
+      for(let i=0;i<16;i++){
+        const box = document.createElement("div");
+        box.className="segbox";
+        overlay.appendChild(box);
+        segBoxes.push(box);
+      }
+      // 闪烁条
+      flashEl = document.createElement("div");
+      flashEl.className="flash";
+      overlay.appendChild(flashEl);
+      layoutOverlay();
     }
+  }
 
-    if(!debug || !boundaries) return;
-
-    // 画边界线（按显示区域比例）
+  function layoutOverlay(){
+    if(!boundaries || segBoxes.length!==16) return;
     const r = getImageDrawRect();
-    for(let i=1;i<boundaries.length-1;i++){
-      const xNat = boundaries[i];
-      const x = ((xNat / r.iw) * r.dw); // 相对显示宽
-      const line = document.createElement("div");
-      line.className = "vline";
-      line.style.left = x + "px";
-      overlay.appendChild(line);
+    // boundaries 是原图像素坐标，转换到显示坐标（相对 overlay）
+    // overlay 与 kbd 同尺寸，因此直接用显示宽 r.dw 并加上留边 (cw-dw)/2
+    const cr = kbd.getBoundingClientRect();
+    const leftPad = (cr.width - r.dw)/2;
+
+    for(let i=0;i<16;i++){
+      const x0 = boundaries[i]   / r.iw * r.dw + leftPad;
+      const x1 = boundaries[i+1] / r.iw * r.dw + leftPad;
+      const w  = Math.max(0, x1-x0);
+      segBoxes[i].style.left = x0 + "px";
+      segBoxes[i].style.width = w + "px";
     }
   }
 
-  function flashSeg(i){
-    const seg = segEls[i];
-    if(!seg) return;
-    seg.classList.add("on");
-    setTimeout(()=>seg.classList.remove("on"), 90);
+  function setDebug(on){
+    debug = on;
+    document.body.classList.toggle("debug", debug);
+    debugBtn.textContent = debug ? "Debug On" : "Debug";
   }
 
-  function detectBoundariesFromImage(){
+  function flashKey(idx){
+    if(!boundaries || !flashEl) return;
+    const r = getImageDrawRect();
+    const cr = kbd.getBoundingClientRect();
+    const leftPad = (cr.width - r.dw)/2;
+
+    const x0 = boundaries[idx]   / r.iw * r.dw + leftPad;
+    const x1 = boundaries[idx+1] / r.iw * r.dw + leftPad;
+    flashEl.style.left = x0 + "px";
+    flashEl.style.width = Math.max(6, x1-x0) + "px";
+    flashEl.classList.add("on");
+    setTimeout(()=>flashEl.classList.remove("on"), 90);
+  }
+
+  function fallbackEqualBoundaries(){
+    const iw = img.naturalWidth || 1024;
+    const bds=[0];
+    for(let i=1;i<16;i++) bds.push(Math.round(iw*i/16));
+    bds.push(iw);
+    return bds;
+  }
+
+  function detectBoundariesByColorBlocks(){
     const iw = img.naturalWidth, ih = img.naturalHeight;
     if(!iw || !ih) return null;
 
     const canvas = document.createElement("canvas");
-    canvas.width = iw; canvas.height = ih;
+    canvas.width=iw; canvas.height=ih;
     const ctx = canvas.getContext("2d", { willReadFrequently:true });
     ctx.drawImage(img, 0, 0, iw, ih);
 
-    // 在标签/色块区域附近扫描一条水平线（避免黑键区域）
-    const y = Math.floor(ih * 0.90);
-    const row = ctx.getImageData(0, y, iw, 1).data;
+    // 取色块所在带状区域：在图片底部 82%~96% 高度范围（覆盖彩色标签块）
+    const y0 = Math.floor(ih * 0.82);
+    const y1 = Math.floor(ih * 0.96);
+    const h  = Math.max(1, y1-y0);
 
-    // 判断“黑色竖线”：亮度低且连续
-    const lum = (i) => {
-      const r=row[i], g=row[i+1], b=row[i+2];
-      return 0.2126*r + 0.7152*g + 0.0722*b;
-    };
+    const data = ctx.getImageData(0, y0, iw, h).data;
 
-    const dark = new Array(iw).fill(false);
+    // 对每个 x 统计“非白像素数量”：
+    // 白键区域接近白（RGB都高）；色块/文字/边框是非白
+    const score = new Float32Array(iw);
+
     for(let x=0;x<iw;x++){
-      const L = lum(x*4);
-      dark[x] = (L < 55); // 阈值：越小越“黑”
+      let s=0;
+      for(let y=0;y<h;y++){
+        const i = (y*iw + x)*4;
+        const r=data[i], g=data[i+1], b=data[i+2];
+        // 判定“接近白”阈值：> 240 且三通道都高
+        const isWhite = (r>240 && g>240 && b>240);
+        if(!isWhite) s++;
+      }
+      score[x]=s;
     }
 
-    // 找连续黑段
-    const runs = [];
-    let s = null;
+    // 平滑（滑动平均），减少文字导致的噪声
+    const smooth = new Float32Array(iw);
+    const W = 9; // 窗口半径
     for(let x=0;x<iw;x++){
-      if(dark[x] && s===null) s=x;
-      if(!dark[x] && s!==null){
+      let sum=0, cnt=0;
+      for(let k=-W;k<=W;k++){
+        const xx=x+k;
+        if(xx>=0 && xx<iw){ sum+=score[xx]; cnt++; }
+      }
+      smooth[x]=sum/cnt;
+    }
+
+    // 归一化阈值：色块区域应明显高于白键
+    let maxv=0;
+    for(let x=0;x<iw;x++) if(smooth[x]>maxv) maxv=smooth[x];
+    if(maxv < h*0.10) return null;
+
+    const thresh = maxv * 0.35; // 经验阈值：越小越“包容”
+    const inBlock = new Array(iw).fill(false);
+    for(let x=0;x<iw;x++){
+      inBlock[x] = smooth[x] > thresh;
+    }
+
+    // 找连续的“在色块区域内”的段
+    const runs=[];
+    let s=null;
+    for(let x=0;x<iw;x++){
+      if(inBlock[x] && s===null) s=x;
+      if(!inBlock[x] && s!==null){
         const e=x-1;
-        if(e-s >= 2) runs.push([s,e]);
+        if(e-s > 10) runs.push([s,e]);
         s=null;
       }
     }
     if(s!==null){
       const e=iw-1;
-      if(e-s >= 2) runs.push([s,e]);
+      if(e-s > 10) runs.push([s,e]);
     }
 
-    // 黑键也会造成局部黑块；我们只取“贯穿底部白键分隔线”的那些：
-    // 策略：对每个 run 取中心点，再二次验证其上下若干像素也较黑（竖线特征）
-    const goodCenters = [];
-    for(const [a,b] of runs){
-      const cx = Math.floor((a+b)/2);
-      // 在 y 的上下再采样几条，确认是竖线
-      let ok = 0;
-      const ys = [Math.floor(ih*0.82), Math.floor(ih*0.86), Math.floor(ih*0.90), Math.floor(ih*0.94)];
-      for(const yy of ys){
-        const p = ctx.getImageData(cx, yy, 1, 1).data;
-        const L = 0.2126*p[0] + 0.7152*p[1] + 0.0722*p[2];
-        if(L < 65) ok++;
-      }
-      if(ok >= 3) goodCenters.push(cx);
+    // 理想情况下应找到 16 个色块段
+    // 若找到更多/更少，尝试用“挑选最宽的16段”
+    if(runs.length < 12) return null;
+
+    runs.sort((a,b)=> (b[1]-b[0]) - (a[1]-a[0])); // 宽度降序
+    const picked = runs.slice(0, 16).sort((a,b)=>a[0]-b[0]);
+
+    if(picked.length !== 16) return null;
+
+    // 生成边界：用每段的起点作为边界，最后加上最后段终点
+    const bds = [];
+    bds.push(picked[0][0]);
+
+    for(let i=1;i<16;i++){
+      // 边界取前一段终点与后一段起点的中点，更稳
+      const prev = picked[i-1];
+      const cur  = picked[i];
+      const bd = Math.floor((prev[1] + cur[0]) / 2);
+      bds.push(bd);
+    }
+    bds.push(picked[15][1]);
+
+    // 强制把首尾扩展到 0..iw（点击更容错）
+    bds[0] = 0;
+    bds[16] = iw;
+
+    // 单调性修正
+    for(let i=1;i<bds.length;i++){
+      if(bds[i] <= bds[i-1]) bds[i] = bds[i-1] + 1;
     }
 
-    // 去重与过滤：太靠近的不算
-    const centers = [];
-    for(const c of goodCenters.sort((x,y)=>x-y)){
-      if(centers.length===0 || (c - centers[centers.length-1] > 8)){
-        centers.push(c);
-      }
-    }
-
-    // 理想情况下：16 个键 => 15 条分隔线
-    // 如果识别数量不对，仍然返回 null 以走 fallback
-    if(centers.length < 10){ // 太少说明识别失败
-      return null;
-    }
-
-    // 选取最接近 15 的情况：如果多了（可能包含边框/黑键），做均匀抽样到 15
-    let sep = centers;
-    if(sep.length > 15){
-      const picked = [];
-      for(let i=0;i<15;i++){
-        const t = i * (sep.length-1) / 14;
-        picked.push(sep[Math.round(t)]);
-      }
-      sep = picked;
-    }
-
-    // 如果少于 15，无法保证准确；交给 fallback
-    if(sep.length !== 15){
-      return null;
-    }
-
-    const bds = [0, ...sep, iw];
-    return bds;
-  }
-
-  function fallbackEqualBoundaries(){
-    const iw = img.naturalWidth || 1024;
-    const bds = [0];
-    for(let i=1;i<16;i++) bds.push(Math.round(iw * i / 16));
-    bds.push(iw);
     return bds;
   }
 
   function pointToKeyIndex(clientX, clientY){
     const r = getImageDrawRect();
+    // 落在图像显示区域外直接忽略
+    if(clientX < r.dx || clientX > r.dx + r.dw || clientY < r.dy || clientY > r.dy + r.dh) return null;
 
-    // 如果点在留边区域，直接忽略
-    if(clientX < r.dx || clientX > r.dx + r.dw || clientY < r.dy || clientY > r.dy + r.dh){
-      return null;
-    }
-
-    const xNat = (clientX - r.dx) / r.dw * r.iw; // 0..iw
+    // 只允许点下半部分（避免点到黑键）
     const yNat = (clientY - r.dy) / r.dh * r.ih;
-
-    // 只允许在下半部分点击（减少点到黑键区域导致误判）
     if(yNat < r.ih * 0.52) return null;
 
-    const bds = boundaries || fallbackEqualBoundaries();
+    const xNat = (clientX - r.dx) / r.dw * r.iw;
 
-    // 找所在区间
-    let lo=0, hi=bds.length-1;
-    while(lo+1<hi){
-      const mid = (lo+hi)>>1;
-      if(xNat < bds[mid]) hi = mid;
-      else lo = mid;
+    const bds = boundaries || fallbackEqualBoundaries();
+    // 二分查找区间
+    let lo=0, hi=16;
+    while(lo<hi){
+      const mid=(lo+hi)>>1;
+      if(xNat < bds[mid+1]) hi=mid;
+      else lo=mid+1;
     }
-    const idx = lo; // 0..15
-    if(idx < 0 || idx > 15) return null;
-    return idx;
+    if(lo<0 || lo>15) return null;
+    return lo;
   }
 
   /* =========================
-     6) 判定逻辑（音符 + 节奏）
+     6) 判定逻辑：只要 gap ≤ 2s 且音正确
   ========================= */
-  let step=0, t1=null, t2=null, dt0=null, last=null;
+  let step=0;
+  let lastTime=null;
 
   function reset(msg="未开始"){
-    step=0; t1=t2=dt0=last=null;
-    statusEl.textContent = msg;
-    statusEl.style.color = "#fff";
+    step=0;
+    lastTime=null;
+    statusEl.textContent=msg;
+    statusEl.style.color="#fff";
   }
   function fail(msg){
     reset("失败：" + msg + "（已重置）");
-    statusEl.style.color = "#ff6b6b";
+    statusEl.style.color="#ff6b6b";
   }
 
   function pressKey(idx){
-    flashSeg(idx);
+    flashKey(idx);
 
     const k = KEYS[idx];
-    if(audioEnabled) playTone(midiToFreq(k.m), 0.95);
+    if(audioEnabled) playTone(midiToFreq(k.m), 1.20);
     else {
-      statusEl.textContent = "请先点“启用声音”";
-      statusEl.style.color = "#ffd36b";
+      statusEl.textContent="请先点“启用声音”";
+      statusEl.style.color="#ffd36b";
     }
 
+    // 时间约束：相邻 ≤ 2 秒
+    const now = performance.now()/1000;
+    if(lastTime !== null){
+      const gap = now - lastTime;
+      if(gap > MAX_GAP){
+        fail(`间隔超过 ${MAX_GAP}s`);
+        return;
+      }
+    }
+    lastTime = now;
+
+    // 顺序判定
     if(step >= target.length) return;
 
     const [tc, tn] = target[step];
@@ -423,45 +463,18 @@
       return;
     }
 
-    const now = performance.now()/1000;
-
-    if(step===0){
-      t1=now; last=now; step++;
-      statusEl.textContent = `进度 ${step}/${target.length}（等待建立基准间隔）`;
-      return;
-    }
-    if(step===1){
-      t2=now; dt0=t2-t1;
-      if(dt0 < DT_MIN || dt0 > DT_MAX){
-        fail(`第1-2音间隔 dt0=${dt0.toFixed(3)}s 不合理`);
-        return;
-      }
-      last=now; step++;
-      statusEl.textContent = `进度 ${step}/${target.length}（dt0=${dt0.toFixed(3)}s，容差±${tolFor(dt0).toFixed(3)}s）`;
-      return;
-    }
-
-    const dt = now - last;
-    const tol = tolFor(dt0);
-    if(Math.abs(dt - dt0) > tol){
-      fail(`节奏不均匀：dt=${dt.toFixed(3)}s，dt0=${dt0.toFixed(3)}s（容差±${tol.toFixed(3)}s）`);
-      return;
-    }
-
-    last = now;
     step++;
-
     if(step === target.length){
-      statusEl.textContent = "success";
-      statusEl.style.color = "#00ff99";
+      statusEl.textContent="success";
+      statusEl.style.color="#00ff99";
     } else {
-      statusEl.textContent = `进度 ${step}/${target.length}（dt0=${dt0.toFixed(3)}s，容差±${tolFor(dt0).toFixed(3)}s）`;
-      statusEl.style.color = "#fff";
+      statusEl.textContent=`进度 ${step}/${target.length}`;
+      statusEl.style.color="#fff";
     }
   }
 
   /* =========================
-     7) 交互：在容器上捕获点击，按“自动边界”映射键
+     7) 事件绑定
   ========================= */
   function handleDown(ev){
     ev.preventDefault();
@@ -475,36 +488,36 @@
   kbd.addEventListener("pointerdown", handleDown, {passive:false});
   kbd.addEventListener("mousedown", handleDown, {passive:false});
   document.addEventListener("dblclick", (e)=>e.preventDefault(), {passive:false});
+  window.addEventListener("resize", ()=>layoutOverlay());
 
   /* =========================
      8) 按钮
   ========================= */
-  audioBtn.addEventListener("click", async () => {
+  audioBtn.addEventListener("click", async ()=>{
     try{
       await enableAudio();
-      audioBtn.textContent = "声音已启用";
-      audioBtn.disabled = true;
-      statusEl.textContent = "声音已启用，开始弹奏";
-      statusEl.style.color = "#00ff99";
+      audioBtn.textContent="声音已启用";
+      audioBtn.disabled=true;
+      statusEl.textContent="声音已启用，开始弹奏";
+      statusEl.style.color="#00ff99";
     }catch(e){
-      statusEl.textContent = "启用声音失败（请再点一次）";
-      statusEl.style.color = "#ff6b6b";
+      statusEl.textContent="启用声音失败（请再点一次）";
+      statusEl.style.color="#ff6b6b";
     }
   });
 
-  resetBtn.addEventListener("click", ()=> reset("已重置"));
+  resetBtn.addEventListener("click", ()=>reset("已重置"));
 
   debugBtn.addEventListener("click", ()=>{
-    debug = !debug;
-    debugBtn.textContent = debug ? "Debug On" : "Debug";
+    setDebug(!debug);
     buildOverlay();
   });
 
   /* =========================
-     9) 图片加载后：自动识别边界
+     9) 图片加载 -> 自动识别边界（色块）
   ========================= */
-  img.addEventListener("load", () => {
-    boundaries = detectBoundariesFromImage() || fallbackEqualBoundaries();
+  img.addEventListener("load", ()=>{
+    boundaries = detectBoundariesByColorBlocks() || fallbackEqualBoundaries();
     buildOverlay();
     reset("未开始");
   });
