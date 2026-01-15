@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Square Puzzle</title>
+  <style>
+    :root { --maxw: 900px; }
+    body {
+      margin: 0;
+      padding: 24px 16px 40px;
+      background: #fff;
+      color: #000;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
+                   "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .wrap { max-width: var(--maxw); margin: 0 auto; }
+    .imgbox {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    img {
+      width: 100%;
+      max-width: var(--maxw);
+      height: auto;
+      display: block;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+    .label { font-weight: 600; }
+    input[type="text"]{
+      width: 200px;
+      max-width: 70vw;
+      padding: 10px 12px;
+      font-size: 18px;
+      border: 1px solid #000;
+      border-radius: 10px;
+      outline: none;
+    }
+    button{
+      padding: 10px 14px;
+      font-size: 16px;
+      border: 1px solid #000;
+      border-radius: 10px;
+      background: #000;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+    .msg {
+      margin-top: 14px;
+      font-size: 18px;
+      min-height: 24px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="imgbox">
+      <!-- 把你发的图片保存为 puzzle.jpg，放在同目录 -->
+      <img src="puzzle.jpg" alt="square puzzle" />
+    </div>
+
+    <div class="row">
+      <span class="label">请填写答案：</span>
+      <input id="answer" type="text" inputmode="numeric" autocomplete="off" />
+      <button id="submitBtn" type="button">提交</button>
+    </div>
+
+    <div id="msg" class="msg"></div>
+  </div>
+
+  <script>
+    (function () {
+      const CORRECT = "15";
+      const input = document.getElementById("answer");
+      const btn = document.getElementById("submitBtn");
+      const msg = document.getElementById("msg");
+
+      function check() {
+        const val = (input.value || "").trim();
+        if (val === CORRECT) {
+          msg.textContent = "success";
+        } else {
+          msg.textContent = "try again";
+        }
+      }
+
+      btn.addEventListener("click", check);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") check();
+      });
+    })();
+  </script>
+</body>
+</html>
