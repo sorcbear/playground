@@ -87,12 +87,19 @@
 
   <script>
     function checkAnswer() {
-      const year = document.getElementById('year').value.trim();
-      const month = document.getElementById('month').value.trim();
-      const day = document.getElementById('day').value.trim();
+      const year = Number(document.getElementById('year').value.trim());
+      const month = Number(document.getElementById('month').value.trim());
+      const day = Number(document.getElementById('day').value.trim());
       const result = document.getElementById('result');
 
-      if (year === '2015' && month === '2' && day === '14') {
+      if (
+        !Number.isNaN(year) &&
+        !Number.isNaN(month) &&
+        !Number.isNaN(day) &&
+        year === 2015 &&
+        month === 2 &&
+        day === 14
+      ) {
         result.textContent = 'success';
       } else {
         result.textContent = '';
