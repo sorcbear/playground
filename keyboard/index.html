@@ -68,14 +68,14 @@ button:active{transform:translateY(1px)}
 <script>
 (() => {
   /* =========================
-     你这张图：固定 12 键；最左为 green si
+     固定：你这张图 12 键；最左为 green si
   ========================= */
   const FIX_N = 12;
   const FIX_OFFSET = 2;   // green so(0), green la(1), green si(2)
   const MAX_GAP = 5.0;
 
-  // 如果你仍觉得“整体偏左/偏右”，只改这一个：
-  // 0 = 默认；+1 往右吸；-1 往左吸
+  // 若你仍觉得“整体偏 1px”，只改这一个：
+  // 0 = 默认；+1 往右；-1 往左
   const GLOBAL_NUDGE = 0;
 
   /* =========================
@@ -192,7 +192,7 @@ button:active{transform:translateY(1px)}
   }
 
   /* =========================
-     核心：检测黑色竖分隔线 + 半高点中心化 + 最黑列吸附
+     核心：检测黑竖分隔线 + 半高点中心化 + 黑线带中心吸附
   ========================= */
   function detectBoundaries12BySeparators(){
     const iw=img.naturalWidth, ih=img.naturalHeight;
@@ -272,7 +272,7 @@ button:active{transform:translateY(1px)}
     if(chosen.length!==need) return null;
     chosen.sort((a,b)=>a.x-b.x);
 
-    // 半高点中心化 refine
+    // 半高点中心化 refine（先把峰中心找准）
     function refineCenter(x0){
       const R=10;
       const left=Math.max(2, x0-R);
@@ -297,24 +297,35 @@ button:active{transform:translateY(1px)}
       return Math.round((xl+xr)/2);
     }
 
-    // 最黑列吸附（±6px 内找 raw 最大）
-    function snapToDarkColumn(x0){
-      const R=6;
+    // 黑线带中心吸附：找到 “raw 最黑列附近的黑线带”，取带中心
+    function snapToDarkRunCenter(x0){
+      const R = 8;
+      const L = Math.max(2, x0 - R);
+      const Rr = Math.min(iw - 3, x0 + R);
+
+      // 1) 找窗口内 raw 最大列
       let bestX=x0, bestV=-1;
-      const L=Math.max(1, x0-R);
-      const Rr=Math.min(iw-2, x0+R);
       for(let x=L;x<=Rr;x++){
         const v=raw[x];
         if(v>bestV){ bestV=v; bestX=x; }
       }
-      return bestX;
+      if(bestV<=0) return bestX;
+
+      // 2) 黑线带阈值：90% 最大值
+      const th = bestV * 0.90;
+
+      // 3) 扩展连续黑线带 [a,b]
+      let a=bestX, b=bestX;
+      while(a>L  && raw[a-1] >= th) a--;
+      while(b<Rr && raw[b+1] >= th) b++;
+
+      // 4) 返回黑线带中心
+      return Math.round((a+b)/2);
     }
 
-    let refined=chosen.map(p=>refineCenter(p.x));
-    refined=refined.map(x=>snapToDarkColumn(x));
-
-    // 全局微调（通常不需要；你若觉得整体偏 1px，改 GLOBAL_NUDGE）
-    refined=refined.map(x=>x+GLOBAL_NUDGE);
+    let refined = chosen.map(p=>refineCenter(p.x));
+    refined = refined.map(x=>snapToDarkRunCenter(x));
+    refined = refined.map(x=>x + GLOBAL_NUDGE);
 
     const bds=[0, ...refined, iw];
 
