@@ -14,58 +14,92 @@
     user-select:none;
     -webkit-tap-highlight-color: transparent;
   }
-  .wrap{max-width:1100px;margin:0 auto;padding:14px;box-sizing:border-box;}
-  .hint{font-size:14px;opacity:.92;margin:6px 0 10px;line-height:1.5;}
-
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    padding:14px;
+    box-sizing:border-box;
+  }
   .topbar{
-    display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
     margin-bottom:10px;
   }
-  .status{font-size:14px;min-height:22px;flex:1 1 240px;}
-  .btns{display:flex;gap:10px;flex:0 0 auto;align-items:center;}
+  .status{
+    font-size:14px;
+    min-height:22px;
+    flex:1 1 240px;
+    opacity:.95;
+  }
+  .btns{
+    display:flex;
+    gap:10px;
+    flex:0 0 auto;
+  }
   button{
-    border:none;border-radius:10px;background:#222;color:#fff;
-    padding:10px 14px;font-size:14px;
+    border:none;
+    border-radius:10px;
+    background:#222;
+    color:#fff;
+    padding:10px 14px;
+    font-size:14px;
   }
   button:active{transform:translateY(1px)}
   .ok{background:#0b5;color:#021;font-weight:700}
-  .warn{background:#a22;font-weight:700}
+  .hint{
+    font-size:14px;
+    opacity:.9;
+    line-height:1.5;
+    margin:6px 0 10px;
+  }
+  .small{opacity:.75;font-size:12px;margin-top:4px;line-height:1.4;}
 
   .kbd{
-    position:relative;width:100%;
-    border-radius:12px;overflow:hidden;
+    position:relative;
+    width:100%;
+    border-radius:12px;
+    overflow:hidden;
     box-shadow:0 10px 30px rgba(0,0,0,.6);
     background:#111;
   }
-  /* 你的图大约 1024x461 */
+  /* 保持键盘容器比例：你的图约 1024x461 */
   .kbd::before{content:"";display:block;padding-top:45.1%;}
-  .kbd-bg{
-    position:absolute;inset:0;
-    background:url("./keyboard.png") center/cover no-repeat;
-  }
-
-  /* 点击区域层：只在底部更容易点中的区域判定 */
-  .hit-layer{
-    position:absolute;inset:0;
-    pointer-events:none; /* 默认关闭，单个键开启 */
-  }
-  .hitkey{
+  .kbd-inner{
     position:absolute;
-    pointer-events:auto;
-    background:rgba(255,255,255,0.0);
-    border-radius:8px;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
-  .hitkey.active{
-    background:rgba(255,255,255,0.08);
+  /* 关键：用 img + contain，杜绝裁切造成的坐标错位 */
+  #kbdImg{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    object-position:center;
+    display:block;
+    pointer-events:none; /* 点击由容器接管 */
   }
 
-  /* 调试用：显示划分（默认关） */
-  .debug .hitkey{
-    outline:1px solid rgba(0,255,153,0.35);
-    background:rgba(0,255,153,0.06);
+  /* 可选的按键反馈：在图上叠一层轻微闪烁 */
+  .flash{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
   }
-
-  .small{opacity:.75;font-size:12px;margin-top:4px;line-height:1.4;}
+  .flash-bar{
+    position:absolute;
+    top:56%;
+    height:44%;
+    border-radius:10px;
+    background:rgba(255,255,255,0.10);
+    opacity:0;
+    transition:opacity 70ms linear;
+  }
+  .flash-bar.on{opacity:1;}
 </style>
 </head>
 
@@ -76,18 +110,19 @@
     <div class="btns">
       <button id="audioBtn" class="ok">启用声音</button>
       <button id="resetBtn">Reset</button>
-      <button id="debugBtn">Debug</button>
     </div>
   </div>
 
   <div class="hint">
-    需要按正确顺序弹奏旋律，并保持节奏均匀（第 1–2 音间隔作为基准）。节奏判定已放宽。
-    <div class="small">如果 iPhone 没声音：先点一次“启用声音”。</div>
+    按正确顺序弹奏旋律，并保持节奏均匀（第 1–2 音间隔作为基准）。节奏判定已放宽。
+    <div class="small">iPhone：先点一次“启用声音”。</div>
   </div>
 
   <div class="kbd" id="kbd">
-    <div class="kbd-bg"></div>
-    <div class="hit-layer" id="hitLayer"></div>
+    <div class="kbd-inner">
+      <img id="kbdImg" src="./keyboard.png" alt="keyboard" />
+    </div>
+    <div class="flash" id="flash"></div>
   </div>
 </div>
 
@@ -95,34 +130,35 @@
 (() => {
   /* =========================
      1) 键位定义（16 个白键）
-     绿 so la si | 红 do~si | 蓝 do~la
+     左绿 3 | 中红 7 | 右蓝 6
      红 do = C4 (60)
   ========================= */
   const KEYS = [
-    {c:"green",n:"so",m:55}, // G3
-    {c:"green",n:"la",m:57}, // A3
-    {c:"green",n:"si",m:59}, // B3
+    {c:"green",n:"so",m:55},
+    {c:"green",n:"la",m:57},
+    {c:"green",n:"si",m:59},
 
-    {c:"red",n:"do",m:60},   // C4
-    {c:"red",n:"re",m:62},   // D4
-    {c:"red",n:"mi",m:64},   // E4
-    {c:"red",n:"fa",m:65},   // F4
-    {c:"red",n:"so",m:67},   // G4
-    {c:"red",n:"la",m:69},   // A4
-    {c:"red",n:"si",m:71},   // B4
+    {c:"red",n:"do",m:60},
+    {c:"red",n:"re",m:62},
+    {c:"red",n:"mi",m:64},
+    {c:"red",n:"fa",m:65},
+    {c:"red",n:"so",m:67},
+    {c:"red",n:"la",m:69},
+    {c:"red",n:"si",m:71},
 
-    {c:"blue",n:"do",m:72},  // C5
-    {c:"blue",n:"re",m:74},  // D5
-    {c:"blue",n:"mi",m:76},  // E5
-    {c:"blue",n:"fa",m:77},  // F5
-    {c:"blue",n:"so",m:79},  // G5
-    {c:"blue",n:"la",m:81},  // A5
+    {c:"blue",n:"do",m:72},
+    {c:"blue",n:"re",m:74},
+    {c:"blue",n:"mi",m:76},
+    {c:"blue",n:"fa",m:77},
+    {c:"blue",n:"so",m:79},
+    {c:"blue",n:"la",m:81},
   ];
+
   const keyIndex = new Map();
   KEYS.forEach((k,i)=> keyIndex.set(`${k.c}|${k.n}`, i));
 
   /* =========================
-     2) 正确答案（32 音，与你描述一致）
+     2) 正确答案（32 音）
   ========================= */
   const target = [
     // A
@@ -136,21 +172,17 @@
   ];
 
   /* =========================
-     3) 节奏判定（放宽）
-     - ABS_TOL 绝对容差：从 80ms 放宽到 140ms
-     - REL_TOL 相对容差：从 18% 放宽到 30%
-     - dt0 合理范围也放宽
+     3) 节奏判定（更宽松）
   ========================= */
-  const ABS_TOL = 0.14;   // 140ms（更宽松）
-  const REL_TOL = 0.30;   // 30%
-  const DT_MIN  = 0.12;   // 120ms
-  const DT_MAX  = 1.60;   // 1600ms
+  const ABS_TOL = 0.16;   // 160ms（更宽松）
+  const REL_TOL = 0.35;   // 35%
+  const DT_MIN  = 0.12;
+  const DT_MAX  = 1.80;
 
   function tolFor(dt0){ return Math.max(ABS_TOL, dt0 * REL_TOL); }
 
   /* =========================
-     4) WebAudio：银色/明亮钢琴感（无音频文件）
-     - iOS 需要“启用声音”一次来 resume
+     4) WebAudio：银色 / 明亮钢琴感（更长音）
   ========================= */
   let audioCtx = null;
   let audioEnabled = false;
@@ -163,22 +195,21 @@
 
   async function enableAudio(){
     const ctx = ensureAudioCtx();
-    if (ctx.state === "suspended") {
-      await ctx.resume();
-    }
+    if (ctx.state === "suspended") await ctx.resume();
     audioEnabled = true;
   }
 
   function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
 
-  function playTone(freq, duration = 0.36){
+  // 更长、更“按键感”的银音色：默认约 0.65s
+  function playTone(freq, duration = 0.65){
     if (!audioEnabled || !audioCtx) return;
 
     const now = audioCtx.currentTime;
 
     const o1 = audioCtx.createOscillator(); // 基音
     const o2 = audioCtx.createOscillator(); // 泛音
-    const o3 = audioCtx.createOscillator(); // 轻微击弦感
+    const o3 = audioCtx.createOscillator(); // 轻微击弦亮度
 
     o1.type = "sine";
     o2.type = "triangle";
@@ -188,88 +219,108 @@
     o2.frequency.setValueAtTime(freq * 2, now);
     o3.frequency.setValueAtTime(freq * 4, now);
 
+    // 让 o3 很轻，避免刺耳
+    const mix = audioCtx.createGain();
+    const mix2 = audioCtx.createGain();
+    const mix3 = audioCtx.createGain();
+    mix.gain.value  = 1.00;
+    mix2.gain.value = 0.55;
+    mix3.gain.value = 0.10;
+
     const g = audioCtx.createGain();
+    // attack + 较慢 decay（更长延音）
     g.gain.setValueAtTime(0.0001, now);
-    g.gain.linearRampToValueAtTime(0.34, now + 0.012);          // attack 稍慢一点更自然
+    g.gain.linearRampToValueAtTime(0.32, now + 0.015);
     g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
     const f = audioCtx.createBiquadFilter();
     f.type = "lowpass";
-    f.frequency.setValueAtTime(Math.min(freq * 6, 12000), now);
-    f.Q.value = 0.7;
+    f.frequency.setValueAtTime(Math.min(freq * 6, 10000), now);
+    f.Q.value = 0.8;
 
-    o1.connect(g); o2.connect(g); o3.connect(g);
-    g.connect(f); f.connect(audioCtx.destination);
+    o1.connect(mix); mix.connect(g);
+    o2.connect(mix2); mix2.connect(g);
+    o3.connect(mix3); mix3.connect(g);
+
+    g.connect(f);
+    f.connect(audioCtx.destination);
 
     o1.start(now); o2.start(now); o3.start(now);
-    const stopAt = now + duration + 0.05;
+    const stopAt = now + duration + 0.08;
     o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
   }
 
   /* =========================
-     5) 点击区域：改为“底部区域判定 + 安全边界”
-     - 仍按 16 段，但只覆盖 bottom band（更符合手指点击）
-     - 并给每段留 margin（避免边界误触）
+     5) 关键：点击坐标映射到“实际显示的图像区域”
+     - img 使用 contain 时，左右/上下可能留黑边
+     - 必须把触摸点投影到图像真实显示矩形，否则会偏
   ========================= */
-  const kbdEl = document.getElementById("kbd");
-  const hitLayer = document.getElementById("hitLayer");
+  const kbd = document.getElementById("kbd");
+  const img = document.getElementById("kbdImg");
   const statusEl = document.getElementById("status");
   const audioBtn = document.getElementById("audioBtn");
   const resetBtn = document.getElementById("resetBtn");
-  const debugBtn = document.getElementById("debugBtn");
+  const flash = document.getElementById("flash");
 
-  // 这些参数专门为“减少误触”而设：
-  const BAND_TOP = 0.56;        // 只在下方 44% 高度做判定（靠近标签）
-  const BAND_BOTTOM = 1.00;
-  const KEY_MARGIN_X = 0.10;    // 每个键左右缩进 10%（减少边界误点）
+  // 按键反馈条（仍在底部区域闪一下），按 16 键分段
+  const flashBars = [];
+  function buildFlashBars(){
+    flash.innerHTML = "";
+    flashBars.length = 0;
 
-  const keyDivs = [];
-
-  function buildHitKeys(){
-    hitLayer.innerHTML = "";
-    keyDivs.length = 0;
-
-    for (let i=0;i<16;i++){
+    for(let i=0;i<16;i++){
       const d = document.createElement("div");
-      d.className = "hitkey";
-      d.dataset.i = String(i);
-
-      // 定位：百分比
-      const segW = 100 / 16;
-      const left = i * segW;
-      const innerLeft = left + segW * KEY_MARGIN_X;
-      const innerW = segW * (1 - 2*KEY_MARGIN_X);
-
-      d.style.left = innerLeft + "%";
-      d.style.width = innerW + "%";
-      d.style.top = (BAND_TOP * 100) + "%";
-      d.style.height = ((BAND_BOTTOM - BAND_TOP) * 100) + "%";
-
-      // 多事件兼容：pointer / touch / mouse
-      const handler = async (ev) => {
-        ev.preventDefault();
-        // 如果没启用声音，仍允许弹，但提示
-        if (!audioEnabled) {
-          statusEl.textContent = "请先点“启用声音”";
-          statusEl.style.color = "#ffd36b";
-        }
-        pressKey(i);
-      };
-
-      d.addEventListener("pointerdown", handler, {passive:false});
-      d.addEventListener("touchstart", handler, {passive:false});
-      d.addEventListener("mousedown", handler, {passive:false});
-
-      hitLayer.appendChild(d);
-      keyDivs.push(d);
+      d.className = "flash-bar";
+      d.style.left = (i * 100 / 16) + "%";
+      d.style.width = (100 / 16) + "%";
+      flash.appendChild(d);
+      flashBars.push(d);
     }
   }
+  buildFlashBars();
 
   function flashKey(i){
-    const d = keyDivs[i];
-    if (!d) return;
-    d.classList.add("active");
-    setTimeout(()=>d.classList.remove("active"), 90);
+    const d = flashBars[i];
+    if(!d) return;
+    d.classList.add("on");
+    setTimeout(()=>d.classList.remove("on"), 90);
+  }
+
+  function getImageDrawRect(){
+    // 容器内容区
+    const cr = kbd.getBoundingClientRect();
+    const cw = cr.width;
+    const ch = cr.height;
+
+    // 图片原始宽高（加载后可得）
+    const iw = img.naturalWidth || 1024;
+    const ih = img.naturalHeight || 461;
+
+    // contain：以较小缩放比适配
+    const scale = Math.min(cw / iw, ch / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+
+    const dx = cr.left + (cw - dw) / 2;
+    const dy = cr.top  + (ch - dh) / 2;
+
+    return {dx, dy, dw, dh};
+  }
+
+  function pointToKeyIndex(clientX, clientY){
+    const r = getImageDrawRect();
+
+    // 若点在留黑边区域，直接判无效（避免误触）
+    if (clientX < r.dx || clientX > r.dx + r.dw || clientY < r.dy || clientY > r.dy + r.dh) {
+      return null;
+    }
+
+    const x = (clientX - r.dx) / r.dw; // 0..1 在图像内
+    // 这里按 16 等分映射键位：由于图像不裁切，等分会和视觉一致得多
+    let idx = Math.floor(x * 16);
+    if (idx < 0) idx = 0;
+    if (idx > 15) idx = 15;
+    return idx;
   }
 
   /* =========================
@@ -293,20 +344,17 @@
     flashKey(i);
 
     const k = KEYS[i];
-    // 发声（若未启用则静默）
-    if (audioEnabled) playTone(midiToFreq(k.m), 0.36);
-
-    // 成功后不再判定
-    if (step >= target.length){
-      return;
+    if (audioEnabled) playTone(midiToFreq(k.m), 0.65);
+    else {
+      statusEl.textContent = "请先点“启用声音”";
+      statusEl.style.color = "#ffd36b";
     }
+
+    if (step >= target.length) return;
 
     const [tc, tn] = target[step];
     const needIdx = keyIndex.get(`${tc}|${tn}`);
-    if (needIdx === undefined){
-      fail("内部配置错误（找不到目标键）");
-      return;
-    }
+    if (needIdx === undefined) { fail("内部配置错误（目标键不存在）"); return; }
 
     if (i !== needIdx){
       fail(`音符错误：应为 ${tc}${tn}`);
@@ -316,36 +364,32 @@
     const now = performance.now() / 1000;
 
     if (step === 0){
-      t1 = now;
-      last = now;
-      step++;
+      t1 = now; last = now; step++;
       statusEl.textContent = `进度 ${step}/${target.length}（等待建立基准间隔）`;
+      statusEl.style.color = "#fff";
       return;
     }
 
     if (step === 1){
-      t2 = now;
-      dt0 = t2 - t1;
+      t2 = now; dt0 = t2 - t1;
       if (dt0 < DT_MIN || dt0 > DT_MAX){
         fail(`第1-2音间隔 dt0=${dt0.toFixed(3)}s 不合理`);
         return;
       }
-      last = now;
-      step++;
+      last = now; step++;
       statusEl.textContent = `进度 ${step}/${target.length}（dt0=${dt0.toFixed(3)}s，容差±${tolFor(dt0).toFixed(3)}s）`;
+      statusEl.style.color = "#fff";
       return;
     }
 
     const dt = now - last;
     const tol = tolFor(dt0);
-
     if (Math.abs(dt - dt0) > tol){
       fail(`节奏不均匀：dt=${dt.toFixed(3)}s，dt0=${dt0.toFixed(3)}s（容差±${tol.toFixed(3)}s）`);
       return;
     }
 
-    last = now;
-    step++;
+    last = now; step++;
 
     if (step === target.length){
       statusEl.textContent = "success";
@@ -357,7 +401,28 @@
   }
 
   /* =========================
-     7) 按钮：启用声音 / Reset / Debug
+     7) 事件：统一在容器上捕获点击，做坐标映射
+  ========================= */
+  function handleDown(ev){
+    ev.preventDefault();
+
+    const pt = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
+    const idx = pointToKeyIndex(pt.clientX, pt.clientY);
+    if (idx === null) return; // 点在留边上不算
+
+    pressKey(idx);
+  }
+
+  // iOS 上用 touchstart 最稳，同时也支持 pointer/mouse
+  kbd.addEventListener("touchstart", handleDown, {passive:false});
+  kbd.addEventListener("pointerdown", handleDown, {passive:false});
+  kbd.addEventListener("mousedown", handleDown, {passive:false});
+
+  // 防止双击缩放
+  document.addEventListener("dblclick", (e)=>e.preventDefault(), {passive:false});
+
+  /* =========================
+     8) 按钮
   ========================= */
   audioBtn.addEventListener("click", async () => {
     try{
@@ -372,20 +437,9 @@
     }
   });
 
-  resetBtn.addEventListener("click", () => reset("已重置"));
+  resetBtn.addEventListener("click", ()=> reset("已重置"));
 
-  let debug = false;
-  debugBtn.addEventListener("click", () => {
-    debug = !debug;
-    document.body.classList.toggle("debug", debug);
-    debugBtn.textContent = debug ? "Debug On" : "Debug";
-  });
-
-  // 防止双击缩放影响触控
-  document.addEventListener("dblclick", (e)=>e.preventDefault(), {passive:false});
-
-  // 初始化
-  buildHitKeys();
+  // 初始
   reset("未开始");
 })();
 </script>
