@@ -1,335 +1,525 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-<title>音符解谜</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>Piano Puzzle</title>
 
 <style>
-  body{
-    margin:0;
-    background:#fff;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-    color:#000;
-  }
-  .container{
-    max-width:980px;
-    margin:0 auto;
-    padding:10px 12px 16px;
-    box-sizing:border-box;
-  }
-  .status{
-    font-size:16px;
-    font-weight:600;
-    margin:0 0 6px 0;
-    min-height:20px;
-  }
-  .status.error{color:#c00;}
-  .status.ok{color:#0a7;}
-  .controls{
-    display:flex;
-    gap:10px;
-    margin:6px 0 6px 0;
-  }
-  button{
-    border:none;
-    border-radius:10px;
-    padding:9px 14px;
-    font-size:15px;
-    cursor:pointer;
-    background:#000;
-    color:#fff;
-  }
-  .btn-audio{background:#1bb35e;}
-  .hint{
-    font-size:14px;
-    line-height:1.45;
-    margin:6px 0 8px 0;
-  }
-  .keyboard-wrap{
-    position:relative;
-    margin-top:4px;
-    background:#fff;
-  }
-  .keyboard-wrap img{
-    width:100%;
-    height:auto;
-    display:block;
-    user-select:none;
-    -webkit-user-drag:none;
-    background:#fff;
-  }
-  .overlay{
-    position:absolute;
-    left:0;top:0;right:0;bottom:0;
-    /* 让 iOS 更稳定地触发 pointer 事件 */
-    touch-action:manipulation;
-  }
-  .key{
-    position:absolute;
-    top:0;bottom:0;
-    /* 不显示任何视觉效果 */
-    background:transparent;
-  }
+html,body{
+  margin:0;background:#fff;color:#111;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  user-select:none;-webkit-tap-highlight-color:transparent;
+}
+.wrap{max-width:1100px;margin:0 auto;padding:6px 8px;box-sizing:border-box;}
+.topbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 4px;}
+.status{font-size:14px;min-height:18px;line-height:18px;flex:1 1 240px;margin:0;}
+.btns{display:flex;gap:8px;flex:0 0 auto;}
+button{border:none;border-radius:10px;background:#111;color:#fff;padding:8px 10px;font-size:14px;cursor:pointer;}
+button:active{transform:translateY(1px)}
+.ok{background:#12b76a;color:#052;font-weight:700}
+.hint{font-size:14px;line-height:1.35;margin:0 0 6px;}
+.small{font-size:12px;opacity:.75;margin-top:2px;line-height:1.25;}
 
-  @media (orientation:landscape){
-    .container{padding:6px 10px 12px;}
-    .hint{margin-bottom:6px;}
-    button{padding:8px 12px;font-size:14px;}
-    .status{font-size:15px;}
-  }
+.kbd{position:relative;width:100%;overflow:hidden;background:#fff;touch-action:none;margin:0;}
+.kbd::before{content:"";display:block;padding-top:34%;}
+.kbd-inner{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;}
+#kbdImg{width:100%;height:100%;object-fit:contain;object-position:center top;display:block;pointer-events:none;background:#fff;}
+
+.overlay{position:absolute;inset:0;pointer-events:none;}
+.segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,160,90,.70);background:rgba(0,160,90,.06);display:none;}
+.debug .segbox{display:block;}
+.flash{position:absolute;top:56%;height:44%;background:rgba(0,0,0,0.10);border-radius:10px;opacity:0;transition:opacity 70ms linear;}
+.flash.on{opacity:1;}
+
+@media (orientation: landscape){
+  .wrap{padding:4px 8px;}
+  .hint{margin-bottom:4px;}
+  button{padding:7px 10px;}
+  .kbd::before{padding-top:26%;}
+}
 </style>
 </head>
 
 <body>
-<div class="container">
-  <div id="status" class="status">请按正确音符顺序弹奏。</div>
-
-  <div class="controls">
-    <button id="audioBtn" class="btn-audio">启用声音</button>
-    <button id="resetBtn">Reset</button>
+<div class="wrap">
+  <div class="topbar">
+    <div class="status" id="status">未开始</div>
+    <div class="btns">
+      <button id="audioBtn" class="ok">启用声音</button>
+      <button id="resetBtn">Reset</button>
+      <button id="debugBtn">Debug</button>
+    </div>
   </div>
 
   <div class="hint">
-    建议横屏操作。只要按对音符顺序即可；相邻两次点击间隔 ≤ 5 秒（超时重置）。<br>
-    iPhone：首次需一次用户点击来解锁声音（点“启用声音”或直接点琴键都可以）。
+    建议横屏操作；相邻两次点击间隔 ≤ 5 秒（超时重置）。
+    <div class="small">iPhone：需先点击“启用声音”。</div>
   </div>
 
-  <div class="keyboard-wrap" id="kbWrap">
-    <img id="kbImg" src="keyboard.png" alt="keyboard">
+  <div class="kbd" id="kbd">
+    <div class="kbd-inner">
+      <img id="kbdImg" src="./keyboard.png" alt="keyboard" />
+    </div>
     <div class="overlay" id="overlay"></div>
   </div>
 </div>
 
 <script>
 (() => {
-  /* ================= 12键（从左到右） =================
-     你确认“强制12，不再裁剪”，所以直接12等分最稳。
-  ====================================================== */
+  /* =========================
+     固定：12 键；最左为 green si
+  ========================= */
+  const FIX_N = 12;
+  const FIX_OFFSET = 2;   // green so(0), green la(1), green si(2)
+  const MAX_GAP = 5.0;
+
+  // 如果你仍觉得“整体偏 1px”，改这里：0 / +1 / -1
+  const GLOBAL_NUDGE = 0;
+
+  /* =========================
+     16 键总模板（完整键盘）
+  ========================= */
   const KEYS = [
-    "greensi",
-    "reddo","redre","redmi","redfa","redso","redla","redsi",
-    "bluedo","bluere","bluemi","bluefa"
+    {c:"green",n:"so",m:55},
+    {c:"green",n:"la",m:57},
+    {c:"green",n:"si",m:59},
+    {c:"red",n:"do",m:60},
+    {c:"red",n:"re",m:62},
+    {c:"red",n:"mi",m:64},
+    {c:"red",n:"fa",m:65},
+    {c:"red",n:"so",m:67},
+    {c:"red",n:"la",m:69},
+    {c:"red",n:"si",m:71},
+    {c:"blue",n:"do",m:72},
+    {c:"blue",n:"re",m:74},
+    {c:"blue",n:"mi",m:76},
+    {c:"blue",n:"fa",m:77},
+    {c:"blue",n:"so",m:79},
+    {c:"blue",n:"la",m:81},
   ];
 
-  /* ================= 正确答案序列 ================= */
-  const ANSWER = [
-    "reddo","redmi","redso","bluedo","bluemi","redso","bluedo","bluemi",
-    "reddo","redre","redla","bluere","bluefa","redla","bluere","bluefa",
-    "greensi","redre","redso","bluere","bluefa","redso","bluere","bluefa",
-    "reddo","redmi","redso","bluedo","bluemi","redso","bluedo","bluemi"
+  const target = [
+    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
+    ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
+    ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
+    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
   ];
 
-  const MAX_GAP_MS = 5000;
-
-  let idx = 0;
-  let lastTime = 0;
-
-  /* ================= iPhone 音频解锁（关键） ================= */
-  let audioCtx = null;
-  let audioReady = false;
-
-  function getAudioCtx(){
-    if(!audioCtx){
-      const AC = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AC();
-    }
+  /* =========================
+     WebAudio（简易钢琴味，稍长音）
+  ========================= */
+  let audioCtx=null, audioEnabled=false;
+  function ensureAudioCtx(){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!audioCtx) audioCtx = new AC();
     return audioCtx;
   }
-
-  async function unlockAudio(){
-    const ctx = getAudioCtx();
-
-    // iOS Safari 常见：state = "suspended"
-    if(ctx.state === "suspended"){
-      try{ await ctx.resume(); } catch(e){}
-    }
-
-    // 额外兜底：播放一个几乎听不见的超短音，让 iOS 真正打开音频通道
-    // 这一招对部分机型很关键
-    try{
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = "sine";
-      o.frequency.value = 440;
-      g.gain.value = 0.00001;
-      o.connect(g).connect(ctx.destination);
-      const t = ctx.currentTime;
-      o.start(t);
-      o.stop(t + 0.02);
-    } catch(e){}
-
-    audioReady = (ctx.state === "running");
-    return audioReady;
+  async function enableAudio(){
+    const ctx = ensureAudioCtx();
+    if(ctx.state==="suspended") await ctx.resume();
+    audioEnabled = true;
   }
+  function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
+  function playTone(freq, duration=1.25){
+    if(!audioEnabled || !audioCtx) return;
+    const now = audioCtx.currentTime;
 
-  /* ================= 发声（电子钢琴味） ================= */
-  const freqMap = {
-    greensi:246.94,
-    reddo:261.63, redre:293.66, redmi:329.63, redfa:349.23, redso:392.00, redla:440.00, redsi:493.88,
-    bluedo:523.25, bluere:587.33, bluemi:659.25, bluefa:698.46
-  };
+    const o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), o3=audioCtx.createOscillator();
+    o1.type="sine"; o2.type="triangle"; o3.type="square";
+    o1.frequency.setValueAtTime(freq, now);
+    o2.frequency.setValueAtTime(freq*2, now);
+    o3.frequency.setValueAtTime(freq*4, now);
 
-  function playNote(key){
-    if(!audioReady) return;
+    const g1=audioCtx.createGain(); g1.gain.value=1.0;
+    const g2=audioCtx.createGain(); g2.gain.value=0.55;
+    const g3=audioCtx.createGain(); g3.gain.value=0.06;
 
-    const ctx = getAudioCtx();
-    const freq = freqMap[key];
-    if(!freq) return;
-
-    const now = ctx.currentTime;
-
-    // 简易“更像钢琴”的叠加（比单纯sine更饱满）
-    const o1 = ctx.createOscillator();
-    const o2 = ctx.createOscillator();
-    const o3 = ctx.createOscillator();
-    o1.type="sine";      o1.frequency.setValueAtTime(freq, now);
-    o2.type="triangle";  o2.frequency.setValueAtTime(freq*2, now);
-    o3.type="square";    o3.frequency.setValueAtTime(freq*4, now);
-
-    const g1 = ctx.createGain(); g1.gain.value = 1.0;
-    const g2 = ctx.createGain(); g2.gain.value = 0.55;
-    const g3 = ctx.createGain(); g3.gain.value = 0.06;
-
-    const amp = ctx.createGain();
+    const amp=audioCtx.createGain();
     amp.gain.setValueAtTime(0.0001, now);
-    amp.gain.linearRampToValueAtTime(0.35, now + 0.015);
-    amp.gain.exponentialRampToValueAtTime(0.0001, now + 1.15);
+    amp.gain.linearRampToValueAtTime(0.33, now+0.015);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now+duration);
 
-    const lp = ctx.createBiquadFilter();
-    lp.type = "lowpass";
+    const lp=audioCtx.createBiquadFilter();
+    lp.type="lowpass";
     lp.frequency.setValueAtTime(Math.min(freq*6, 9000), now);
-    lp.Q.value = 0.85;
+    lp.Q.value=0.85;
 
     o1.connect(g1); g1.connect(amp);
     o2.connect(g2); g2.connect(amp);
     o3.connect(g3); g3.connect(amp);
-
-    amp.connect(lp);
-    lp.connect(ctx.destination);
+    amp.connect(lp); lp.connect(audioCtx.destination);
 
     o1.start(now); o2.start(now); o3.start(now);
-    const stopAt = now + 1.25;
+    const stopAt = now+duration+0.12;
     o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
   }
 
-  /* ================= UI & 判定 ================= */
-  const statusEl = document.getElementById("status");
-  const audioBtn = document.getElementById("audioBtn");
-  const resetBtn = document.getElementById("resetBtn");
-  const overlay = document.getElementById("overlay");
-  const img = document.getElementById("kbImg");
+  /* =========================
+     DOM
+  ========================= */
+  const kbd=document.getElementById("kbd");
+  const img=document.getElementById("kbdImg");
+  const overlay=document.getElementById("overlay");
+  const statusEl=document.getElementById("status");
+  const audioBtn=document.getElementById("audioBtn");
+  const resetBtn=document.getElementById("resetBtn");
+  const debugBtn=document.getElementById("debugBtn");
 
-  function setStatus(text, cls=""){
-    statusEl.textContent = text;
-    statusEl.className = "status" + (cls ? " " + cls : "");
+  let boundaries=null; // length FIX_N+1
+  let segBoxes=[];
+  let flashEl=null;
+
+  function getImageDrawRect(){
+    const cr = kbd.getBoundingClientRect();
+    const cw=cr.width, ch=cr.height;
+    const iw=img.naturalWidth||1024, ih=img.naturalHeight||461;
+    const scale=Math.min(cw/iw, ch/ih);
+    const dw=iw*scale, dh=ih*scale;
+    const dx=cr.left+(cw-dw)/2;
+    const dy=cr.top +(ch-dh)/2;
+    return {dx,dy,dw,dh,iw,ih,cw,ch};
   }
 
-  function reset(msg="已重置。"){
-    idx = 0;
-    lastTime = 0;
-    setStatus(msg, "");
+  function fallbackEqualBoundaries(n){
+    const iw = img.naturalWidth || 1024;
+    const bds=[0];
+    for(let i=1;i<n;i++) bds.push(Math.round(iw*i/n));
+    bds.push(iw);
+    return bds;
   }
 
+  /* =========================
+     核心：检测黑竖分隔线
+     - 先吸附到黑线带中心
+     - 再做等间距线性拟合校正
+     - 再小半径二次吸附
+  ========================= */
+  function detectBoundaries12BySeparators(){
+    const iw=img.naturalWidth, ih=img.naturalHeight;
+    if(!iw||!ih) return null;
+
+    const canvas=document.createElement("canvas");
+    canvas.width=iw; canvas.height=ih;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    ctx.drawImage(img,0,0,iw,ih);
+
+    const y0=Math.floor(ih*0.66);
+    const y1=Math.floor(ih*0.90);
+    const h=Math.max(1,y1-y0);
+    const data=ctx.getImageData(0,y0,iw,h).data;
+
+    const raw=new Float32Array(iw);
+    for(let x=0;x<iw;x++){
+      let s=0;
+      for(let y=0;y<h;y++){
+        const i=(y*iw+x)*4;
+        const r=data[i], g=data[i+1], b=data[i+2];
+        if(r<60 && g<60 && b<60) s++;
+      }
+      raw[x]=s;
+    }
+
+    const tmp=Array.from(raw).sort((a,b)=>a-b);
+    const baseline=tmp[Math.floor(tmp.length*0.5)];
+    for(let x=0;x<iw;x++) raw[x]=Math.max(0, raw[x]-baseline);
+
+    const smooth=new Float32Array(iw);
+    const W=5;
+    let maxv=0;
+    for(let x=0;x<iw;x++){
+      let sum=0,cnt=0;
+      for(let k=-W;k<=W;k++){
+        const xx=x+k;
+        if(xx>=0 && xx<iw){ sum+=raw[xx]; cnt++; }
+      }
+      const v=sum/cnt;
+      smooth[x]=v;
+      if(v>maxv) maxv=v;
+    }
+    if(maxv < h*0.08) return null;
+
+    const thresh=maxv*0.45;
+    const peaks=[];
+    for(let x=2;x<iw-2;x++){
+      const v=smooth[x];
+      if(v<thresh) continue;
+      if(v>=smooth[x-1] && v>=smooth[x+1] && v>=smooth[x-2] && v>=smooth[x+2]){
+        peaks.push({x, v});
+      }
+    }
+    if(peaks.length < 11) return null;
+
+    peaks.sort((a,b)=>b.v-a.v);
+    const need = FIX_N - 1; // 11
+    const minDist = Math.floor(iw/(FIX_N*1.20));
+    const chosen=[];
+    for(const p of peaks){
+      if(p.x < iw*0.02 || p.x > iw*0.98) continue;
+      let ok=true;
+      for(const q of chosen){
+        if(Math.abs(p.x - q.x) < minDist){ ok=false; break; }
+      }
+      if(!ok) continue;
+      chosen.push(p);
+      if(chosen.length===need) break;
+    }
+    if(chosen.length!==need) return null;
+    chosen.sort((a,b)=>a.x-b.x);
+
+    function snapToDarkRunCenter(x0){
+      const R = 10;
+      const L = Math.max(2, x0 - R);
+      const Rr = Math.min(iw - 3, x0 + R);
+
+      let bestX=x0, bestV=-1;
+      for(let x=L;x<=Rr;x++){
+        const v=raw[x];
+        if(v>bestV){ bestV=v; bestX=x; }
+      }
+      if(bestV<=0) return bestX;
+
+      const th = bestV * 0.90;
+      let a=bestX, b=bestX;
+      while(a>L  && raw[a-1] >= th) a--;
+      while(b<Rr && raw[b+1] >= th) b++;
+      return Math.round((a+b)/2);
+    }
+
+    // 1) 初次吸附
+    let refined = chosen.map(p => snapToDarkRunCenter(p.x));
+
+    // 2) 等间距线性拟合（最小二乘） x ≈ a + k*d, k=1..11
+    let sumk=0, sumx=0, sumkk=0, sumkx=0;
+    for(let i=0;i<need;i++){
+      const k=i+1;
+      const x=refined[i];
+      sumk += k;
+      sumx += x;
+      sumkk += k*k;
+      sumkx += k*x;
+    }
+    const n=need;
+    const denom = (n*sumkk - sumk*sumk) || 1;
+    const d = (n*sumkx - sumk*sumx) / denom;
+    const a = (sumx - d*sumk) / n;
+
+    const fitted=[];
+    for(let k=1;k<=need;k++){
+      fitted.push(Math.round(a + d*k));
+    }
+
+    // 3) 小半径二次吸附（把拟合点再次压回黑线中心）
+    function snapSmall(x0){
+      const R = 4;
+      const L = Math.max(2, x0 - R);
+      const Rr = Math.min(iw - 3, x0 + R);
+
+      let bestX=x0, bestV=-1;
+      for(let x=L;x<=Rr;x++){
+        const v=raw[x];
+        if(v>bestV){ bestV=v; bestX=x; }
+      }
+      if(bestV<=0) return bestX;
+
+      const th = bestV * 0.90;
+      let a=bestX, b=bestX;
+      while(a>L  && raw[a-1] >= th) a--;
+      while(b<Rr && raw[b+1] >= th) b++;
+      return Math.round((a+b)/2);
+    }
+
+    refined = fitted.map(x => snapSmall(x) + GLOBAL_NUDGE);
+
+    const bds=[0, ...refined, iw];
+
+    for(let i=1;i<bds.length;i++){
+      if(bds[i]<=bds[i-1]) bds[i]=bds[i-1]+1;
+    }
+    return bds;
+  }
+
+  function buildOverlay(){
+    overlay.innerHTML="";
+    segBoxes=[];
+    flashEl=null;
+
+    if(!boundaries) return;
+
+    for(let i=0;i<FIX_N;i++){
+      const box=document.createElement("div");
+      box.className="segbox";
+      overlay.appendChild(box);
+      segBoxes.push(box);
+    }
+    flashEl=document.createElement("div");
+    flashEl.className="flash";
+    overlay.appendChild(flashEl);
+
+    layoutOverlay();
+  }
+
+  function layoutOverlay(){
+    if(!boundaries || segBoxes.length!==FIX_N) return;
+    const r = getImageDrawRect();
+    const leftPad = (r.cw - r.dw)/2;
+
+    for(let i=0;i<FIX_N;i++){
+      const x0 = boundaries[i]   / r.iw * r.dw + leftPad;
+      const x1 = boundaries[i+1] / r.iw * r.dw + leftPad;
+      segBoxes[i].style.left = x0 + "px";
+      segBoxes[i].style.width = Math.max(0, x1-x0) + "px";
+    }
+  }
+
+  function flashKey(localIdx){
+    if(!flashEl || !boundaries) return;
+    const r = getImageDrawRect();
+    const leftPad = (r.cw - r.dw)/2;
+
+    const x0 = boundaries[localIdx]   / r.iw * r.dw + leftPad;
+    const x1 = boundaries[localIdx+1] / r.iw * r.dw + leftPad;
+    flashEl.style.left = x0 + "px";
+    flashEl.style.width = Math.max(6, x1-x0) + "px";
+    flashEl.classList.add("on");
+    setTimeout(()=>flashEl.classList.remove("on"), 90);
+  }
+
+  function pointToLocalIndex(clientX, clientY){
+    const r = getImageDrawRect();
+    if(clientX<r.dx || clientX>r.dx+r.dw || clientY<r.dy || clientY>r.dy+r.dh) return null;
+
+    const yNat = (clientY-r.dy)/r.dh*r.ih;
+    if(yNat < r.ih*0.52) return null;
+
+    const xNat = (clientX-r.dx)/r.dw*r.iw;
+    const bds = boundaries || fallbackEqualBoundaries(FIX_N);
+
+    let lo=0, hi=FIX_N-1;
+    while(lo<=hi){
+      const mid=(lo+hi)>>1;
+      if(xNat < bds[mid]) hi=mid-1;
+      else if(xNat >= bds[mid+1]) lo=mid+1;
+      else return mid;
+    }
+    return null;
+  }
+
+  /* =========================
+     判定逻辑
+  ========================= */
+  let step=0;
+  let lastTime=null;
+
+  function reset(msg="未开始"){
+    step=0; lastTime=null;
+    statusEl.textContent=msg;
+    statusEl.style.color="#111";
+  }
   function fail(msg){
-    idx = 0;
-    lastTime = 0;
-    setStatus(msg, "error");
+    reset("失败：" + msg + "（已重置）");
+    statusEl.style.color="#b42318";
+  }
+  function timeoutReset(){
+    reset("已超时，请重新完整弹奏。");
+    statusEl.style.color="#b42318";
   }
 
-  function success(){
-    setStatus("success", "ok");
-  }
+  function pressLocal(localIdx){
+    const globalIdx = FIX_OFFSET + localIdx;
+    if(globalIdx < 0 || globalIdx >= 16) return;
 
-  function press(key){
-    const now = Date.now();
+    flashKey(localIdx);
 
-    if(lastTime && (now - lastTime) > MAX_GAP_MS){
-      fail("已超时，请重新完整弹奏。");
+    const key = KEYS[globalIdx];
+    if(audioEnabled) playTone(midiToFreq(key.m), 1.25);
+
+    const now = performance.now()/1000;
+    if(lastTime !== null && (now-lastTime) > MAX_GAP){
+      timeoutReset();
       return;
     }
-
-    // 声音：如果未解锁，先尝试解锁（用户点击琴键也是手势）
-    // 解锁成功后再播放
-    if(!audioReady){
-      unlockAudio().then(() => {
-        playNote(key);
-      });
-    }else{
-      playNote(key);
-    }
-
-    // 判定顺序
-    if(key !== ANSWER[idx]){
-      fail(`音符错误：应为 ${ANSWER[idx]}`);
-      return;
-    }
-
-    idx++;
     lastTime = now;
 
-    if(idx === ANSWER.length){
-      success();
-    }else{
-      setStatus(`进度 ${idx}/${ANSWER.length}`);
+    if(step >= target.length) return;
+
+    const [tc, tn] = target[step];
+    const needIdx = KEYS.findIndex(k => k.c===tc && k.n===tn);
+    if(needIdx < 0){ fail("内部配置错误"); return; }
+
+    if(needIdx < FIX_OFFSET || needIdx >= FIX_OFFSET + FIX_N){
+      fail("当前键盘图片缺少必要琴键");
+      return;
+    }
+
+    if(globalIdx !== needIdx){
+      fail(`音符错误：应为 ${tc}${tn}`);
+      return;
+    }
+
+    step++;
+    if(step === target.length){
+      statusEl.textContent="success";
+      statusEl.style.color="#067647";
+    } else {
+      statusEl.textContent=`进度 ${step}/${target.length}`;
+      statusEl.style.color="#111";
     }
   }
 
-  /* ================= 12等分点击区（最稳定） ================= */
-  function buildKeys(){
-    overlay.innerHTML = "";
+  /* =========================
+     事件
+  ========================= */
+  let lastDownAt = 0;
+  function handlePointerDown(ev){
+    const t = performance.now();
+    if(t - lastDownAt < 50) return;
+    lastDownAt = t;
 
-    // 等待 overlay 有尺寸
-    const w = overlay.clientWidth;
-    const h = overlay.clientHeight;
-    if(!w || !h) return;
-
-    const keyW = w / 12;
-
-    for(let i=0;i<12;i++){
-      const d = document.createElement("div");
-      d.className = "key";
-      d.style.left = (i * keyW) + "px";
-      d.style.width = keyW + "px";
-
-      // pointerdown：PC+iOS 都兼容
-      d.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        press(KEYS[i]);
-      }, {passive:false});
-
-      // 兜底：某些 iOS 版本 pointer 事件怪异，额外加 touchstart
-      d.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        press(KEYS[i]);
-      }, {passive:false});
-
-      overlay.appendChild(d);
-    }
+    ev.preventDefault();
+    const localIdx = pointToLocalIndex(ev.clientX, ev.clientY);
+    if(localIdx === null) return;
+    pressLocal(localIdx);
   }
+  kbd.addEventListener("pointerdown", handlePointerDown, {passive:false});
+  window.addEventListener("resize", ()=>layoutOverlay());
 
-  window.addEventListener("resize", buildKeys);
-  img.addEventListener("load", buildKeys);
-
-  /* ================= 按钮 ================= */
-  audioBtn.addEventListener("click", async () => {
-    const ok = await unlockAudio();
-    if(ok){
-      setStatus("声音已启用，开始弹奏", "ok");
-      audioBtn.textContent = "声音已启用";
-      audioBtn.disabled = true;
-    }else{
-      setStatus("启用声音失败（请再点一次）", "error");
+  /* =========================
+     按钮
+  ========================= */
+  audioBtn.addEventListener("click", async ()=>{
+    try{
+      await enableAudio();
+      audioBtn.textContent="声音已启用";
+      audioBtn.disabled=true;
+      statusEl.textContent="声音已启用，开始弹奏";
+      statusEl.style.color="#067647";
+    }catch(e){
+      statusEl.textContent="启用声音失败（请再点一次）";
+      statusEl.style.color="#b42318";
     }
   });
 
-  resetBtn.addEventListener("click", () => reset("已重置。"));
+  resetBtn.addEventListener("click", ()=>reset("已重置"));
 
-  // 初始
-  reset("请按正确音符顺序弹奏。");
+  debugBtn.addEventListener("click", ()=>{
+    const on = document.body.classList.toggle("debug");
+    debugBtn.textContent = on ? "Debug On" : "Debug";
+  });
 
-  // 如果图片很快加载不到，也尝试先建一次（后面 load 会再建）
-  buildKeys();
+  /* =========================
+     图片加载 -> 一定生成 12 段
+  ========================= */
+  img.addEventListener("load", ()=>{
+    boundaries = detectBoundaries12BySeparators();
+    if(!boundaries || boundaries.length !== FIX_N+1){
+      boundaries = fallbackEqualBoundaries(FIX_N);
+    }
+    buildOverlay();
+    reset("未开始");
+  });
+
+  reset("未开始");
 })();
 </script>
 </body>
