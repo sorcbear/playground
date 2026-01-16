@@ -29,6 +29,12 @@
       color: var(--text);
     }
 
+    /* 所有表单控件强制同字体 */
+    input, button, textarea, select{
+      font-family: inherit;
+      font-size: inherit;
+    }
+
     .wrap{
       max-width: 1200px;
       margin: 10px auto;
@@ -40,22 +46,20 @@
     }
 
     .pageTitle{
-      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size: 24px;
       font-weight: 600;
       line-height: 1.25;
       letter-spacing: 0.02em;
       color: var(--text);
       text-align: left;
-      margin: 34px 0 6px; /* 标题与小字更近 */
+      margin: 34px 0 6px;
     }
 
-    /* 标题下的小字 */
     .pageSub{
       font-size: 12px;
       line-height: 1.4;
       color: var(--muted);
-      margin: 0 0 22px;   /* 小字下方留白 */
+      margin: 0 0 22px;
       text-align: left;
     }
 
@@ -92,6 +96,44 @@
       transition: transform 120ms ease;
       pointer-events:none;
       user-select:none;
+    }
+
+    .belowHint{
+      margin-top: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .answerRow{
+      margin-top: 10px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .ansInput{
+      width: 120px;
+      padding: 10px 12px;
+      border: 1px solid var(--line2);
+      border-radius: 12px;
+      outline: none;
+      background:#fff;
+      color: var(--text);
+      font-size: 16px; /* 与 answerRow 一致 */
+      line-height: 1.2;
+    }
+    .ansInput:focus{
+      border-color: rgba(0,0,0,.35);
+    }
+
+    .fixedWord{
+      font-size: 16px;
+      line-height: 1.2;
     }
 
     .hud{
@@ -137,10 +179,19 @@
 <body>
   <div class="wrap">
     <div class="pageTitle">寻找你的起点</div>
-    <div class="pageSub"> 可横屏操作</div>
+    <div class="pageSub">可横屏操作</div>
 
     <div class="boardShell">
       <div id="board" class="board"></div>
+    </div>
+
+    <div class="belowHint">拼图正确并提交正确地点后方可继续</div>
+
+    <div class="answerRow" aria-label="answer">
+      <input id="ansRoad" class="ansInput" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <span class="fixedWord">路</span>
+      <input id="ansNo" class="ansInput" autocomplete="off" inputmode="numeric" pattern="[0-9]*" spellcheck="false" />
+      <span class="fixedWord">号</span>
     </div>
 
     <div class="hud">
@@ -152,7 +203,6 @@
     </div>
   </div>
 
-  <!-- 关键：加版本号避免缓存旧 JS -->
-  <script src="./script.js?v=20260116a"></script>
+  <script src="./script.js?v=20260116b"></script>
 </body>
 </html>
