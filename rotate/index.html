@@ -98,9 +98,10 @@
       user-select:none;
     }
 
+    /* 提示文字：字号与填空题一致 */
     .belowHint{
       margin-top: 10px;
-      font-size: 14px;
+      font-size: 16px;
       line-height: 1.6;
       color: var(--text);
       text-align: left;
@@ -113,19 +114,22 @@
       gap:8px;
       flex-wrap:wrap;
       font-size: 16px;
+      line-height: 1.6;
       color: var(--text);
     }
 
+    /* 方框：约 3 个字宽 */
     .ansInput{
-      width: 120px;
+      width: 3.2em;
       padding: 10px 12px;
       border: 1px solid var(--line2);
       border-radius: 12px;
       outline: none;
       background:#fff;
       color: var(--text);
-      font-size: 16px; /* 与 answerRow 一致 */
+      font-size: 16px;
       line-height: 1.2;
+      text-align: center;
     }
     .ansInput:focus{
       border-color: rgba(0,0,0,.35);
@@ -185,7 +189,7 @@
       <div id="board" class="board"></div>
     </div>
 
-    <div class="belowHint">拼图正确并提交正确地点后方可继续</div>
+    <div class="belowHint">拼图正确并提交正确地点后方可继续。</div>
 
     <div class="answerRow" aria-label="answer">
       <input id="ansRoad" class="ansInput" autocomplete="off" autocapitalize="off" spellcheck="false" />
@@ -203,6 +207,7 @@
     </div>
   </div>
 
-  <script src="./script.js?v=20260116b"></script>
+  <!-- 改 JS 后把 v= 后面换个新值，避免缓存旧脚本 -->
+  <script src="./script.js?v=20260116c"></script>
 </body>
 </html>
