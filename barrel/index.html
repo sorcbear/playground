@@ -23,6 +23,9 @@
 
   --btnSize:76px;
   --btnGap:44px;
+
+  /* 成功提示绿色 */
+  --ok:#0b6b2b;
 }
 
 *{ box-sizing:border-box; }
@@ -135,14 +138,16 @@ body{ -webkit-tap-highlight-color: transparent; }
   user-select:none;
 }
 
-.status{
+/* 倒计时提示：在 .msg 显示 */
+.msg{
   text-align:center;
   margin-top:14px;
-  min-height:28px;
-  font-weight:800;
-  font-size:24px;
-  color:#000; /* 固定黑色，避免看不见 */
+  min-height:22px;
+  font-size:14px;       /* 按你要求固定 14px */
+  font-weight:700;
+  color:#000;
 }
+.msg.ok{ color:var(--ok); }
 
 /* 手机适配 */
 @media (max-width:900px){
@@ -154,7 +159,6 @@ body{ -webkit-tap-highlight-color: transparent; }
     --midLine:3px;
   }
   .topHint{ font-size:16px; }
-  .status{ font-size:22px; }
 }
 </style>
 </head>
@@ -172,17 +176,17 @@ body{ -webkit-tap-highlight-color: transparent; }
 
     <div class="card">
       <img class="pattern" id="pat1" src="p0.png" alt="p0">
-      <div class="digit" id="dig1">0</div>
+      <div class="digit" id="dig1">9</div>
     </div>
 
     <div class="card">
       <img class="pattern" id="pat2" src="p1.png" alt="p1">
-      <div class="digit" id="dig2">0</div>
+      <div class="digit" id="dig2">9</div>
     </div>
 
     <div class="card">
       <img class="pattern" id="pat3" src="p2.png" alt="p2">
-      <div class="digit" id="dig3">0</div>
+      <div class="digit" id="dig3">9</div>
     </div>
   </div>
 
@@ -192,7 +196,7 @@ body{ -webkit-tap-highlight-color: transparent; }
     <button class="coinBtn" id="btn3" aria-label="按钮3"><img src="coin.png" alt="coin"></button>
   </div>
 
-  <div class="status" id="status"></div>
+  <div class="msg" id="msg"></div>
 
 </div>
 
@@ -200,21 +204,21 @@ body{ -webkit-tap-highlight-color: transparent; }
 /* ===== 资源 ===== */
 const patterns = ["p0.png","p1.png","p2.png"]; // 3种图案
 
-/* ===== 数字范围：0..6（更简单） ===== */
-const DIGIT_MOD = 7;
+/* ===== 数字范围：0..9（允许初始 999，并且后续也正常循环） ===== */
+const DIGIT_MOD = 10;
 
 /* ===== 跳转目标 ===== */
 const NEXT_URL = "https://sorcbear.github.io/playground/post/";
 
 /* ===== 当前状态 ===== */
-let D = [0, 0, 0];   // 初始改为 000
+let D = [9, 9, 9];   // 初始改为 999
 let P = [0, 1, 2];   // P1 P2 P3  (0..2)
 
 /* ===== 正确答案：全 p0 + 105 ===== */
 const targetD = [1, 0, 5];
 const targetP = [0, 0, 0];
 
-/* ===== DOM（全部显式获取，避免某些浏览器不生成全局变量） ===== */
+/* ===== DOM ===== */
 const digEls = [
   document.getElementById("dig1"),
   document.getElementById("dig2"),
@@ -225,16 +229,27 @@ const patEls = [
   document.getElementById("pat2"),
   document.getElementById("pat3"),
 ];
-const statusEl = document.getElementById("status");
+const msgEl = document.getElementById("msg");
 
 const btn1 = document.getElementById("btn1");
 const btn2 = document.getElementById("btn2");
 const btn3 = document.getElementById("btn3");
 
+/* ===== 交互锁定（倒计时期间禁止重复触发） ===== */
+let isCountingDown = false;
+function setButtonsLocked(locked){
+  btn1.disabled = locked;
+  btn2.disabled = locked;
+  btn3.disabled = locked;
+  // 禁用时也不想出现灰掉效果的话可加：
+  // btn1.style.opacity = btn2.style.opacity = btn3.style.opacity = locked ? "0.65" : "1";
+}
+
+/* ===== 工具 ===== */
 function incDigit(x){ return (x + 1) % DIGIT_MOD; }
 function incPattern(x){ return (x + 1) % patterns.length; }
 
-/* ===== 新规则（你指定的纠缠版）=====
+/* ===== 新规则（纠缠版）=====
 按钮1：控制 位置1的数字 + 位置2的图案
 按钮2：控制 位置1的图案 + 位置2的数字 + 位置3的数字
 按钮3：控制 位置3的数字 + 位置3的图案
@@ -267,21 +282,45 @@ function render(){
     patEls[i].src = patterns[P[i]];
   }
 
-  const ok = checkWin();
-  statusEl.textContent = ok ? "success" : "";
+  // 不再显示 success；只有进入倒计时才显示提示
+  if(!isCountingDown){
+    msgEl.textContent = "";
+    msgEl.classList.remove("ok");
+  }
 
-  if(ok){
-    // 给浏览器一帧时间渲染出 success（可选），然后跳转
-    setTimeout(() => { location.href = NEXT_URL; }, 250);
+  if(checkWin()){
+    startCountdownOnce();
   }
 }
 
-/* 绑定按钮 */
-btn1.onclick = () => { applyRule(1); render(); };
-btn2.onclick = () => { applyRule(2); render(); };
-btn3.onclick = () => { applyRule(3); render(); };
+/* ===== 成功后倒计时 + 跳转（3/2/1）===== */
+function startCountdownOnce(){
+  if(isCountingDown) return;
+  isCountingDown = true;
 
-/* 初始化：也检查 success */
+  setButtonsLocked(true);
+
+  let t = 3;
+  msgEl.classList.add("ok");
+  msgEl.textContent = `答案正确，即将进入下一题（${t}）`;
+
+  const timer = setInterval(() => {
+    t -= 1;
+    if(t >= 1){
+      msgEl.textContent = `答案正确，即将进入下一题（${t}）`;
+    }else{
+      clearInterval(timer);
+      location.href = NEXT_URL;
+    }
+  }, 1000);
+}
+
+/* 绑定按钮 */
+btn1.onclick = () => { if(isCountingDown) return; applyRule(1); render(); };
+btn2.onclick = () => { if(isCountingDown) return; applyRule(2); render(); };
+btn3.onclick = () => { if(isCountingDown) return; applyRule(3); render(); };
+
+/* 初始化 */
 render();
 </script>
 </body>
