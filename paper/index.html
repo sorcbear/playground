@@ -8,6 +8,7 @@
     :root{
       --stroke:#111;
       --bg:#fff;
+      --ok:#0b6b2b;
     }
     html,body{
       margin:0;
@@ -46,6 +47,11 @@
       cursor:pointer;
     }
     button:active{ transform: translateY(1px); }
+    button:disabled{
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+    }
 
     /* 7x2 grid with dashed connector between each pair */
     .grid{
@@ -101,6 +107,10 @@
       outline: none;
       font-variant-numeric: tabular-nums;
     }
+    .answer input:disabled{
+      opacity: .6;
+      cursor: not-allowed;
+    }
 
     .submitbar{
       margin-top: 12px;
@@ -110,13 +120,15 @@
       align-items:center;
       flex-wrap:wrap;
     }
+
     .msg{
       margin-top: 10px;
       text-align:center;
-      font-size: 16px;
+      font-size: 14px;            /* 按你的要求：14px */
       font-weight: 700;
       min-height: 22px;
     }
+    .msg.ok{ color: var(--ok); }
 
     /* Responsive tweaks */
     @media (max-width: 420px){
@@ -132,13 +144,11 @@
   <div class="wrap">
     <div class="toptext">ymbbb我想不出来了，随便敷衍一下混过去。</div>
 
-    <!-- Button moved ABOVE the numbers -->
     <div class="btnbar">
       <button id="btnShake" type="button">随机摇一摇</button>
     </div>
 
     <div id="grid" class="grid" aria-label="7x2 boxes">
-      <!-- 7 rows: (box, connector, box) repeated -->
       <div class="box"><div class="digits" data-cell="0">00</div></div><div class="connector"></div><div class="box"><div class="digits" data-cell="1">00</div></div>
       <div class="box"><div class="digits" data-cell="2">00</div></div><div class="connector"></div><div class="box"><div class="digits" data-cell="3">00</div></div>
       <div class="box"><div class="digits" data-cell="4">00</div></div><div class="connector"></div><div class="box"><div class="digits" data-cell="5">00</div></div>
@@ -148,7 +158,7 @@
       <div class="box"><div class="digits" data-cell="12">00</div></div><div class="connector"></div><div class="box"><div class="digits" data-cell="13">00</div></div>
     </div>
 
-    <div class="hint">请使用实体道具，从小到大填写4个数字：</div>
+    <div class="hint">请使用实体道具，勇敢刺穿靶心，解决谜题。请从小到大填写4个数字：</div>
 
     <div class="answer" aria-label="answer inputs">
       <input id="a1" inputmode="decimal" autocomplete="off" />
@@ -166,9 +176,16 @@
 
   <script>
     (() => {
-      const btnShake = document.getElementById("btnShake");
+      const btnShake  = document.getElementById("btnShake");
       const btnSubmit = document.getElementById("btnSubmit");
-      const msg = document.getElementById("msg");
+      const msg       = document.getElementById("msg");
+
+      const inputs = [
+        document.getElementById("a1"),
+        document.getElementById("a2"),
+        document.getElementById("a3"),
+        document.getElementById("a4"),
+      ];
 
       const cells = Array.from(document.querySelectorAll("[data-cell]"));
 
@@ -185,12 +202,18 @@
 
       // Answer (must be in ascending order)
       const ANSWER = [4.1, 10.5, 10.9, 15.2];
+
+      // 跳转目标
       const NEXT_URL = "https://sorcbear.github.io/playground/keyboard/";
 
       function pad2(n){
-        // Keep your 2-digit look; for decimals this becomes "4.2" (length 3) which is fine.
-        // If you want strict formatting later, we can format decimals separately.
         return String(n).padStart(2, "0");
+      }
+
+      function setLocked(locked){
+        btnShake.disabled = locked;
+        btnSubmit.disabled = locked;
+        for (const el of inputs) el.disabled = locked;
       }
 
       btnShake.addEventListener("click", () => {
@@ -202,36 +225,50 @@
       });
 
       function normNumberStr(s){
-        // Trim and normalize common inputs like "04.1" -> "4.1"
         const t = String(s || "").trim();
         if (!t) return null;
         const x = Number(t);
         if (!Number.isFinite(x)) return null;
-        // Avoid float display issues by rounding to 1 decimal since answers are 1-decimal
-        return Math.round(x * 10) / 10;
+        return Math.round(x * 10) / 10; // 1 decimal
+      }
+
+      function startCountdownAndRedirect(){
+        msg.classList.add("ok");
+        let t = 3;
+
+        // 立即显示 (3)
+        msg.textContent = `答案正确，即将进入下一题（${t}）`;
+
+        setLocked(true);
+
+        const timer = setInterval(() => {
+          t -= 1;
+          if (t >= 1) {
+            msg.textContent = `答案正确，即将进入下一题（${t}）`;
+          } else {
+            clearInterval(timer);
+            location.href = NEXT_URL;
+          }
+        }, 1000);
       }
 
       btnSubmit.addEventListener("click", () => {
-        const v1 = normNumberStr(document.getElementById("a1").value);
-        const v2 = normNumberStr(document.getElementById("a2").value);
-        const v3 = normNumberStr(document.getElementById("a3").value);
-        const v4 = normNumberStr(document.getElementById("a4").value);
+        // 若已锁定（倒计时中），直接忽略
+        if (btnSubmit.disabled) return;
 
-        if ([v1, v2, v3, v4].some(v => v === null)) {
+        const v = inputs.map(i => normNumberStr(i.value));
+        if (v.some(x => x === null)) {
+          msg.classList.remove("ok");
           msg.textContent = "try again";
           return;
         }
 
-        const input = [v1, v2, v3, v4];
-        const ok = input.length === 4 && input.every((v, i) => Object.is(v, ANSWER[i]));
+        const ok = v.length === 4 && v.every((x, i) => Object.is(x, ANSWER[i]));
 
         if (ok) {
-          msg.textContent = "success";
-          // Small delay lets user see success; keep it minimal.
-          setTimeout(() => {
-            location.href = NEXT_URL;
-          }, 250);
+          startCountdownAndRedirect();
         } else {
+          msg.classList.remove("ok");
           msg.textContent = "try again";
         }
       });
