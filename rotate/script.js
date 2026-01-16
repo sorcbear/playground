@@ -10,6 +10,9 @@
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "canon";
 
+  // 返回保留状态：sessionStorage（关掉浏览器会清）
+  const SOLVED_KEY = "rotate_find_origin_solved_v1";
+
   const params = new URLSearchParams(location.search);
   const k = (params.get("k") || DEFAULT_K).trim();
 
@@ -110,6 +113,9 @@
   }
 
   function startCountdownAndRedirect() {
+    // 记录“已完成”，以便从下一页返回仍保留样子
+    sessionStorage.setItem(SOLVED_KEY, "1");
+
     lockUI(true);
 
     let left = COUNTDOWN_SECONDS;
@@ -224,6 +230,21 @@
     await sliceImageToTiles("./image.png");
     setTileImages();
     applyAllRotations();
+
+    // 如果已经完成过（从下一页返回），恢复“正确后的样子”
+    if (sessionStorage.getItem(SOLVED_KEY) === "1") {
+      // 拼图直接设为完成状态
+      curSteps = new Array(TILE_COUNT).fill(0);
+      applyAllRotations();
+
+      // 填空直接填好
+      ansRoad.value = ANSWER_ROAD;
+      ansNo.value = ANSWER_NO;
+
+      lockUI(true);
+      setMessage("答案已确认。", "ok");
+      return;
+    }
 
     setMessage("开始吧。");
   }
