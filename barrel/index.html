@@ -176,17 +176,17 @@ body{ -webkit-tap-highlight-color: transparent; }
 
     <div class="card">
       <img class="pattern" id="pat1" src="p0.png" alt="p0">
-      <div class="digit" id="dig1">9</div>
+      <div class="digit" id="dig1">6</div>
     </div>
 
     <div class="card">
       <img class="pattern" id="pat2" src="p1.png" alt="p1">
-      <div class="digit" id="dig2">9</div>
+      <div class="digit" id="dig2">6</div>
     </div>
 
     <div class="card">
       <img class="pattern" id="pat3" src="p2.png" alt="p2">
-      <div class="digit" id="dig3">9</div>
+      <div class="digit" id="dig3">6</div>
     </div>
   </div>
 
@@ -204,14 +204,14 @@ body{ -webkit-tap-highlight-color: transparent; }
 /* ===== 资源 ===== */
 const patterns = ["p0.png","p1.png","p2.png"]; // 3种图案
 
-/* ===== 数字范围：0..9（允许初始 999，并且后续也正常循环） ===== */
-const DIGIT_MOD = 10;
+/* ===== 数字范围：0..6（7 个数字） ===== */
+const DIGIT_MOD = 7;
 
 /* ===== 跳转目标 ===== */
 const NEXT_URL = "https://sorcbear.github.io/playground/post/";
 
 /* ===== 当前状态 ===== */
-let D = [9, 9, 9];   // 初始改为 999
+let D = [6, 6, 6];   // 初始 666
 let P = [0, 1, 2];   // P1 P2 P3  (0..2)
 
 /* ===== 正确答案：全 p0 + 105 ===== */
@@ -241,8 +241,6 @@ function setButtonsLocked(locked){
   btn1.disabled = locked;
   btn2.disabled = locked;
   btn3.disabled = locked;
-  // 禁用时也不想出现灰掉效果的话可加：
-  // btn1.style.opacity = btn2.style.opacity = btn3.style.opacity = locked ? "0.65" : "1";
 }
 
 /* ===== 工具 ===== */
