@@ -5,114 +5,87 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>地址推理谜题</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #fff;
-      color: #111;
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    html, body{
+      margin:0; padding:0;
+      background:#fff; color:#111;
+      font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
     }
-    .wrap {
+    .wrap{
       max-width: 980px;
       margin: 0 auto;
       padding: 18px 14px 28px;
       box-sizing: border-box;
     }
-    .prompt {
-      line-height: 1.75;
-      font-size: 16px;
-      white-space: pre-wrap;
+    .title{
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 10px 0;
+      line-height: 1.5;
     }
-    .grid {
-      margin-top: 18px;
+    .hint{
+      font-size: 13px;
+      color: #555;
+      margin: 0 0 14px 0;
+    }
+    .grid{
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
+      margin-bottom: 16px;
     }
-    @media (min-width: 820px) {
-      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (min-width: 820px){
+      .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
-    button.addr {
-      appearance: none;
+    button.addr{
+      appearance:none;
       border: 1px solid #111;
-      background: #111;
-      color: #fff;
+      background:#111;
+      color:#fff;
       border-radius: 10px;
       padding: 12px 10px;
       font-size: 15px;
       cursor: pointer;
       text-align: center;
-      user-select: none;
+      user-select:none;
       -webkit-tap-highlight-color: transparent;
     }
-    button.addr:disabled {
-      opacity: 0.45;
+    button.addr:disabled{
+      opacity: .45;
       cursor: not-allowed;
     }
-    .status {
+    .text{
+      white-space: pre-wrap;
+      font-size: 16px;
+      line-height: 1.75;
+      margin-top: 6px;
+    }
+    .question{
+      margin-top: 10px;
+      font-weight: 700;
+    }
+    .status{
       margin-top: 14px;
       min-height: 22px;
       font-size: 15px;
     }
-    .status.ok { color: #111; font-weight: 700; }
-    .status.bad { color: #b00020; font-weight: 700; }
-    .small {
-      margin-top: 6px;
-      font-size: 13px;
-      color: #555;
-    }
-    .card {
-      margin-top: 10px;
-      padding: 12px 12px;
-      border: 1px solid #e7e7e7;
-      border-radius: 12px;
-      background: #fafafa;
-    }
-    .addrlist {
-      margin-top: 8px;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 6px;
-      font-size: 14px;
-      color: #333;
-    }
-    @media (min-width: 620px) {
-      .addrlist { grid-template-columns: 1fr 1fr; }
-    }
-    .addrlist div { padding: 6px 8px; border-radius: 8px; background: #fff; border: 1px solid #eee; }
+    .status.ok{ color:#111; font-weight: 700; }
+    .status.bad{ color:#b00020; font-weight: 700; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="prompt" id="promptText">
-下个谜题在以下10个可能的地点之一：
+    <div class="title">下个谜题在以下10个可能的地点之一：</div>
+    <div class="hint">提示：点击错误会导致本页面冻结3分钟。</div>
 
-天平路75弄   天平路152弄   天平路216弄
-余庆路80弄   余庆路51弄
-康平路101弄   康平路152弄
-宛平路75弄   宛平路80弄   宛平路101弄
+    <div class="grid" id="btnGrid"></div>
 
-现在有2个玩家，A知道街道，B知道多少弄。
-A玩家说：“我不知道是多少弄，但我知道B也不知道。”
+    <div class="text" id="dialogText">现在有2个玩家，A知道街道，B知道多少弄。
+A说：“我不知道是多少弄，但我知道B也不知道。”
 B说：“起初我不知道，但现在我知道了。”
 A说：“那我现在知道下个谜题在哪了。”
 
-那么下个谜题在哪里？
-    </div>
-
-    <div class="card">
-      <div style="font-size:14px;color:#444;">10 个候选地点：</div>
-      <div class="addrlist" aria-hidden="true">
-        <div>天平路75弄</div><div>天平路152弄</div><div>天平路216弄</div>
-        <div>余庆路80弄</div><div>余庆路51弄</div>
-        <div>康平路101弄</div><div>康平路152弄</div>
-        <div>宛平路75弄</div><div>宛平路80弄</div><div>宛平路101弄</div>
-      </div>
-      <div class="small">点击下方按钮提交你的答案。答错将锁定 3 分钟（刷新也不会解除）。</div>
-    </div>
-
-    <div class="grid" id="btnGrid"></div>
+那么下个谜题在哪里？请点击正确地址。</div>
 
     <div class="status" id="status"></div>
   </div>
@@ -122,7 +95,6 @@ A说：“那我现在知道下个谜题在哪了。”
   const NEXT_URL = "https://sorcbear.github.io/playground/square/";
   const LOCK_MS = 3 * 60 * 1000; // 3 minutes
   const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
-  const STORAGE_HAS_SUCCESS = "riddle_addr_solved";
 
   const ADDRS = [
     "天平路75弄",
@@ -137,7 +109,7 @@ A说：“那我现在知道下个谜题在哪了。”
     "宛平路101弄",
   ];
 
-  // 正确答案（推理结果）：康平路152弄
+  // 正确答案：康平路152弄
   const CORRECT = "康平路152弄";
 
   const grid = document.getElementById("btnGrid");
@@ -145,54 +117,53 @@ A说：“那我现在知道下个谜题在哪了。”
 
   let timer = null;
 
-  function now() { return Date.now(); }
+  function now(){ return Date.now(); }
 
-  function fmtMMSS(ms) {
+  function fmtMMSS(ms){
     const t = Math.max(0, Math.ceil(ms / 1000));
     const mm = String(Math.floor(t / 60)).padStart(2, "0");
     const ss = String(t % 60).padStart(2, "0");
     return `${mm}:${ss}`;
   }
 
-  function getLockUntil() {
+  function getLockUntil(){
     const v = localStorage.getItem(STORAGE_LOCK_UNTIL);
     if (!v) return 0;
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   }
 
-  function setLockUntil(ts) {
+  function setLockUntil(ts){
     localStorage.setItem(STORAGE_LOCK_UNTIL, String(ts));
   }
 
-  function clearLock() {
+  function clearLock(){
     localStorage.removeItem(STORAGE_LOCK_UNTIL);
   }
 
-  function setButtonsEnabled(enabled) {
-    const btns = grid.querySelectorAll("button.addr");
-    btns.forEach(b => b.disabled = !enabled);
+  function setButtonsEnabled(enabled){
+    grid.querySelectorAll("button.addr").forEach(b => b.disabled = !enabled);
   }
 
-  function showStatus(text, kind) {
+  function showStatus(text, kind){
     statusEl.textContent = text || "";
     statusEl.className = "status" + (kind ? (" " + kind) : "");
   }
 
-  function startCountdown() {
+  function startCountdown(){
     if (timer) clearInterval(timer);
 
     const tick = () => {
       const lockUntil = getLockUntil();
       const left = lockUntil - now();
-      if (left > 0) {
+      if (left > 0){
         setButtonsEnabled(false);
-        showStatus(`try again（已锁定，剩余 ${fmtMMSS(left)}）`, "bad");
+        showStatus(`try again（已冻结，剩余 ${fmtMMSS(left)}）`, "bad");
       } else {
         clearLock();
         setButtonsEnabled(true);
         showStatus("", "");
-        if (timer) { clearInterval(timer); timer = null; }
+        if (timer){ clearInterval(timer); timer = null; }
       }
     };
 
@@ -200,20 +171,17 @@ A说：“那我现在知道下个谜题在哪了。”
     timer = setInterval(tick, 250);
   }
 
-  function handleClick(addr) {
+  function handleClick(addr){
     const lockUntil = getLockUntil();
-    if (lockUntil > now()) {
+    if (lockUntil > now()){
       startCountdown();
       return;
     }
 
-    if (addr === CORRECT) {
-      localStorage.setItem(STORAGE_HAS_SUCCESS, "1");
+    if (addr === CORRECT){
       setButtonsEnabled(false);
       showStatus("success", "ok");
-      setTimeout(() => {
-        location.href = NEXT_URL;
-      }, 500);
+      setTimeout(() => { location.href = NEXT_URL; }, 500);
       return;
     }
 
@@ -222,7 +190,7 @@ A说：“那我现在知道下个谜题在哪了。”
     startCountdown();
   }
 
-  function buildButtons() {
+  function buildButtons(){
     grid.innerHTML = "";
     ADDRS.forEach(addr => {
       const btn = document.createElement("button");
@@ -234,15 +202,7 @@ A说：“那我现在知道下个谜题在哪了。”
     });
   }
 
-  // init
   buildButtons();
-
-  // 如果你希望“做对一次就永远自动跳转”，打开下面这段：
-  // if (localStorage.getItem(STORAGE_HAS_SUCCESS) === "1") {
-  //   location.href = NEXT_URL;
-  //   return;
-  // }
-
   startCountdown();
 })();
 </script>
