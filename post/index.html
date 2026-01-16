@@ -6,6 +6,10 @@
   <title>Post Puzzle</title>
 
   <style>
+    :root{
+      --ok:#0b6b2b; /* 绿色系 */
+    }
+
     body {
       margin: 0;
       padding: 24px;
@@ -42,7 +46,7 @@
     .answer {
       display: flex;
       gap: 12px;
-      margin-bottom: 24px;
+      margin-bottom: 14px;
     }
 
     .answer input {
@@ -72,10 +76,23 @@
       opacity: 0.8;
     }
 
-    .result {
-      margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
+    /* 原来的 result 不再用于 success/try again，改为 msg（倒计时 & 错误提示都在这里） */
+    .msg{
+      margin-top: 14px;
+      font-size: 14px;       /* 按你的要求：14px */
+      line-height: 1.6;
+      min-height: 1.6em;     /* 防止跳动 */
+    }
+    .msg.ok{ color: var(--ok); } /* 成功状态颜色 */
+    .msg.err{ color:#111; }
+
+    /* 倒计时期间交互锁定的视觉反馈 */
+    button[disabled]{
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    input[disabled]{
+      opacity: 0.7;
     }
   </style>
 </head>
@@ -84,10 +101,9 @@
   <div class="container">
 
     <div class="text">
-这里的时光仿佛走得特别慢，不光是刚才的门牌，就连街角伫立的那个绿色大邮筒，也满是旧日的气息。已经十多年没寄过信了，最后那次，用的还是吴冠英大师在上海签售的珍藏版。那是我第一次参加签售会，好像是从某个公众号上获知的活动讯息，我到底是哪一天参加的签售活动呢？
+这里的时光仿佛走得特别慢，不光是刚才的门牌，就连街角伫立的那个绿色大邮筒，也满是旧日的气息。已经十多年没寄过信了，最后那次，用的还是吴冠英大师在上海签售的珍藏版邮票。那是我第一次参加签售会，好像是从某个公众号上获知的活动讯息，我到底是哪一天参加的签售活动呢？
     </div>
 
-    <!-- 新增图片 -->
     <div class="image-box">
       <img src="post.png" alt="post" />
     </div>
@@ -98,17 +114,70 @@
       <input id="day" class="short" placeholder="DD" inputmode="numeric" />
     </div>
 
-    <button onclick="checkAnswer()">Submit</button>
+    <button id="btnSubmit" onclick="checkAnswer()">Submit</button>
 
-    <div class="result" id="result"></div>
+    <!-- 倒计时文字显示在 .msg -->
+    <div class="msg" id="msg"></div>
   </div>
 
   <script>
+    // 你要求的 NEXT_URL
+    const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";
+
+    let isLocked = false;
+    let countdownTimer = null;
+
+    function setLocked(locked){
+      isLocked = locked;
+
+      const btn = document.getElementById("btnSubmit");
+      const y = document.getElementById("year");
+      const m = document.getElementById("month");
+      const d = document.getElementById("day");
+
+      btn.disabled = locked;
+      y.disabled = locked;
+      m.disabled = locked;
+      d.disabled = locked;
+    }
+
+    function setMsg(text, type){
+      const msg = document.getElementById("msg");
+      msg.textContent = text || "";
+      msg.classList.remove("ok","err");
+      if(type) msg.classList.add(type);
+    }
+
+    function startCountdownAndRedirect(){
+      // 倒计时期间交互锁定
+      setLocked(true);
+
+      // 立即显示（3）
+      let n = 3;
+      setMsg(`答案正确，即将进入下一题（${n}）`, "ok");
+
+      // 清理旧 timer（防止异常重复）
+      if(countdownTimer) clearInterval(countdownTimer);
+
+      countdownTimer = setInterval(() => {
+        n -= 1;
+
+        if(n >= 1){
+          setMsg(`答案正确，即将进入下一题（${n}）`, "ok");
+        }else{
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          window.location.href = NEXT_URL;
+        }
+      }, 1000);
+    }
+
     function checkAnswer() {
+      if(isLocked) return; // 防止重复触发
+
       const year = Number(document.getElementById('year').value.trim());
       const month = Number(document.getElementById('month').value.trim());
       const day = Number(document.getElementById('day').value.trim());
-      const result = document.getElementById('result');
 
       const isCorrect =
         !Number.isNaN(year) &&
@@ -119,12 +188,10 @@
         day === 14;
 
       if (isCorrect) {
-        result.textContent = 'success';
-        setTimeout(() => {
-          window.location.href = 'https://sorcbear.github.io/playground/ppl/';
-        }, 600);
+        // success（不再显示），改为倒计时流程
+        startCountdownAndRedirect();
       } else {
-        result.textContent = 'try again';
+        setMsg("try again", "err");
       }
     }
   </script>
