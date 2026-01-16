@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>地址推理谜题</title>
+  <title>addresss</title>
   <style>
+    :root{
+      --ok:#0b6b2b; /* 绿色系 */
+    }
     html, body{
       margin:0; padding:0;
       background:#fff; color:#111;
@@ -17,7 +20,7 @@
       box-sizing: border-box;
     }
     .title{
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
       margin: 0 0 10px 0;
       line-height: 1.5;
@@ -59,17 +62,16 @@
       line-height: 1.75;
       margin-top: 6px;
     }
-    .question{
-      margin-top: 10px;
-      font-weight: 700;
-    }
-    .status{
+
+    /* 倒计时文字显示区：.msg（字号 14px，继承 body 字体） */
+    .msg{
       margin-top: 14px;
-      min-height: 22px;
-      font-size: 15px;
+      min-height: 20px;
+      font-size: 14px;
+      line-height: 1.4;
     }
-    .status.ok{ color:#111; font-weight: 700; }
-    .status.bad{ color:#b00020; font-weight: 700; }
+    .msg.ok{ color: var(--ok); font-weight: 700; }
+    .msg.bad{ color:#b00020; font-weight: 700; }
   </style>
 </head>
 
@@ -87,7 +89,7 @@ A说：“那我现在知道下个谜题在哪了。”
 
 那么下个谜题在哪里？请点击正确地址。</div>
 
-    <div class="status" id="status"></div>
+    <div class="msg" id="msg"></div>
   </div>
 
 <script>
@@ -113,9 +115,11 @@ A说：“那我现在知道下个谜题在哪了。”
   const CORRECT = "康平路152弄";
 
   const grid = document.getElementById("btnGrid");
-  const statusEl = document.getElementById("status");
+  const msgEl = document.getElementById("msg");
 
-  let timer = null;
+  let lockTimer = null;      // 错误冻结倒计时
+  let successTimer = null;   // 成功跳转倒计时
+  let inSuccessCountdown = false;
 
   function now(){ return Date.now(); }
 
@@ -145,49 +149,82 @@ A说：“那我现在知道下个谜题在哪了。”
     grid.querySelectorAll("button.addr").forEach(b => b.disabled = !enabled);
   }
 
-  function showStatus(text, kind){
-    statusEl.textContent = text || "";
-    statusEl.className = "status" + (kind ? (" " + kind) : "");
+  function showMsg(text, kind){
+    msgEl.textContent = text || "";
+    msgEl.className = "msg" + (kind ? (" " + kind) : "");
   }
 
-  function startCountdown(){
-    if (timer) clearInterval(timer);
+  function stopSuccessCountdown(){
+    if (successTimer){ clearInterval(successTimer); successTimer = null; }
+    inSuccessCountdown = false;
+  }
+
+  function startLockCountdown(){
+    if (lockTimer) clearInterval(lockTimer);
 
     const tick = () => {
+      // 成功倒计时期间，不覆盖提示文案
+      if (inSuccessCountdown) return;
+
       const lockUntil = getLockUntil();
       const left = lockUntil - now();
       if (left > 0){
         setButtonsEnabled(false);
-        showStatus(`try again（已冻结，剩余 ${fmtMMSS(left)}）`, "bad");
+        showMsg(`try again（已冻结，剩余 ${fmtMMSS(left)}）`, "bad");
       } else {
         clearLock();
         setButtonsEnabled(true);
-        showStatus("", "");
-        if (timer){ clearInterval(timer); timer = null; }
+        showMsg("", "");
+        if (lockTimer){ clearInterval(lockTimer); lockTimer = null; }
       }
     };
 
     tick();
-    timer = setInterval(tick, 250);
+    lockTimer = setInterval(tick, 250);
+  }
+
+  // 成功后：不显示 success，改为 3→2→1 倒计时，期间锁定交互，最后跳转
+  function startSuccessCountdown(){
+    stopSuccessCountdown();
+    inSuccessCountdown = true;
+
+    // 成功倒计时期间锁定按钮，避免重复触发
+    setButtonsEnabled(false);
+
+    // 立即显示（3）
+    let n = 3;
+    showMsg(`答案正确，即将进入下一题（${n}）`, "ok");
+
+    successTimer = setInterval(() => {
+      n -= 1;
+      if (n >= 1){
+        showMsg(`答案正确，即将进入下一题（${n}）`, "ok");
+      } else {
+        clearInterval(successTimer);
+        successTimer = null;
+        location.href = NEXT_URL;
+      }
+    }, 1000);
   }
 
   function handleClick(addr){
+    // 成功倒计时期间，完全忽略点击
+    if (inSuccessCountdown) return;
+
     const lockUntil = getLockUntil();
     if (lockUntil > now()){
-      startCountdown();
+      startLockCountdown();
       return;
     }
 
     if (addr === CORRECT){
-      setButtonsEnabled(false);
-      showStatus("success", "ok");
-      setTimeout(() => { location.href = NEXT_URL; }, 500);
+      startSuccessCountdown();
       return;
     }
 
     // wrong
     setLockUntil(now() + LOCK_MS);
-    startCountdown();
+    startLockCountdown();
   }
 
   function buildButtons(){
@@ -203,7 +240,7 @@ A说：“那我现在知道下个谜题在哪了。”
   }
 
   buildButtons();
-  startCountdown();
+  startLockCountdown();
 })();
 </script>
 </body>
