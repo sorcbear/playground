@@ -3,37 +3,38 @@
   const COLS = 7;
   const TILE_COUNT = ROWS * COLS;
 
-  const STORAGE_KEY = "rotatePuzzle_4x7_seed";
-
   // 成功后跳转目标（从 /rotate/ 跳到 /circle/）
   const NEXT_URL = "../circle/";
 
-  // 倒计时 3、2、1（单位：秒）
+  // 成功后倒计时 3、2、1
   const COUNTDOWN_SECONDS = 3;
 
+  // ===============================
+  // 剧情绑定：你只需要维护这两个东西
+  // 1) STORY_KEY：这一关的“章节密钥”（可随剧情改）
+  // 2) k：上一题答案（由上一页链接带入 ?k=xxxx）
+  //
+  // 示例：上一题跳转到本页用：
+  //   location.href = "../rotate/?k=20150214";
+  // 这样 seed 就由 STORY_KEY + "20150214" 决定，刷新/换设备都一致
+  // ===============================
+  const STORY_KEY = "chapter.rotate.find_your_origin.v1";
+
   const params = new URLSearchParams(location.search);
-  const isSetup = params.get("setup") === "1";
+  const k = (params.get("k") || "").trim(); // 上一题答案/口令
 
   const board = document.getElementById("board");
   const messageEl = document.getElementById("message");
-  const hintTextEl = document.getElementById("hintText");
 
   const btnUndo = document.getElementById("btnUndo");
   const btnSubmit = document.getElementById("btnSubmit");
 
-  // 这些在 setup 模式下会用到（即便 HTML 被删，也不要让 JS 报错）
-  const setupBar = document.getElementById("setupBar");
-  const btnSaveSetup = document.getElementById("btnSaveSetup");
-  const btnClearSetup = document.getElementById("btnClearSetup");
-
-  // 每块的角度（0/1/2/3 → 0/90/180/270）
   let seedSteps = new Array(TILE_COUNT).fill(0);
   let curSteps  = new Array(TILE_COUNT).fill(0);
-
   let tileDataURLs = new Array(TILE_COUNT).fill(null);
 
-  let locked = false;         // 成功倒计时期间锁定交互
-  let countdownTimer = null;  // 用于清理倒计时
+  let locked = false;
+  let countdownTimer = null;
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
@@ -83,10 +84,9 @@
 
         const img = document.createElement("img");
         img.draggable = false;
-
         tile.appendChild(img);
-        tile.onclick = () => rotateOne(idx);
 
+        tile.onclick = () => rotateOne(idx);
         board.appendChild(tile);
       }
     }
@@ -97,23 +97,6 @@
       const img = board.querySelector(`.tile[data-idx="${i}"] img`);
       if (img) img.src = tileDataURLs[i];
     }
-  }
-
-  function loadSeed() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr.length === TILE_COUNT) {
-          seedSteps = arr.map(v => ((v % 4) + 4) % 4);
-          return;
-        }
-      } catch {}
-    }
-
-    seedSteps = isSetup
-      ? new Array(TILE_COUNT).fill(0)
-      : new Array(TILE_COUNT).fill(0).map(() => Math.floor(Math.random() * 4));
   }
 
   function lockUI(on) {
@@ -140,56 +123,80 @@
     }, 1000);
   }
 
+  // ===============================
+  // 剧情绑定 seed 的核心：把字符串稳定映射成 0..3 的数组
+  // 用的是轻量 hash + PRNG（稳定、跨浏览器一致）
+  // ===============================
+  function xmur3(str) {
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function() {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      h ^= h >>> 16;
+      return h >>> 0;
+    };
+  }
+
+  function mulberry32(a) {
+    return function() {
+      let t = (a += 0x6D2B79F5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function deriveSeed() {
+    // 绑定逻辑：章节密钥 + 上一题口令
+    // 若你不想依赖上一题，就把 k 固定写成某个值即可（例如 "canon"）
+    const binding = `${STORY_KEY}|${k}`;
+
+    const seedFn = xmur3(binding);
+    const rand = mulberry32(seedFn());
+
+    const steps = new Array(TILE_COUNT);
+    for (let i = 0; i < TILE_COUNT; i++) {
+      // 0..3：每格旋转步数
+      steps[i] = Math.floor(rand() * 4);
+    }
+
+    // 可选：让绑定更“剧情化”一点——把 k 的字符影响再叠加一次（仍然稳定）
+    if (k) {
+      for (let i = 0; i < TILE_COUNT; i++) {
+        const ch = k.charCodeAt(i % k.length);
+        steps[i] = (steps[i] + (ch % 4)) % 4;
+      }
+    }
+
+    return steps;
+  }
+
   function wireButtons() {
     btnUndo.onclick = resetToSeed;
 
     btnSubmit.onclick = () => {
       if (locked) return;
 
-      const solved = isSolved();
-
-      if (solved) {
-        // 成功：中文提示 + 3/2/1 倒计时跳转（非 setup 才跳）
-        if (!isSetup) {
-          startCountdownAndRedirect();
-        } else {
-          setMessage("答案正确。", "ok");
-        }
+      if (isSolved()) {
+        startCountdownAndRedirect();
       } else {
         setMessage("try again", "bad");
       }
     };
-
-    // setup 模式：仅当这些元素存在时才启用，避免报错
-    if (isSetup) {
-      if (setupBar) setupBar.style.display = "flex";
-
-      if (btnSaveSetup) {
-        btnSaveSetup.onclick = () => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(curSteps));
-          seedSteps = curSteps.slice();
-          setMessage("Setup 已保存。", "ok");
-        };
-      }
-
-      if (btnClearSetup) {
-        btnClearSetup.onclick = () => {
-          localStorage.removeItem(STORAGE_KEY);
-          setMessage("已清除本地 Setup。");
-        };
-      }
-    }
   }
 
   async function sliceImageToTiles(url) {
     const img = new Image();
     img.src = url;
 
-    // decode 失败时也要给出明确提示
     try {
       await img.decode();
     } catch (e) {
-      setMessage("图片加载失败：请确认 image.png 与页面同目录。", "bad");
+      setMessage("图片加载失败。", "bad");
       throw e;
     }
 
@@ -212,24 +219,19 @@
   }
 
   async function init() {
-    hintTextEl.textContent = isSetup
-      ? "Setup 模式：点击方块设置初始角度，保存后供玩家挑战。"
-      : "请点击方块旋转图像，使其恢复正确方向后提交。";
-
     buildBoard();
     wireButtons();
 
-    loadSeed();
-    curSteps = seedSteps.slice();
+    // 不随机、不存储：只由剧情绑定生成（刷新/换设备一致）
+    seedSteps = deriveSeed();
+    curSteps  = seedSteps.slice();
 
     await sliceImageToTiles("./image.png");
     setTileImages();
     applyAllRotations();
 
-    setMessage(isSetup ? "Setup 模式。" : "开始吧。");
+    setMessage("开始吧。");
   }
 
-  init().catch(() => {
-    // 已在 sliceImageToTiles 里 setMessage，这里不重复
-  });
+  init().catch(() => {});
 })();
