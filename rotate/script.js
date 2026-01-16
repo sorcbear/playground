@@ -6,11 +6,8 @@
   const NEXT_URL = "../circle/";
   const COUNTDOWN_SECONDS = 3;
 
-  // 章节密钥：这一关固定
+  // 章节密钥 + 默认口令：保证不带 ?k= 也绝对固定
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
-
-  // 没有带 ?k= 时的默认口令：保证刷新/换设备都一致
-  // 你可以把它直接改成上一题的答案（例如 "20150214"）
   const DEFAULT_K = "canon";
 
   const params = new URLSearchParams(location.search);
@@ -20,6 +17,13 @@
   const messageEl = document.getElementById("message");
   const btnUndo = document.getElementById("btnUndo");
   const btnSubmit = document.getElementById("btnSubmit");
+
+  const ansRoad = document.getElementById("ansRoad");
+  const ansNo = document.getElementById("ansNo");
+
+  // 正确答案
+  const ANSWER_ROAD = "天平";
+  const ANSWER_NO = "41";
 
   let seedSteps = new Array(TILE_COUNT).fill(0);
   let curSteps  = new Array(TILE_COUNT).fill(0);
@@ -36,8 +40,14 @@
     messageEl.textContent = text;
   }
 
-  function isSolved() {
+  function isPuzzleSolved() {
     return curSteps.every(step => normalize(step * 90) === 0);
+  }
+
+  function isAnswerSolved() {
+    const a1 = (ansRoad.value || "").trim();
+    const a2 = (ansNo.value || "").trim();
+    return a1 === ANSWER_ROAD && a2 === ANSWER_NO;
   }
 
   function applyRotation(i) {
@@ -95,6 +105,8 @@
     locked = on;
     btnSubmit.disabled = on;
     btnUndo.disabled = on;
+    ansRoad.disabled = on;
+    ansNo.disabled = on;
   }
 
   function startCountdownAndRedirect() {
@@ -115,7 +127,7 @@
     }, 1000);
   }
 
-  // ===== 稳定 hash + PRNG（跨设备一致）=====
+  // 稳定 hash + PRNG（跨设备一致、不会随机变化）
   function xmur3(str) {
     let h = 1779033703 ^ str.length;
     for (let i = 0; i < str.length; i++) {
@@ -147,7 +159,7 @@
     const steps = new Array(TILE_COUNT);
     for (let i = 0; i < TILE_COUNT; i++) steps[i] = Math.floor(rand() * 4);
 
-    // 叠加一次口令字符影响（仍然稳定）
+    // 再叠加一次口令字符影响（仍然稳定）
     for (let i = 0; i < TILE_COUNT; i++) {
       const ch = k.charCodeAt(i % k.length);
       steps[i] = (steps[i] + (ch % 4)) % 4;
@@ -158,10 +170,24 @@
   function wireButtons() {
     btnUndo.onclick = resetToSeed;
 
+    // 回车提交（在输入框里按 Enter）
+    [ansRoad, ansNo].forEach(el => {
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") btnSubmit.click();
+      });
+    });
+
     btnSubmit.onclick = () => {
       if (locked) return;
-      if (isSolved()) startCountdownAndRedirect();
-      else setMessage("try again", "bad");
+
+      const okPuzzle = isPuzzleSolved();
+      const okAns = isAnswerSolved();
+
+      if (okPuzzle && okAns) {
+        startCountdownAndRedirect();
+      } else {
+        setMessage("try again", "bad");
+      }
     };
   }
 
