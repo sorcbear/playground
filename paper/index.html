@@ -22,6 +22,31 @@
       box-sizing: border-box;
     }
 
+    .toptext{
+      font-size:16px;
+      line-height:1.8;
+      margin: 0 0 14px;
+      white-space: pre-wrap;
+    }
+
+    .btnbar{
+      margin: 10px 0 14px;
+      display:flex;
+      justify-content:center;
+    }
+    button{
+      appearance:none;
+      border:none;
+      background:#111;
+      color:#fff;
+      font-size:16px;
+      font-weight:700;
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor:pointer;
+    }
+    button:active{ transform: translateY(1px); }
+
     /* 7x2 grid with dashed connector between each pair */
     .grid{
       display: grid;
@@ -52,23 +77,46 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .btnbar{
-      margin-top: 20px;
+    .hint{
+      margin-top: 16px;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .answer{
+      margin-top: 10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+    }
+    .answer input{
+      width: 110px;
+      height: 44px;
+      border: 2px solid #111;
+      border-radius: 10px;
+      font-size: 18px;
+      padding: 6px 10px;
+      box-sizing: border-box;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .submitbar{
+      margin-top: 12px;
       display:flex;
       justify-content:center;
+      gap: 10px;
+      align-items:center;
+      flex-wrap:wrap;
     }
-    button{
-      appearance:none;
-      border:none;
-      background:#111;
-      color:#fff;
-      font-size:16px;
-      font-weight:700;
-      padding: 12px 18px;
-      border-radius: 10px;
-      cursor:pointer;
+    .msg{
+      margin-top: 10px;
+      text-align:center;
+      font-size: 16px;
+      font-weight: 700;
+      min-height: 22px;
     }
-    button:active{ transform: translateY(1px); }
 
     /* Responsive tweaks */
     @media (max-width: 420px){
@@ -76,11 +124,19 @@
       .digits{ font-size: 26px; }
       .connector{ width: 52px; border-top-width: 2.5px; }
       .grid{ gap: 12px 10px; }
+      .answer input{ width: 94px; height: 42px; font-size: 16px; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
+    <div class="toptext">ymbbb我想不出来了，随便敷衍一下混过去。</div>
+
+    <!-- Button moved ABOVE the numbers -->
+    <div class="btnbar">
+      <button id="btnShake" type="button">随机摇一摇</button>
+    </div>
+
     <div id="grid" class="grid" aria-label="7x2 boxes">
       <!-- 7 rows: (box, connector, box) repeated -->
       <div class="box"><div class="digits" data-cell="0">00</div></div><div class="connector"></div><div class="box"><div class="digits" data-cell="1">00</div></div>
@@ -92,38 +148,91 @@
       <div class="box"><div class="digits" data-cell="12">00</div></div><div class="connector"></div><div class="box"><div class="digits" data-cell="13">00</div></div>
     </div>
 
-    <div class="btnbar">
-      <button id="btn">随机大乐透</button>
+    <div class="hint">请使用实体道具，从小到大填写4个数字：</div>
+
+    <div class="answer" aria-label="answer inputs">
+      <input id="a1" inputmode="decimal" autocomplete="off" />
+      <input id="a2" inputmode="decimal" autocomplete="off" />
+      <input id="a3" inputmode="decimal" autocomplete="off" />
+      <input id="a4" inputmode="decimal" autocomplete="off" />
     </div>
+
+    <div class="submitbar">
+      <button id="btnSubmit" type="button">Submit</button>
+    </div>
+
+    <div id="msg" class="msg"></div>
   </div>
 
   <script>
     (() => {
-      const btn = document.getElementById("btn");
+      const btnShake = document.getElementById("btnShake");
+      const btnSubmit = document.getElementById("btnSubmit");
+      const msg = document.getElementById("msg");
+
       const cells = Array.from(document.querySelectorAll("[data-cell]"));
 
       // Row-wise left->right pairs:
-      // 4 7, 7 10, 8 11, 2 5, 6 9, 2 9, 3 12
       const targetPairs = [
-        [4, 7],
-        [7, 10],
-        [8, 11],
-        [2, 5],
-        [6, 9],
-        [2, 9],
-        [3, 12],
+        [4.2, 7.3],
+        [7.3, 10.2],
+        [8.7, 11.5],
+        [2.3, 5.7],
+        [6.2, 9.4],
+        [9.4, 2.3],
+        [3.8, 12.7],
       ];
 
+      // Answer (must be in ascending order)
+      const ANSWER = [4.1, 10.5, 10.9, 15.2];
+      const NEXT_URL = "https://sorcbear.github.io/playground/keyboard/";
+
       function pad2(n){
+        // Keep your 2-digit look; for decimals this becomes "4.2" (length 3) which is fine.
+        // If you want strict formatting later, we can format decimals separately.
         return String(n).padStart(2, "0");
       }
 
-      btn.addEventListener("click", () => {
-        // Fill 14 cells in row order: left then right
+      btnShake.addEventListener("click", () => {
         let idx = 0;
         for (const [l, r] of targetPairs) {
           cells[idx++].textContent = pad2(l);
           cells[idx++].textContent = pad2(r);
+        }
+      });
+
+      function normNumberStr(s){
+        // Trim and normalize common inputs like "04.1" -> "4.1"
+        const t = String(s || "").trim();
+        if (!t) return null;
+        const x = Number(t);
+        if (!Number.isFinite(x)) return null;
+        // Avoid float display issues by rounding to 1 decimal since answers are 1-decimal
+        return Math.round(x * 10) / 10;
+      }
+
+      btnSubmit.addEventListener("click", () => {
+        const v1 = normNumberStr(document.getElementById("a1").value);
+        const v2 = normNumberStr(document.getElementById("a2").value);
+        const v3 = normNumberStr(document.getElementById("a3").value);
+        const v4 = normNumberStr(document.getElementById("a4").value);
+
+        if ([v1, v2, v3, v4].some(v => v === null)) {
+          msg.textContent = "try again";
+          return;
+        }
+
+        const input = [v1, v2, v3, v4];
+        const ok = input.length === 4 && input.every((v, i) => Object.is(v, ANSWER[i]));
+
+        if (ok) {
+          msg.textContent = "success";
+          // Small delay lets user see success; keep it minimal.
+          setTimeout(() => {
+            location.href = NEXT_URL;
+          }, 250);
+        } else {
+          msg.textContent = "try again";
         }
       });
     })();
