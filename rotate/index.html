@@ -10,11 +10,8 @@
       --bg:#ffffff;
       --text:#111111;
       --muted:#888888;
-
-      /* 线更细、更淡 */
       --line:rgba(0,0,0,.08);
       --line2:rgba(0,0,0,.12);
-
       --btn:#000000;
       --btnHover:#222222;
       --ok:#2fbf71;
@@ -42,7 +39,6 @@
       .wrap{ padding: 0 16px 24px; }
     }
 
-    /* 可复用标题样式（含“空两行”效果的留白） */
     .pageTitle{
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size: 24px;
@@ -51,7 +47,16 @@
       letter-spacing: 0.02em;
       color: var(--text);
       text-align: left;
-      margin: 34px 0 22px;
+      margin: 34px 0 6px; /* 标题与小字更近 */
+    }
+
+    /* 标题下的小字 */
+    .pageSub{
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--muted);
+      margin: 0 0 22px;   /* 小字下方留白 */
+      text-align: left;
     }
 
     .boardShell{
@@ -87,13 +92,6 @@
       transition: transform 120ms ease;
       pointer-events:none;
       user-select:none;
-    }
-
-    .orientation-hint{
-      margin-top: 8px;
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
     }
 
     .hud{
@@ -133,25 +131,17 @@
     }
     button:hover{ background: var(--btnHover); }
     button:disabled{ opacity: .55; cursor:not-allowed; }
-
-    /* 你原来隐藏的元素继续隐藏 */
-    #hintText, #clickCount, #clickLimit { display:none !important; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="pageTitle">寻找你的起点</div>
-
-    <p id="hintText"></p>
-    <span id="clickCount">0</span>
-    <span id="clickLimit">27</span>
+    <div class="pageSub">可横屏操作</div>
 
     <div class="boardShell">
       <div id="board" class="board"></div>
     </div>
-
-    <div class="orientation-hint">可以转动手机，横向操作。</div>
 
     <div class="hud">
       <div id="message" class="msg"></div>
@@ -162,6 +152,7 @@
     </div>
   </div>
 
-  <script src="./script.js"></script>
+  <!-- 关键：加版本号避免缓存旧 JS -->
+  <script src="./script.js?v=20260116a"></script>
 </body>
 </html>
