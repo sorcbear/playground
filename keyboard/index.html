@@ -19,6 +19,13 @@ button{border:none;border-radius:10px;background:#111;color:#fff;padding:8px 10p
 button:active{transform:translateY(1px)}
 .ok{background:#12b76a;color:#052;font-weight:700}
 
+/* 顶部新增一句话：普通文字 */
+.intro{
+  font-size:14px;
+  line-height:1.45;
+  margin:2px 0 6px;
+}
+
 /* 提示字小一点 */
 .hint{font-size:12px;line-height:1.35;margin:0 0 6px;}
 .small{font-size:11px;opacity:.75;margin-top:2px;line-height:1.25;}
@@ -43,6 +50,10 @@ button:active{transform:translateY(1px)}
 
 <body>
 <div class="wrap">
+
+  <!-- 新增：页面最上面一句话 -->
+  <div class="intro">请按照正确的曲谱顺序（4.1,10.5,10.9,15.2）演奏乐曲。</div>
+
   <div class="topbar">
     <div class="status" id="status">未开始</div>
     <div class="btns">
@@ -72,6 +83,9 @@ button:active{transform:translateY(1px)}
   const MAX_GAP = 5.0;
 
   const GLOBAL_NUDGE = 0;
+
+  // success 后跳转目标
+  const NEXT_URL = "https://sorcbear.github.io/playground/end/";
 
   // 这里你改 0.8 应该会“明显压缩”，如果你看不到变化，一定是旧文件/缓存 或 fallback 未应用
   const BOUNDARY_SCALE = 0.9920;
@@ -436,6 +450,12 @@ button:active{transform:translateY(1px)}
     if(step === target.length){
       statusEl.textContent="success";
       statusEl.style.color="#067647";
+
+      /* 新增：success 后自动跳转 */
+      setTimeout(() => {
+        location.href = NEXT_URL;
+      }, 800);
+
     } else {
       statusEl.textContent=`进度 ${step}/${target.length}`;
       statusEl.style.color="#111";
@@ -475,7 +495,6 @@ button:active{transform:translateY(1px)}
     const on = document.body.classList.toggle("debug");
     debugBtn.textContent = on ? "Debug On" : "Debug";
     if(on){
-      // 打开 debug 时告诉你当前到底是 detected 还是 fallback，以及 scale 值
       statusEl.textContent = `Debug: ${boundarySource || "?"}, scale=${BOUNDARY_SCALE}`;
       statusEl.style.color="#111";
     }
@@ -490,7 +509,6 @@ button:active{transform:translateY(1px)}
       boundarySource = "detected";
     }
 
-    // 关键：无论 detected / fallback，都应用 scale
     boundaries = applyScaleToBoundaries(bds, BOUNDARY_SCALE);
 
     buildOverlay();
