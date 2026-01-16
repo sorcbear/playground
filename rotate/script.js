@@ -9,8 +9,8 @@
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "canon";
 
-  // 返回保留状态：sessionStorage
-  const SOLVED_KEY = "rotate_find_origin_solved_v2";
+  // 返回保留“已完成”状态：sessionStorage
+  const SOLVED_KEY = "rotate_find_origin_solved_v3";
 
   const params = new URLSearchParams(location.search);
   const k = (params.get("k") || DEFAULT_K).trim();
@@ -39,6 +39,26 @@
     messageEl.classList.remove("ok", "bad");
     if (type) messageEl.classList.add(type);
     messageEl.textContent = text;
+  }
+
+  function clearCountdown() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+  }
+
+  function setDisabledAll(on) {
+    btnSubmit.disabled = on;
+    btnUndo.disabled = on;
+    ansRoad.disabled = on;
+    ansNo.disabled = on;
+  }
+
+  function unlockUI() {
+    locked = false;
+    clearCountdown();
+    setDisabledAll(false);
   }
 
   function isPuzzleSolved() {
@@ -102,37 +122,21 @@
     }
   }
 
-  function lockAll(on) {
-    locked = on;
-    btnSubmit.disabled = on;
-    btnUndo.disabled = on;
-    ansRoad.disabled = on;
-    ansNo.disabled = on;
-  }
-
-  function lockForCountdown(on) {
-    // 倒计时期间，禁止重复点击 submit/undo 和乱改输入、乱转拼图
-    locked = on;
-    btnSubmit.disabled = on;
-    btnUndo.disabled = on;
-    ansRoad.disabled = on;
-    ansNo.disabled = on;
-  }
-
   function startCountdownAndRedirect() {
-    // 记录“已完成”，以便从下一页返回仍显示提交状态
+    // 标记已完成（用于返回恢复状态）
     sessionStorage.setItem(SOLVED_KEY, "1");
 
-    lockForCountdown(true);
+    locked = true;
+    setDisabledAll(true);
 
     let left = COUNTDOWN_SECONDS;
     setMessage(`答案正确，即将进入下一题（${left}）`, "ok");
 
+    clearCountdown();
     countdownTimer = setInterval(() => {
       left -= 1;
       if (left <= 0) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
+        clearCountdown();
         location.href = NEXT_URL;
         return;
       }
@@ -140,7 +144,26 @@
     }, 1000);
   }
 
-  // 稳定 hash + PRNG
+  // 关键：用于“返回”时强制恢复 UI（解决 iOS Safari bfcache）
+  function restoreSolvedUIIfNeeded() {
+    if (sessionStorage.getItem(SOLVED_KEY) !== "1") return;
+
+    // 解除任何倒计时锁定
+    unlockUI();
+
+    // 拼图置为完成
+    curSteps = new Array(TILE_COUNT).fill(0);
+    applyAllRotations();
+
+    // 填空置为完成
+    ansRoad.value = ANSWER_ROAD;
+    ansNo.value = ANSWER_NO;
+
+    // 提示：已确认（但不锁 submit）
+    setMessage("答案已确认。", "ok");
+  }
+
+  // 稳定 hash + PRNG（跨设备一致）
   function xmur3(str) {
     let h = 1779033703 ^ str.length;
     for (let i = 0; i < str.length; i++) {
@@ -182,7 +205,6 @@
   function wireButtons() {
     btnUndo.onclick = resetToSeed;
 
-    // 回车提交
     [ansRoad, ansNo].forEach(el => {
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter") btnSubmit.click();
@@ -192,7 +214,7 @@
     btnSubmit.onclick = () => {
       if (locked) return;
 
-      // 如果已经完成过（从下一页返回），允许直接继续
+      // 已完成过：允许直接继续
       if (sessionStorage.getItem(SOLVED_KEY) === "1") {
         startCountdownAndRedirect();
         return;
@@ -201,11 +223,8 @@
       const okPuzzle = isPuzzleSolved();
       const okAns = isAnswerSolved();
 
-      if (okPuzzle && okAns) {
-        startCountdownAndRedirect();
-      } else {
-        setMessage("try again", "bad");
-      }
+      if (okPuzzle && okAns) startCountdownAndRedirect();
+      else setMessage("try again", "bad");
     };
   }
 
@@ -243,25 +262,19 @@
     setTileImages();
     applyAllRotations();
 
-    // 从下一页返回：显示“提交后的样子”，但不锁定 Submit
-    if (sessionStorage.getItem(SOLVED_KEY) === "1") {
-      curSteps = new Array(TILE_COUNT).fill(0);
-      applyAllRotations();
-
-      ansRoad.value = ANSWER_ROAD;
-      ansNo.value = ANSWER_NO;
-
-      // 不锁 submit：只允许继续；允许玩家改也无所谓，因为 submit 已可直接继续
-      // 若你希望这里仍禁止乱改/乱转，可把下面两行打开
-      // locked = true;
-      // btnUndo.disabled = true;
-
-      setMessage("答案已确认。", "ok");
-      return;
+    // 正常进入：如果已完成过，也恢复一次
+    restoreSolvedUIIfNeeded();
+    if (sessionStorage.getItem(SOLVED_KEY) !== "1") {
+      setMessage("开始吧。");
     }
-
-    setMessage("开始吧。");
   }
+
+  // 关键：iOS Safari 返回时常走 bfcache，不会重新 init
+  // pageshow 会触发，并且 event.persisted 可能为 true
+  window.addEventListener("pageshow", () => {
+    // 只要页面被“返回/前进”展示，就重刷已完成 UI，并解除锁定
+    restoreSolvedUIIfNeeded();
+  });
 
   init().catch(() => {
     setMessage("图片加载失败。", "bad");
