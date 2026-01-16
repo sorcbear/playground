@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Square Puzzle</title>
   <style>
-    :root { --maxw: 900px; }
+    :root {
+      --maxw: 900px;
+      --ok: #0b6b2b; /* 绿色系 */
+    }
     body {
       margin: 0;
       padding: 24px 16px 40px;
@@ -43,6 +46,7 @@
       line-height: 1.2;
     }
     .label { font-weight: 600; }
+
     input[type="text"]{
       width: 200px;
       max-width: 70vw;
@@ -52,6 +56,7 @@
       border-radius: 10px;
       outline: none;
     }
+
     button{
       padding: 10px 14px;
       font-size: 16px;
@@ -62,24 +67,24 @@
       cursor: pointer;
     }
     button:active { transform: translateY(1px); }
+
+    /* 倒计时文字：14px，继承 body 字体 */
     .msg {
       margin-top: 14px;
-      font-size: 18px;
-      min-height: 24px;
+      font-size: 14px;
+      min-height: 20px;
       font-weight: 600;
     }
+    .msg.ok { color: var(--ok); }
   </style>
 </head>
 <body>
   <div class="wrap">
-
-    <!-- 新增说明文字 -->
     <div class="intro">
       这是一条不超过200米的弄堂，请用这条弄堂里的环境信息完成以下谜题。
     </div>
 
     <div class="imgbox">
-      <!-- puzzle.jpg 放在同目录 -->
       <img src="puzzle.jpg" alt="square puzzle" />
     </div>
 
@@ -96,25 +101,69 @@
     (function () {
       const CORRECT = "15";
       const NEXT_URL = "https://sorcbear.github.io/playground/barrel/";
+
       const input = document.getElementById("answer");
       const btn = document.getElementById("submitBtn");
       const msg = document.getElementById("msg");
 
+      let locked = false;
+      let timerId = null;
+
+      function setLocked(state) {
+        locked = state;
+        btn.disabled = state;
+        input.disabled = state;
+      }
+
+      function setMsgOk(text) {
+        msg.classList.add("ok");
+        msg.textContent = text;
+      }
+
+      function setMsgNormal(text) {
+        msg.classList.remove("ok");
+        msg.textContent = text;
+      }
+
+      function startCountdownAndRedirect() {
+        setLocked(true);
+
+        // 立即显示（3），然后每 1 秒递减到（1），再 1 秒跳转
+        let n = 3;
+        setMsgOk(`答案正确，即将进入下一题（${n}）`);
+
+        timerId = setInterval(() => {
+          n -= 1;
+          if (n >= 1) {
+            setMsgOk(`答案正确，即将进入下一题（${n}）`);
+          } else {
+            clearInterval(timerId);
+            timerId = null;
+            location.href = NEXT_URL;
+          }
+        }, 1000);
+      }
+
       function check() {
+        if (locked) return;
+
         const val = (input.value || "").trim();
         if (val === CORRECT) {
-          msg.textContent = "success";
-          setTimeout(() => {
-            location.href = NEXT_URL;
-          }, 800); // 与你之前页面一致的“成功后短暂停留再跳转”
+          // 不再显示 "success"，直接进入倒计时流程
+          startCountdownAndRedirect();
         } else {
-          msg.textContent = "try again";
+          setMsgNormal("try again");
         }
       }
 
       btn.addEventListener("click", check);
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") check();
+      });
+
+      // 防止页面跳转前，计时器残留（可选但稳妥）
+      window.addEventListener("pagehide", () => {
+        if (timerId) clearInterval(timerId);
       });
     })();
   </script>
