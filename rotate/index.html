@@ -10,8 +10,11 @@
       --bg:#ffffff;
       --text:#111111;
       --muted:#888888;
-      --line:rgba(0,0,0,.12);
-      --line2:rgba(0,0,0,.18);
+
+      /* 线更细、更淡 */
+      --line:rgba(0,0,0,.08);
+      --line2:rgba(0,0,0,.12);
+
       --btn:#000000;
       --btnHover:#222222;
       --ok:#2fbf71;
@@ -41,13 +44,20 @@
       }
     }
 
-    /* ===== 新增：标题 ===== */
-    .title{
-      font-size: 20px;
-      font-weight: 500;
+    /* =========================
+       可复用：标题字体“全部格式”
+       ========================= */
+    .pageTitle{
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.25;
+      letter-spacing: 0.02em;
       color: var(--text);
       text-align: left;
-      margin-bottom: 2.2em; /* 空两行 */
+
+      /* “空两行”的视觉留白：你可按需调整 */
+      margin: 34px 0 22px;
     }
 
     .boardShell{
@@ -68,8 +78,8 @@
     }
 
     .tile{
-      border-right: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
+      border-right: 0.5px solid var(--line);
+      border-bottom: 0.5px solid var(--line);
       overflow:hidden;
       cursor:pointer;
     }
@@ -107,6 +117,9 @@
       font-size: 14px;
       color: var(--muted);
       background: #ffffff;
+      min-height: 44px;
+      display:flex;
+      align-items:center;
     }
     .msg.ok{ color: var(--ok); }
     .msg.bad{ color: var(--bad); }
@@ -128,10 +141,21 @@
       background: var(--btn);
     }
 
-    button:hover{
-      background: var(--btnHover);
+    button:hover{ background: var(--btnHover); }
+    button:disabled{
+      opacity: .55;
+      cursor: not-allowed;
     }
 
+    /* setup 控制条：默认隐藏，setup 模式显示 */
+    #setupBar{
+      display:none;
+      margin-top: 10px;
+      gap:10px;
+      justify-content:flex-end;
+    }
+
+    /* 你原来隐藏的元素继续隐藏 */
     #hintText,
     #clickCount,
     #clickLimit{
@@ -143,8 +167,8 @@
 <body>
   <div class="wrap">
 
-    <!-- 新增标题 -->
-    <div class="title">寻找你的起点</div>
+    <!-- 标题：顶部留白相当于“空两行” -->
+    <div class="pageTitle">寻找你的起点</div>
 
     <p id="hintText"></p>
     <span id="clickCount">0</span>
@@ -164,6 +188,12 @@
         <button id="btnUndo">Undo</button>
         <button id="btnSubmit">Submit</button>
       </div>
+    </div>
+
+    <!-- setup 专用操作（仅 ?setup=1 时显示） -->
+    <div id="setupBar">
+      <button id="btnSaveSetup">Save Setup</button>
+      <button id="btnClearSetup">Clear Setup</button>
     </div>
 
   </div>
