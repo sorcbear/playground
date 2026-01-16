@@ -15,6 +15,13 @@
                    "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
     }
     .wrap { max-width: var(--maxw); margin: 0 auto; }
+
+    .intro {
+      font-size: 18px;
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
     .imgbox {
       display: flex;
       justify-content: center;
@@ -65,8 +72,14 @@
 </head>
 <body>
   <div class="wrap">
+
+    <!-- 新增说明文字 -->
+    <div class="intro">
+      这是一条不超过200米的弄堂，请用这条弄堂里的环境信息完成以下谜题。
+    </div>
+
     <div class="imgbox">
-      <!-- 把你发的图片保存为 puzzle.jpg，放在同目录 -->
+      <!-- puzzle.jpg 放在同目录 -->
       <img src="puzzle.jpg" alt="square puzzle" />
     </div>
 
@@ -82,6 +95,7 @@
   <script>
     (function () {
       const CORRECT = "15";
+      const NEXT_URL = "https://sorcbear.github.io/playground/barrel/";
       const input = document.getElementById("answer");
       const btn = document.getElementById("submitBtn");
       const msg = document.getElementById("msg");
@@ -90,6 +104,9 @@
         const val = (input.value || "").trim();
         if (val === CORRECT) {
           msg.textContent = "success";
+          setTimeout(() => {
+            location.href = NEXT_URL;
+          }, 800); // 与你之前页面一致的“成功后短暂停留再跳转”
         } else {
           msg.textContent = "try again";
         }
