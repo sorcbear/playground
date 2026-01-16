@@ -29,7 +29,6 @@
       color: var(--text);
     }
 
-    /* 所有表单控件强制同字体 */
     input, button, textarea, select{
       font-family: inherit;
       font-size: inherit;
@@ -98,7 +97,6 @@
       user-select:none;
     }
 
-    /* 提示文字：字号与填空题一致 */
     .belowHint{
       margin-top: 10px;
       font-size: 16px;
@@ -118,17 +116,17 @@
       color: var(--text);
     }
 
-    /* 方框：约 3 个字宽 */
+    /* 方框更矮：减少上下 padding + 更紧的 line-height */
     .ansInput{
       width: 4em;
-      padding: 12px 8px;
+      padding: 8px 8px;          /* ← 原来 12px 以上，改小 */
       border: 1px solid var(--line2);
       border-radius: 12px;
       outline: none;
       background:#fff;
       color: var(--text);
       font-size: 16px;
-      line-height: 1.4;
+      line-height: 1.1;          /* ← 原来 1.4，改紧凑 */
       text-align: center;
     }
     .ansInput:focus{
@@ -207,7 +205,6 @@
     </div>
   </div>
 
-  <!-- 改 JS 后把 v= 后面换个新值，避免缓存旧脚本 -->
-  <script src="./script.js?v=20260116c"></script>
+  <script src="./script.js?v=20260116d"></script>
 </body>
 </html>
