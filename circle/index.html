@@ -8,6 +8,7 @@
     :root { 
       --maxw: 720px;
       --text: #111;
+      --ok: #0b6b2b;
     }
     body{
       margin:0;
@@ -16,8 +17,6 @@
       color:var(--text);
     }
     .wrap{ max-width:var(--maxw); margin:0 auto; padding:12px; }
-
-    /* 标题 */
 
     .subtitle{
       font-size:16px;
@@ -74,15 +73,15 @@
       margin-top:12px;
       padding:0;
       background:transparent;
-      font-size:14px;
+      font-size:14px; /* 倒计时文字：14px */
       min-height:1.4em;
     }
+    .msg.ok{ color: var(--ok); } /* 成功状态绿色 */
   </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- 标题区 -->
   <div class="subtitle">
     请走到老吉士马路对面，然后往左边方向前进，留意100米范围内的墙面信息，找到线索解题。
   </div>
@@ -127,7 +126,9 @@ const ANSWER_POINTS = [
 ];
 
 const NEXT_URL = "https://sorcbear.github.io/playground/track/";
-const REDIRECT_DELAY = 600;
+
+// 倒计时：3 → 2 → 1 → 跳转
+const COUNTDOWN_START = 3;
 
 const R_DOT=10, SNAP_DIST=36, EPS=10;
 
@@ -138,6 +139,9 @@ const submitBtn=document.getElementById("submitBtn");
 const undoBtn=document.getElementById("undoBtn");
 
 const selected=new Array(CIRCLES.length).fill(false);
+
+let locked = false;      // 倒计时期间：图点击无效
+let countdownTimer = null;
 
 function el(n,a={}){const e=document.createElementNS("http://www.w3.org/2000/svg",n);for(const k in a)e.setAttribute(k,a[k]);return e;}
 function svgPt(ev){const p=svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
@@ -160,6 +164,7 @@ function sameSet(u,a){
   return true;
 }
 function userPts(){return selected.map((v,i)=>v?CIRCLES[i]:null).filter(Boolean);}
+
 function render(){
   svg.querySelectorAll(".hit,.dot").forEach(n=>n.remove());
   CIRCLES.forEach((c,i)=>{
@@ -173,33 +178,60 @@ function render(){
   });
 }
 
+function setLocked(v){
+  locked = v;
+  submitBtn.disabled = v;
+  undoBtn.disabled = v;
+}
+
+function setMsg(text, isOk=false){
+  msg.textContent = text;
+  msg.classList.toggle("ok", !!isOk);
+}
+
 catcher.addEventListener("pointerdown",e=>{
   e.preventDefault();
+  if(locked) return;
+
   const p=svgPt(e);
   const i=nearest(p.x,p.y);
   if(i<0)return;
+
   selected[i]=!selected[i];
-  msg.textContent="";
+  setMsg("", false);
   render();
 },{passive:false});
 
 undoBtn.onclick=()=>{
+  if(locked) return;
   selected.fill(false);
-  msg.textContent="";
+  setMsg("", false);
   render();
 };
 
 submitBtn.onclick=()=>{
-  if(sameSet(userPts(),ANSWER_POINTS)){
-    msg.textContent="Success";
-    submitBtn.disabled=true;
-    undoBtn.disabled=true;
+  if(locked) return;
 
-    setTimeout(()=>{
-      location.href=NEXT_URL;
-    },REDIRECT_DELAY);
+  if(sameSet(userPts(),ANSWER_POINTS)){
+    // 进入倒计时流程（锁定交互）
+    setLocked(true);
+
+    let t = COUNTDOWN_START;
+    setMsg(`答案正确，即将进入下一题（${t}）`, true);
+
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(()=>{
+      t -= 1;
+      if(t > 0){
+        setMsg(`答案正确，即将进入下一题（${t}）`, true);
+      }else{
+        clearInterval(countdownTimer);
+        location.href = NEXT_URL;
+      }
+    }, 1000);
+
   }else{
-    msg.textContent="Please try again";
+    setMsg("Please try again", false);
   }
 };
 
@@ -207,5 +239,3 @@ render();
 </script>
 </body>
 </html>
-
-
