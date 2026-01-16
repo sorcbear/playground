@@ -6,12 +6,11 @@
   const NEXT_URL = "../circle/";
   const COUNTDOWN_SECONDS = 3;
 
-  // 章节密钥 + 默认口令：保证不带 ?k= 也绝对固定
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "canon";
 
-  // 返回保留状态：sessionStorage（关掉浏览器会清）
-  const SOLVED_KEY = "rotate_find_origin_solved_v1";
+  // 返回保留状态：sessionStorage
+  const SOLVED_KEY = "rotate_find_origin_solved_v2";
 
   const params = new URLSearchParams(location.search);
   const k = (params.get("k") || DEFAULT_K).trim();
@@ -24,7 +23,6 @@
   const ansRoad = document.getElementById("ansRoad");
   const ansNo = document.getElementById("ansNo");
 
-  // 正确答案
   const ANSWER_ROAD = "天平";
   const ANSWER_NO = "41";
 
@@ -104,7 +102,16 @@
     }
   }
 
-  function lockUI(on) {
+  function lockAll(on) {
+    locked = on;
+    btnSubmit.disabled = on;
+    btnUndo.disabled = on;
+    ansRoad.disabled = on;
+    ansNo.disabled = on;
+  }
+
+  function lockForCountdown(on) {
+    // 倒计时期间，禁止重复点击 submit/undo 和乱改输入、乱转拼图
     locked = on;
     btnSubmit.disabled = on;
     btnUndo.disabled = on;
@@ -113,10 +120,10 @@
   }
 
   function startCountdownAndRedirect() {
-    // 记录“已完成”，以便从下一页返回仍保留样子
+    // 记录“已完成”，以便从下一页返回仍显示提交状态
     sessionStorage.setItem(SOLVED_KEY, "1");
 
-    lockUI(true);
+    lockForCountdown(true);
 
     let left = COUNTDOWN_SECONDS;
     setMessage(`答案正确，即将进入下一题（${left}）`, "ok");
@@ -133,7 +140,7 @@
     }, 1000);
   }
 
-  // 稳定 hash + PRNG（跨设备一致、不会随机变化）
+  // 稳定 hash + PRNG
   function xmur3(str) {
     let h = 1779033703 ^ str.length;
     for (let i = 0; i < str.length; i++) {
@@ -165,7 +172,6 @@
     const steps = new Array(TILE_COUNT);
     for (let i = 0; i < TILE_COUNT; i++) steps[i] = Math.floor(rand() * 4);
 
-    // 再叠加一次口令字符影响（仍然稳定）
     for (let i = 0; i < TILE_COUNT; i++) {
       const ch = k.charCodeAt(i % k.length);
       steps[i] = (steps[i] + (ch % 4)) % 4;
@@ -176,7 +182,7 @@
   function wireButtons() {
     btnUndo.onclick = resetToSeed;
 
-    // 回车提交（在输入框里按 Enter）
+    // 回车提交
     [ansRoad, ansNo].forEach(el => {
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter") btnSubmit.click();
@@ -185,6 +191,12 @@
 
     btnSubmit.onclick = () => {
       if (locked) return;
+
+      // 如果已经完成过（从下一页返回），允许直接继续
+      if (sessionStorage.getItem(SOLVED_KEY) === "1") {
+        startCountdownAndRedirect();
+        return;
+      }
 
       const okPuzzle = isPuzzleSolved();
       const okAns = isAnswerSolved();
@@ -231,17 +243,19 @@
     setTileImages();
     applyAllRotations();
 
-    // 如果已经完成过（从下一页返回），恢复“正确后的样子”
+    // 从下一页返回：显示“提交后的样子”，但不锁定 Submit
     if (sessionStorage.getItem(SOLVED_KEY) === "1") {
-      // 拼图直接设为完成状态
       curSteps = new Array(TILE_COUNT).fill(0);
       applyAllRotations();
 
-      // 填空直接填好
       ansRoad.value = ANSWER_ROAD;
       ansNo.value = ANSWER_NO;
 
-      lockUI(true);
+      // 不锁 submit：只允许继续；允许玩家改也无所谓，因为 submit 已可直接继续
+      // 若你希望这里仍禁止乱改/乱转，可把下面两行打开
+      // locked = true;
+      // btnUndo.disabled = true;
+
       setMessage("答案已确认。", "ok");
       return;
     }
