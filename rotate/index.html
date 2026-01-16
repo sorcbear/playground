@@ -39,14 +39,10 @@
     }
 
     @media (min-width: 768px){
-      .wrap{
-        padding: 0 16px 24px;
-      }
+      .wrap{ padding: 0 16px 24px; }
     }
 
-    /* =========================
-       可复用：标题字体“全部格式”
-       ========================= */
+    /* 可复用标题样式（含“空两行”效果的留白） */
     .pageTitle{
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size: 24px;
@@ -55,8 +51,6 @@
       letter-spacing: 0.02em;
       color: var(--text);
       text-align: left;
-
-      /* “空两行”的视觉留白：你可按需调整 */
       margin: 34px 0 22px;
     }
 
@@ -124,10 +118,7 @@
     .msg.ok{ color: var(--ok); }
     .msg.bad{ color: var(--bad); }
 
-    .btnCol{
-      display:flex;
-      gap:10px;
-    }
+    .btnCol{ display:flex; gap:10px; }
 
     button{
       min-width: 110px;
@@ -140,34 +131,16 @@
       color: #ffffff;
       background: var(--btn);
     }
-
     button:hover{ background: var(--btnHover); }
-    button:disabled{
-      opacity: .55;
-      cursor: not-allowed;
-    }
-
-    /* setup 控制条：默认隐藏，setup 模式显示 */
-    #setupBar{
-      display:none;
-      margin-top: 10px;
-      gap:10px;
-      justify-content:flex-end;
-    }
+    button:disabled{ opacity: .55; cursor:not-allowed; }
 
     /* 你原来隐藏的元素继续隐藏 */
-    #hintText,
-    #clickCount,
-    #clickLimit{
-      display:none !important;
-    }
+    #hintText, #clickCount, #clickLimit { display:none !important; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-
-    <!-- 标题：顶部留白相当于“空两行” -->
     <div class="pageTitle">寻找你的起点</div>
 
     <p id="hintText"></p>
@@ -178,9 +151,7 @@
       <div id="board" class="board"></div>
     </div>
 
-    <div class="orientation-hint">
-      可以转动手机，横向操作。
-    </div>
+    <div class="orientation-hint">可以转动手机，横向操作。</div>
 
     <div class="hud">
       <div id="message" class="msg"></div>
@@ -189,13 +160,6 @@
         <button id="btnSubmit">Submit</button>
       </div>
     </div>
-
-    <!-- setup 专用操作（仅 ?setup=1 时显示） -->
-    <div id="setupBar">
-      <button id="btnSaveSetup">Save Setup</button>
-      <button id="btnClearSetup">Clear Setup</button>
-    </div>
-
   </div>
 
   <script src="./script.js"></script>
