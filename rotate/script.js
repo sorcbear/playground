@@ -9,6 +9,9 @@
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "canon";
 
+  // ✅ 仅用于“返回时恢复正确样子”
+  const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
+
   const params = new URLSearchParams(location.search);
   const k = (params.get("k") || DEFAULT_K).trim();
 
@@ -58,6 +61,23 @@
     setDisabledAll(false);
   }
 
+  function getNavType() {
+    // 'navigate' | 'reload' | 'back_forward' | 'prerender'
+    try {
+      const nav = performance.getEntriesByType("navigation");
+      if (nav && nav[0] && nav[0].type) return nav[0].type;
+    } catch {}
+    // 兜底（老浏览器）
+    // eslint-disable-next-line no-restricted-globals
+    if (performance && performance.navigation) {
+      const t = performance.navigation.type;
+      if (t === 1) return "reload";
+      if (t === 2) return "back_forward";
+      return "navigate";
+    }
+    return "navigate";
+  }
+
   function isPuzzleSolved() {
     return curSteps.every(step => normalize(step * 90) === 0);
   }
@@ -91,7 +111,6 @@
   }
 
   function resetAllToInitial() {
-    // 强制回到初始状态：拼图回 seed、输入清空、解锁、提示恢复
     unlockUI();
     curSteps = seedSteps.slice();
     applyAllRotations();
@@ -129,7 +148,23 @@
     }
   }
 
+  function restoreSolvedUI() {
+    // 恢复“正确提交后的样子”，但不做倒计时、不锁按钮
+    unlockUI();
+
+    curSteps = new Array(TILE_COUNT).fill(0);
+    applyAllRotations();
+
+    ansRoad.value = ANSWER_ROAD;
+    ansNo.value = ANSWER_NO;
+
+    setMessage("答案已确认。", "ok");
+  }
+
   function startCountdownAndRedirect() {
+    // ✅ 记住已完成：只用于“从下一页返回时恢复”
+    sessionStorage.setItem(SOLVED_KEY, "1");
+
     locked = true;
     setDisabledAll(true);
 
@@ -241,15 +276,33 @@
     setTileImages();
     applyAllRotations();
 
-    // 初始状态：输入清空、解锁、提示开始
-    resetAllToInitial();
+    // ✅ 刷新/正常进入：回初始，并清除“已完成标记”
+    // ✅ 返回：恢复“正确提交后的样子”
+    const navType = getNavType();
+    if (navType === "back_forward" && sessionStorage.getItem(SOLVED_KEY) === "1") {
+      restoreSolvedUI();
+    } else {
+      sessionStorage.removeItem(SOLVED_KEY);
+      resetAllToInitial();
+    }
   }
 
-  // 关键：iOS Safari 返回常用 bfcache，不会重新执行 init
-  // persisted=true 表示从 bfcache 恢复。我们直接强制 reload，使其回到初始状态。
+  // ✅ 关键：iOS Safari 返回时 init 可能不运行（bfcache），但 pageshow 一定会触发
   window.addEventListener("pageshow", (e) => {
-    if (e.persisted) {
-      location.reload();
+    const navType = getNavType();
+
+    // 返回（含 bfcache）：恢复正确样子
+    if ((e.persisted || navType === "back_forward") && sessionStorage.getItem(SOLVED_KEY) === "1") {
+      restoreSolvedUI();
+      return;
+    }
+
+    // 刷新/正常进入：清标记并回初始
+    if (navType === "reload" || navType === "navigate") {
+      sessionStorage.removeItem(SOLVED_KEY);
+      // 若是 bfcache 恢复但不是 back_forward（少数情况），也强制回初始
+      // 这里不 reload，直接重置 UI 即可
+      resetAllToInitial();
     }
   });
 
