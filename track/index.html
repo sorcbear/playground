@@ -7,7 +7,7 @@
   <style>
     :root {
       --btn-h: 52px;
-      --ok: #0b6b2b; /* 绿色系 */
+      --ok: #0b6b2b;
     }
 
     body{
@@ -51,7 +51,6 @@
       color: #444;
     }
 
-    /* 你的“msg”要求：14px、继承系统字体 */
     .msg{
       margin-top: 12px;
       font-size: 14px;
@@ -84,12 +83,6 @@
       cursor: not-allowed;
     }
 
-    .success{
-      margin-top: 14px;
-      font-size: 18px;
-      font-weight: 700;
-    }
-
     .countdown{
       font-variant-numeric: tabular-nums;
     }
@@ -109,21 +102,18 @@
       如果选错，本页面将冻结 5 分钟无法再次提交获取线索。
     </div>
 
-    <!-- status 改为 msg（符合你的命名/样式要求） -->
     <div class="msg" id="msg"></div>
 
     <div class="actions" id="actions">
       <button id="btnLeft">向左走</button>
       <button id="btnRight">向右走</button>
     </div>
-
-    <div class="success" id="success" style="display:none;">success</div>
   </div>
 
   <script>
     // ====== 配置 ======
-    const CORRECT = "right";                         // 正确答案：向右走
-    const LOCK_MS = 5 * 60 * 1000;                   // 5分钟冻结（选错）
+    const CORRECT = "right";
+    const LOCK_MS = 5 * 60 * 1000;
     const STORAGE_KEY = "bike_trace_lock_until_v1";
 
     // 成功后跳转目标
@@ -132,12 +122,11 @@
     // ====== DOM ======
     const msgEl = document.getElementById("msg");
     const actionsEl = document.getElementById("actions");
-    const successEl = document.getElementById("success");
     const btnLeft = document.getElementById("btnLeft");
     const btnRight = document.getElementById("btnRight");
 
-    let lockTimer = null;     // 错误冻结倒计时
-    let successTimer = null;  // 成功跳转倒计时
+    let lockTimer = null;
+    let successTimer = null;
     let isSuccessFlow = false;
 
     function now() { return Date.now(); }
@@ -150,11 +139,6 @@
 
     function setLockUntil(ts) {
       localStorage.setItem(STORAGE_KEY, String(ts));
-    }
-
-    function clearTimers() {
-      if (lockTimer) { clearInterval(lockTimer); lockTimer = null; }
-      if (successTimer) { clearTimeout(successTimer); successTimer = null; }
     }
 
     function fmtRemaining(ms) {
@@ -174,14 +158,13 @@
       msgEl.classList.toggle("ok", !!ok);
     }
 
-    // ====== 错误冻结流程（保留原逻辑） ======
+    // ====== 错误冻结流程 ======
     function showLockedUI(remainingMs) {
       setDisabled(true);
       setMsg(`页面已冻结：${fmtRemaining(remainingMs)}`, false);
     }
 
     function showUnlockedUI() {
-      // 只有不在成功流程时才恢复可点击
       if (!isSuccessFlow) setDisabled(false);
       if (!isSuccessFlow) setMsg("");
     }
@@ -193,10 +176,12 @@
     }
 
     function applyLockState() {
-      // 成功倒计时期间不覆盖UI
       if (isSuccessFlow) return;
 
-      if (lockTimer) { clearInterval(lockTimer); lockTimer = null; }
+      if (lockTimer) {
+        clearInterval(lockTimer);
+        lockTimer = null;
+      }
 
       const until = getLockUntil();
       const rem = until - now();
@@ -205,7 +190,6 @@
         showLockedUI(rem);
 
         lockTimer = setInterval(() => {
-          // 成功倒计时开始后，停止错误倒计时干扰
           if (isSuccessFlow) {
             clearInterval(lockTimer);
             lockTimer = null;
@@ -216,7 +200,8 @@
           const rem2 = until2 - now();
           if (rem2 <= 0) {
             showUnlockedUI();
-            if (lockTimer) { clearInterval(lockTimer); lockTimer = null; }
+            clearInterval(lockTimer);
+            lockTimer = null;
             return;
           }
           showLockedUI(rem2);
@@ -226,31 +211,28 @@
       }
     }
 
-    // ====== 成功跳转倒计时流程 ======
+    // ====== 成功跳转倒计时流程（不显示 success，只显示 msg） ======
     function startSuccessCountdownAndRedirect() {
       isSuccessFlow = true;
 
-      // 交互锁定：避免重复提交/重复触发跳转
+      // 锁定交互，避免重复触发
       setDisabled(true);
 
-      // 可选：隐藏按钮区域（如果你希望成功时不再显示按钮）
+      // 可选：隐藏按钮区域（避免视觉上还能点）
       actionsEl.style.display = "none";
-      successEl.style.display = "block";
 
-      // 倒计时文案在 .msg，14px，系统字体；成功态绿色
+      // 倒计时文字显示在 .msg，成功态绿色
       setMsg("答案正确，即将进入下一题（3）", true);
 
-      // 使用 setTimeout 串联，避免 setInterval 叠加
       let n = 3;
 
       const tick = () => {
         n -= 1;
 
         if (n >= 1) {
-          setMsg(`答案正确，即将进入下一题（${n})`.replace(")", "）").replace("(", "（"), true);
+          setMsg(`答案正确，即将进入下一题（${n}）`, true);
           successTimer = setTimeout(tick, 1000);
         } else {
-          // 最后1秒后跳转
           window.location.href = NEXT_URL;
         }
       };
@@ -259,10 +241,8 @@
     }
 
     function onAnswer(choice) {
-      // 成功倒计时期间：彻底忽略点击
       if (isSuccessFlow) return;
 
-      // 错误冻结期间：拒绝
       const until = getLockUntil();
       if (until - now() > 0) return;
 
