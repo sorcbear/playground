@@ -9,9 +9,6 @@
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "canon";
 
-  // 返回保留“已完成”状态：sessionStorage
-  const SOLVED_KEY = "rotate_find_origin_solved_v3";
-
   const params = new URLSearchParams(location.search);
   const k = (params.get("k") || DEFAULT_K).trim();
 
@@ -93,6 +90,16 @@
     setMessage("已重置。");
   }
 
+  function resetAllToInitial() {
+    // 强制回到初始状态：拼图回 seed、输入清空、解锁、提示恢复
+    unlockUI();
+    curSteps = seedSteps.slice();
+    applyAllRotations();
+    ansRoad.value = "";
+    ansNo.value = "";
+    setMessage("开始吧。");
+  }
+
   function buildBoard() {
     board.innerHTML = "";
     for (let r = 0; r < ROWS; r++) {
@@ -123,9 +130,6 @@
   }
 
   function startCountdownAndRedirect() {
-    // 标记已完成（用于返回恢复状态）
-    sessionStorage.setItem(SOLVED_KEY, "1");
-
     locked = true;
     setDisabledAll(true);
 
@@ -142,25 +146,6 @@
       }
       setMessage(`答案正确，即将进入下一题（${left}）`, "ok");
     }, 1000);
-  }
-
-  // 关键：用于“返回”时强制恢复 UI（解决 iOS Safari bfcache）
-  function restoreSolvedUIIfNeeded() {
-    if (sessionStorage.getItem(SOLVED_KEY) !== "1") return;
-
-    // 解除任何倒计时锁定
-    unlockUI();
-
-    // 拼图置为完成
-    curSteps = new Array(TILE_COUNT).fill(0);
-    applyAllRotations();
-
-    // 填空置为完成
-    ansRoad.value = ANSWER_ROAD;
-    ansNo.value = ANSWER_NO;
-
-    // 提示：已确认（但不锁 submit）
-    setMessage("答案已确认。", "ok");
   }
 
   // 稳定 hash + PRNG（跨设备一致）
@@ -214,12 +199,6 @@
     btnSubmit.onclick = () => {
       if (locked) return;
 
-      // 已完成过：允许直接继续
-      if (sessionStorage.getItem(SOLVED_KEY) === "1") {
-        startCountdownAndRedirect();
-        return;
-      }
-
       const okPuzzle = isPuzzleSolved();
       const okAns = isAnswerSolved();
 
@@ -262,18 +241,16 @@
     setTileImages();
     applyAllRotations();
 
-    // 正常进入：如果已完成过，也恢复一次
-    restoreSolvedUIIfNeeded();
-    if (sessionStorage.getItem(SOLVED_KEY) !== "1") {
-      setMessage("开始吧。");
-    }
+    // 初始状态：输入清空、解锁、提示开始
+    resetAllToInitial();
   }
 
-  // 关键：iOS Safari 返回时常走 bfcache，不会重新 init
-  // pageshow 会触发，并且 event.persisted 可能为 true
-  window.addEventListener("pageshow", () => {
-    // 只要页面被“返回/前进”展示，就重刷已完成 UI，并解除锁定
-    restoreSolvedUIIfNeeded();
+  // 关键：iOS Safari 返回常用 bfcache，不会重新执行 init
+  // persisted=true 表示从 bfcache 恢复。我们直接强制 reload，使其回到初始状态。
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) {
+      location.reload();
+    }
   });
 
   init().catch(() => {
