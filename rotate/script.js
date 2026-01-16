@@ -8,8 +8,8 @@
   // 成功后跳转目标（从 /rotate/ 跳到 /circle/）
   const NEXT_URL = "../circle/";
 
-  // 统一叙事性跳转延迟：0.6s
-  const REDIRECT_DELAY = 600;
+  // 倒计时 3、2、1（单位：秒）
+  const COUNTDOWN_SECONDS = 3;
 
   const params = new URLSearchParams(location.search);
   const isSetup = params.get("setup") === "1";
@@ -21,6 +21,7 @@
   const btnUndo = document.getElementById("btnUndo");
   const btnSubmit = document.getElementById("btnSubmit");
 
+  // 这些在 setup 模式下会用到（即便 HTML 被删，也不要让 JS 报错）
   const setupBar = document.getElementById("setupBar");
   const btnSaveSetup = document.getElementById("btnSaveSetup");
   const btnClearSetup = document.getElementById("btnClearSetup");
@@ -30,6 +31,9 @@
   let curSteps  = new Array(TILE_COUNT).fill(0);
 
   let tileDataURLs = new Array(TILE_COUNT).fill(null);
+
+  let locked = false;         // 成功倒计时期间锁定交互
+  let countdownTimer = null;  // 用于清理倒计时
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
@@ -53,14 +57,16 @@
   }
 
   function rotateOne(i) {
+    if (locked) return;
     curSteps[i] = (curSteps[i] + 1) % 4;
     applyRotation(i);
   }
 
   function resetToSeed() {
+    if (locked) return;
     curSteps = seedSteps.slice();
     applyAllRotations();
-    setMessage("已重置到起始状态。");
+    setMessage("已重置。");
   }
 
   function buildBoard() {
@@ -110,46 +116,82 @@
       : new Array(TILE_COUNT).fill(0).map(() => Math.floor(Math.random() * 4));
   }
 
+  function lockUI(on) {
+    locked = on;
+    btnSubmit.disabled = on;
+    btnUndo.disabled = on;
+  }
+
+  function startCountdownAndRedirect() {
+    lockUI(true);
+
+    let left = COUNTDOWN_SECONDS;
+    setMessage(`答案正确，即将进入下一题（${left}）`, "ok");
+
+    countdownTimer = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        location.href = NEXT_URL;
+        return;
+      }
+      setMessage(`答案正确，即将进入下一题（${left}）`, "ok");
+    }, 1000);
+  }
+
   function wireButtons() {
     btnUndo.onclick = resetToSeed;
 
     btnSubmit.onclick = () => {
+      if (locked) return;
+
       const solved = isSolved();
 
-      // 仅在展示层做改变：成功输出 success（小写），失败仍 try again
-      setMessage(solved ? "success" : "try again", solved ? "ok" : "bad");
-
-      // 成功后叙事性跳转：success -> 锁定交互 -> 0.6s -> redirect（非 setup 模式才跳）
-      if (solved && !isSetup) {
-        btnSubmit.disabled = true;
-        btnUndo.disabled = true;
-
-        setTimeout(() => {
-          location.href = NEXT_URL;
-        }, REDIRECT_DELAY);
+      if (solved) {
+        // 成功：中文提示 + 3/2/1 倒计时跳转（非 setup 才跳）
+        if (!isSetup) {
+          startCountdownAndRedirect();
+        } else {
+          setMessage("答案正确。", "ok");
+        }
+      } else {
+        setMessage("try again", "bad");
       }
     };
 
+    // setup 模式：仅当这些元素存在时才启用，避免报错
     if (isSetup) {
-      setupBar.style.display = "flex";
+      if (setupBar) setupBar.style.display = "flex";
 
-      btnSaveSetup.onclick = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(curSteps));
-        seedSteps = curSteps.slice();
-        setMessage("Setup 已保存。", "ok");
-      };
+      if (btnSaveSetup) {
+        btnSaveSetup.onclick = () => {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(curSteps));
+          seedSteps = curSteps.slice();
+          setMessage("Setup 已保存。", "ok");
+        };
+      }
 
-      btnClearSetup.onclick = () => {
-        localStorage.removeItem(STORAGE_KEY);
-        setMessage("已清除本地 Setup。");
-      };
+      if (btnClearSetup) {
+        btnClearSetup.onclick = () => {
+          localStorage.removeItem(STORAGE_KEY);
+          setMessage("已清除本地 Setup。");
+        };
+      }
     }
   }
 
   async function sliceImageToTiles(url) {
     const img = new Image();
     img.src = url;
-    await img.decode();
+
+    // decode 失败时也要给出明确提示
+    try {
+      await img.decode();
+    } catch (e) {
+      setMessage("图片加载失败：请确认 image.png 与页面同目录。", "bad");
+      throw e;
+    }
 
     const tileW = img.naturalWidth / COLS;
     const tileH = img.naturalHeight / ROWS;
@@ -162,6 +204,7 @@
         const i = r * COLS + c;
         canvas.width = tileW;
         canvas.height = tileH;
+        ctx.clearRect(0, 0, tileW, tileH);
         ctx.drawImage(img, c * tileW, r * tileH, tileW, tileH, 0, 0, tileW, tileH);
         tileDataURLs[i] = canvas.toDataURL();
       }
@@ -186,5 +229,7 @@
     setMessage(isSetup ? "Setup 模式。" : "开始吧。");
   }
 
-  init();
+  init().catch(() => {
+    // 已在 sliceImageToTiles 里 setMessage，这里不重复
+  });
 })();
