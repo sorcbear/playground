@@ -29,9 +29,39 @@ body{
   padding:20px;
 }
 
+/* 图片容器：用于叠加文字 */
+.hero{
+  position:relative;
+}
+
 img{
   width:100%;
   display:block;
+}
+
+/* 叠加文字样式 */
+.overlay{
+  position:absolute;
+  left:16px;
+  right:16px;
+  top:14px;
+  padding:12px 14px;
+  box-sizing:border-box;
+  background:rgba(255,255,255,0.78);
+  border:2px solid #000;
+  font-size:18px;
+  line-height:1.6;
+  color:#111;
+}
+
+@media (max-width:480px){
+  .overlay{
+    left:10px;
+    right:10px;
+    top:10px;
+    padding:10px 12px;
+    font-size:16px;
+  }
 }
 
 .code{
@@ -108,7 +138,12 @@ button:active{
 <body>
 <div class="wrap">
 
-  <img src="puzzle.png" alt="puzzle">
+  <div class="hero">
+    <img src="puzzle.png" alt="puzzle">
+    <div class="overlay">
+      原来是那一天，记得参加完签售会后，我去了衡山公园约会，那有一个有趣的名人雕塑，不如去那找找线索，完成以下谜题。
+    </div>
+  </div>
 
   <div class="code">
     <div>暗号：</div>
@@ -138,6 +173,8 @@ button:active{
 const ANSWER = ["四","君子","在","衡山","五","四","三","号"];
 const ids = ["s1","s2","s3","s4","s5","s6","s7","s8"];
 
+const NEXT_URL = "https://sorcbear.github.io/playground/riddle/";
+
 function clean(v){
   return v.replace(/\s/g,"");
 }
@@ -150,6 +187,8 @@ function check(){
   if(ok){
     msg.textContent = "success";
     msg.className = "msg success";
+    // 给用户看到 success，再跳转
+    setTimeout(()=>{ location.href = NEXT_URL; }, 600);
   }else{
     msg.textContent = "try again";
     msg.className = "msg fail";
@@ -158,7 +197,9 @@ function check(){
 
 function resetAll(){
   ids.forEach(id=>document.getElementById(id).value="");
-  document.getElementById("msg").textContent="";
+  const msg = document.getElementById("msg");
+  msg.textContent="";
+  msg.className="msg";
 }
 </script>
 </body>
