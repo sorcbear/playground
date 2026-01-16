@@ -23,8 +23,20 @@
 
     .text {
       font-size: 16px;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
       white-space: pre-wrap;
+    }
+
+    .image-box {
+      margin: 0 0 32px;
+      text-align: center;
+    }
+
+    .image-box img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
     }
 
     .answer {
@@ -70,8 +82,14 @@
 
 <body>
   <div class="container">
+
     <div class="text">
 这里的时光仿佛走得特别慢，不光是刚才的门牌，就连街角伫立的那个绿色大邮筒，也满是旧日的气息。已经十多年没寄过信了，最后那次，用的还是吴冠英大师在上海签售的珍藏版。那是我第一次参加签售会，好像是从某个公众号上获知的活动讯息，我到底是哪一天参加的签售活动呢？
+    </div>
+
+    <!-- 新增图片 -->
+    <div class="image-box">
+      <img src="post.png" alt="post" />
     </div>
 
     <div class="answer">
@@ -100,8 +118,16 @@
         month === 2 &&
         day === 14;
 
-      result.textContent = isCorrect ? 'success' : 'try again';
+      if (isCorrect) {
+        result.textContent = 'success';
+        setTimeout(() => {
+          window.location.href = 'https://sorcbear.github.io/playground/ppl/';
+        }, 600);
+      } else {
+        result.textContent = 'try again';
+      }
     }
   </script>
+
 </body>
 </html>
