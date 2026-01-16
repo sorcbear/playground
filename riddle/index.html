@@ -105,9 +105,9 @@ B ： “我更喜欢现代的几何感。我用家乡的一个大区Picardie为
 
 C： “我堆砌了一座坚固的堡垒。它曾经拥有一个来自纽约的名字。”
 
-D： “我不想争第一，我只是为了让我的父亲有个家。“
+D： “我不想争第一，我只是为了让我的父亲有个家。”
 
-上述4位建筑师中，哪位在对话中提及的作品与其他3位的作品不处于同一年代？”</div>
+上述4位建筑师中，哪位在对话中提及的作品与其他3位的作品不处于同一年代？（酒店大堂里也许有些线索）</div>
 
     <div class="hint">提示：<strong>如果选错，将冻结5分钟无法获取下一个线索。</strong></div>
 
@@ -127,6 +127,8 @@ D： “我不想争第一，我只是为了让我的父亲有个家。“
     (function(){
       // ====== 配置 ======
       const CORRECT = "A";
+      const NEXT_URL = "https://sorcbear.github.io/playground/paper/";
+      const REDIRECT_DELAY_MS = 350; // success后稍等一下再跳转，避免误触体验
       const LOCK_MS = 5 * 60 * 1000; // 5分钟
       const STORAGE_KEY = "riddle_lock_until_ts_v1"; // 变更逻辑可升级版本号
 
@@ -200,6 +202,11 @@ D： “我不想争第一，我只是为了让我的父亲有个家。“
         timer = null;
       }
 
+      function redirectNext(){
+        // 用 assign 保留正常跳转语义
+        window.location.assign(NEXT_URL);
+      }
+
       function onChoice(choice){
         const lockUntil = getLockUntil();
         if(lockUntil > nowMs()){
@@ -214,6 +221,9 @@ D： “我不想争第一，我只是为了让我的父亲有个家。“
           statusEl.className = "status ok";
           statusEl.textContent = "success";
           footEl.textContent = "";
+
+          // success 后跳转到下一个页面
+          setTimeout(redirectNext, REDIRECT_DELAY_MS);
           return;
         }
 
