@@ -6,90 +6,81 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                   Roboto, "Helvetica Neue", Arial, sans-serif;
+    html, body{
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
+      background:#ffffff;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     }
 
-    .container {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-      box-sizing: border-box;
-      text-align: center;
+    .container{
+      width:100%;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:18px;
+      padding:18px;
+      box-sizing:border-box;
+      text-align:center;
     }
 
-    button {
-      padding: 16px 36px;
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      background: #ffffff;
-      color: #000000;
-      border: 2px solid #000000;
-      cursor: pointer;
+    .hint{
+      min-height:28px;
+      font-size:16px;
+      line-height:1.6;
+      color:#111;
+      white-space:pre-wrap;
+      user-select:none;
     }
 
-    button:hover { background: #000000; color: #ffffff; }
-    button:disabled { opacity: .45; cursor: default; }
+    .status{
+      min-height:26px;
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:.5px;
+      color:#111;
+      user-select:none;
+    }
 
-    .status {
-      min-height: 28px;
-      font-size: 16px;
-      line-height: 1.6;
-      color: #111;
-      user-select: none;
-      white-space: pre-wrap;
+    button{
+      padding:16px 36px;
+      font-size:18px;
+      font-weight:600;
+      letter-spacing:1px;
+      background:#ffffff;
+      color:#000000;
+      border:2px solid #000000;
+      cursor:pointer;
     }
-    .hint {
-      font-size: 14px;
-      color: #111;
-      user-select: none;
-      white-space: pre-wrap;
-    }
-    .countdown {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: .5px;
-    }
+
+    button:hover{ background:#000000; color:#ffffff; }
+    button:disabled{ opacity:.45; cursor:default; }
   </style>
 </head>
 
 <body>
   <div class="container">
+    <div class="hint" id="hint"></div>
     <div class="status" id="status"></div>
 
-    <button id="startBtn">
-      START GAME
-    </button>
-
-    <div class="hint" id="hint"></div>
+    <button id="mainBtn">开始游戏</button>
   </div>
 
 <script>
 (() => {
-  // ===== 跳转目标（按你的原始按钮：去 ./rotate/） =====
+  // 点击“确定”后 10 秒结束跳转到下一个页面
   const NEXT_URL = "./rotate/";
 
-  // ===== 倒计时设置 =====
-  const PRE_COUNTDOWN_SEC = 3;   // 点击后 3,2,1
-  const POST_COUNTDOWN_SEC = 10; // 播放开始后 10 秒跳转
-
   // ===== 音乐节奏设置（每个按键间隔一致） =====
-  const NOTE_GAP_SEC = 0.25;     // 相邻音之间间隔（固定）
-  const NOTE_DUR_SEC = 0.22;     // 单音持续（建议略小于间隔）
+  const NOTE_GAP_SEC = 0.25;
+  const NOTE_DUR_SEC = 0.22;
+  const COUNTDOWN_SEC = 10;
 
-  // ===== 下面是“刚才那个代码”里的正确答案音乐（target）+ 音色合成（playTone） =====
+  // ===== 来自你“钢琴谜题”代码：正确答案音乐 =====
   const KEYS = [
     {c:"green",n:"so",m:55},
     {c:"green",n:"la",m:57},
@@ -109,7 +100,6 @@
     {c:"blue",n:"la",m:81},
   ];
 
-  // 正确答案对应的音乐（原 target）
   const target = [
     ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
     ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
@@ -127,7 +117,7 @@
   }
   const CORRECT_MIDI_SEQ = targetToMidiSeq();
 
-  // ===== WebAudio（音色与播放） =====
+  // ===== WebAudio：音色合成（与原代码一致） =====
   let audioCtx = null;
   let audioEnabled = false;
 
@@ -149,7 +139,6 @@
     if(!audioEnabled || !audioCtx) return;
     const now = audioCtx.currentTime;
 
-    // 3 振荡器叠加：sine + triangle + square（与原代码一致）
     const o1 = audioCtx.createOscillator();
     const o2 = audioCtx.createOscillator();
     const o3 = audioCtx.createOscillator();
@@ -165,13 +154,11 @@
     const g2 = audioCtx.createGain(); g2.gain.value = 0.55;
     const g3 = audioCtx.createGain(); g3.gain.value = 0.06;
 
-    // 包络（与原代码一致）
     const amp = audioCtx.createGain();
     amp.gain.setValueAtTime(0.0001, now);
     amp.gain.linearRampToValueAtTime(0.33, now + 0.015);
     amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-    // 低通滤波（与原代码一致）
     const lp = audioCtx.createBiquadFilter();
     lp.type = "lowpass";
     lp.frequency.setValueAtTime(Math.min(freq * 6, 9000), now);
@@ -188,7 +175,6 @@
   }
 
   function playCorrectMelodyFixedGap(){
-    // 用 setTimeout 排队播放，确保每个音间隔一致
     CORRECT_MIDI_SEQ.forEach((midi, i) => {
       setTimeout(() => {
         playTone(midiToFreq(midi), NOTE_DUR_SEC);
@@ -196,66 +182,28 @@
     });
   }
 
-  // ===== UI & 逻辑 =====
-  const startBtn = document.getElementById("startBtn");
-  const statusEl = document.getElementById("status");
+  // ===== 页面流程：开始游戏 -> 确定 -> 播放 + 10s 倒计时跳转 =====
+  const mainBtn = document.getElementById("mainBtn");
   const hintEl = document.getElementById("hint");
+  const statusEl = document.getElementById("status");
 
-  let running = false;
+  let phase = 0; // 0: 初始；1: 等待确定；2: 已开始
   let timers = [];
 
   function clearTimers(){
     timers.forEach(id => clearTimeout(id));
     timers = [];
   }
-
   function schedule(fn, ms){
     const id = setTimeout(fn, ms);
     timers.push(id);
     return id;
   }
 
-  function setStatus(text){
-    statusEl.textContent = text || "";
-  }
-
-  startBtn.addEventListener("click", async () => {
-    if(running) return;
-    running = true;
-    startBtn.disabled = true;
-    clearTimers();
-    hintEl.textContent = "";
-
-    // 点击按钮属于用户手势：这里直接启用声音（iOS 也需要这个）
-    try{
-      await enableAudio();
-    }catch(e){
-      // 不阻断流程，但声音可能播不出来
-    }
-
-    // 1) 倒计时 3,2,1
-    let t = PRE_COUNTDOWN_SEC;
-    const tickPre = () => {
-      setStatus(`倒计时：${t}`);
-      if(t <= 0){
-        // 2) 提示文字
-        hintEl.textContent = "好像听到一段奇怪的音乐";
-        // 3) 播放正确音乐
-        schedule(() => playCorrectMelodyFixedGap(), 300);
-        // 4) 开始 10 秒倒计时并跳转
-        schedule(() => startPostCountdown(POST_COUNTDOWN_SEC), 0);
-        return;
-      }
-      t--;
-      schedule(tickPre, 1000);
-    };
-    tickPre();
-  });
-
-  function startPostCountdown(sec){
-    let left = sec;
+  function startCountdown10s(){
+    let left = COUNTDOWN_SEC;
     const tick = () => {
-      setStatus(`进入下一页倒计时：${left}s`);
+      statusEl.textContent = `倒计时：${left}`;
       if(left <= 0){
         location.href = NEXT_URL;
         return;
@@ -266,8 +214,32 @@
     tick();
   }
 
-  // 初始化
-  setStatus("");
+  mainBtn.addEventListener("click", async () => {
+    if(phase === 0){
+      // 第一次点击：进入“确认”状态
+      phase = 1;
+      hintEl.textContent = "确定要开始吗？这可能会影响你和另一些人的命运。";
+      statusEl.textContent = "";
+      mainBtn.textContent = "确定";
+      return;
+    }
+
+    if(phase === 1){
+      // 第二次点击：立即开始（播放音乐 + 10s 倒计时）
+      phase = 2;
+      mainBtn.disabled = true;
+      hintEl.textContent = "好像听到一段奇怪的音乐";
+      statusEl.textContent = "";
+
+      clearTimers();
+
+      // iOS 需要用户手势：这里用“确定”这次点击来解锁音频
+      try{ await enableAudio(); }catch(e){ /* 若失败仍继续倒计时 */ }
+
+      playCorrectMelodyFixedGap();
+      startCountdown10s();
+    }
+  });
 })();
 </script>
 </body>
