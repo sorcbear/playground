@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verify Codes Admin</title>
+  <style>
+    :root{
+      --fg:#111; --muted:#666; --border:#e5e5e5; --bg:#fff;
+      --btn:#111; --btnfg:#fff; --bad:#b00020; --ok:#0b6b2b;
+    }
+    html,body{ margin:0; background:var(--bg); color:var(--fg);
+      font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
+    .wrap{ max-width: 1100px; margin:0 auto; padding:18px 14px 34px; }
+    h1{ font-size:18px; margin:0 0 10px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+    label{ font-size:13px; color:var(--muted); }
+    input[type="text"], input[type="password"]{
+      height:38px; padding:0 10px; border:1px solid var(--border); border-radius:10px;
+      font-size:14px; outline:none; min-width: 260px;
+    }
+    input[type="checkbox"]{ transform: translateY(1px); }
+    button{
+      height:38px; padding:0 14px; border:none; border-radius:10px;
+      background:var(--btn); color:var(--btnfg); font-size:14px; cursor:pointer;
+    }
+    button.secondary{ background:#f2f2f2; color:#111; border:1px solid var(--border); }
+    .hint{ font-size:13px; color:var(--muted); line-height:1.6; }
+    .msg{ font-size:13px; margin-top:8px; }
+    .msg.ok{ color: var(--ok); }
+    .msg.bad{ color: var(--bad); }
+
+    .stats{ display:flex; gap:12px; flex-wrap:wrap; margin:14px 0 8px; }
+    .pill{ border:1px solid var(--border); border-radius:999px; padding:6px 10px; font-size:13px; color:#111; }
+    .pill b{ font-weight:700; }
+
+    table{ width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
+    th, td{ border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; }
+    th{ font-size:12px; color:var(--muted); font-weight:600; }
+    tr:hover td{ background:#fafafa; }
+    .used{ color: var(--bad); font-weight:600; }
+    .unused{ color: var(--ok); font-weight:600; }
+    .small{ font-size:12px; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>核销码后台</h1>
+
+    <div class="hint">
+      说明：本页面部署在 GitHub Pages，只是一个前端工具。<br>
+      你的管理 token 不会写死在代码里，需要你手动输入（可选择“记住”保存在本机浏览器）。
+    </div>
+
+    <div class="row">
+      <label>云函数 Base URL：</label>
+      <input id="baseUrl" type="text" placeholder="例如：https://xxxx.ap-shanghai.tencentscf.com" />
+    </div>
+
+    <div class="row">
+      <label>ADMIN_TOKEN：</label>
+      <input id="token" type="password" placeholder="粘贴你的管理 token" />
+      <label><input id="remember" type="checkbox" /> 记住（本机浏览器）</label>
+      <button id="loadBtn">加载数据</button>
+      <button id="csvBtn" class="secondary">导出 CSV</button>
+    </div>
+
+    <div class="row">
+      <label>搜索 code：</label>
+      <input id="search" type="text" placeholder="输入例如 5QT5-F9QL" />
+      <label>
+        <input id="onlyUnused" type="checkbox" />
+        只看未使用
+      </label>
+    </div>
+
+    <div id="msg" class="msg"></div>
+
+    <div class="stats" id="stats" style="display:none;">
+      <div class="pill">总数：<b id="stTotal">0</b></div>
+      <div class="pill">已用：<b id="stUsed">0</b></div>
+      <div class="pill">未用：<b id="stUnused">0</b></div>
+    </div>
+
+    <table id="tbl" style="display:none;">
+      <thead>
+        <tr>
+          <th style="width: 220px;">code</th>
+          <th style="width: 80px;">状态</th>
+          <th>usedAt</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <div class="small" style="margin-top:10px;">
+      提示：usedAt 是毫秒时间戳；你只需要用它判断“是否已用”即可。
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const LS_BASE = 'verify_admin_baseUrl';
+  const LS_TOKEN = 'verify_admin_token';
+
+  function setMsg(text, ok=false){
+    const el = $('msg');
+    el.textContent = text || '';
+    el.className = 'msg ' + (ok ? 'ok' : 'bad');
+    if(!text) el.className = 'msg';
+  }
+
+  function normalizeBaseUrl(u){
+    u = (u || '').trim();
+    if(!u) return '';
+    // 去掉末尾 /
+    return u.replace(/\/+$/, '');
+  }
+
+  function toLocalTime(ms){
+    if(ms == null || ms === '') return '';
+    try{
+      const d = new Date(Number(ms));
+      if(String(d) === 'Invalid Date') return String(ms);
+      return d.toLocaleString('zh-CN');
+    }catch(e){
+      return String(ms);
+    }
+  }
+
+  let lastData = null; // { items:[], total, usedCount, unusedCount, ... }
+
+  function applyFilters(){
+    if(!lastData) return;
+    const q = ($('search').value || '').trim().toUpperCase();
+    const onlyUnused = $('onlyUnused').checked;
+
+    const items = lastData.items.filter(it => {
+      if(onlyUnused && it.used) return false;
+      if(q && !it.code.includes(q)) return false;
+      return true;
+    });
+
+    renderTable(items);
+  }
+
+  function renderStats(meta){
+    $('stats').style.display = 'flex';
+    $('stTotal').textContent = meta.total;
+    $('stUsed').textContent = meta.usedCount;
+    $('stUnused').textContent = meta.unusedCount;
+  }
+
+  function renderTable(items){
+    $('tbl').style.display = 'table';
+    const tb = $('tbody');
+    tb.innerHTML = '';
+    for(const it of items){
+      const tr = document.createElement('tr');
+
+      const td1 = document.createElement('td');
+      td1.textContent = it.code;
+
+      const td2 = document.createElement('td');
+      td2.textContent = it.used ? '已用' : '未用';
+      td2.className = it.used ? 'used' : 'unused';
+
+      const td3 = document.createElement('td');
+      td3.textContent = it.used ? (it.usedAt + '  (' + toLocalTime(it.usedAt) + ')') : '';
+
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      tr.appendChild(td3);
+      tb.appendChild(tr);
+    }
+  }
+
+  async function loadData(){
+    const base = normalizeBaseUrl($('baseUrl').value);
+    const token = ($('token').value || '').trim();
+
+    if(!base){ setMsg('请填写云函数 Base URL'); return; }
+    if(!token){ setMsg('请填写 ADMIN_TOKEN'); return; }
+
+    setMsg('加载中...', true);
+
+    try{
+      const url = base + '/export?token=' + encodeURIComponent(token) + '&format=json';
+      const r = await fetch(url, { method:'GET' });
+      const data = await r.json();
+
+      if(!r.ok || !data.ok){
+        setMsg('加载失败：' + (data.message || ('HTTP ' + r.status)));
+        return;
+      }
+
+      // 记住
+      if($('remember').checked){
+        localStorage.setItem(LS_BASE, base);
+        localStorage.setItem(LS_TOKEN, token);
+      }else{
+        localStorage.setItem(LS_BASE, base);
+        localStorage.removeItem(LS_TOKEN);
+      }
+
+      // 兼容云函数返回结构
+      lastData = {
+        total: data.total,
+        usedCount: data.usedCount,
+        unusedCount: data.unusedCount,
+        items: data.items || []
+      };
+
+      renderStats(lastData);
+      applyFilters();
+      setMsg('加载成功（已用 ' + lastData.usedCount + ' / 总计 ' + lastData.total + '）', true);
+    }catch(e){
+      setMsg('加载失败：' + (e && e.message ? e.message : String(e)));
+    }
+  }
+
+  async function exportCsv(){
+    const base = normalizeBaseUrl($('baseUrl').value);
+    const token = ($('token').value || '').trim();
+    if(!base){ setMsg('请填写云函数 Base URL'); return; }
+    if(!token){ setMsg('请填写 ADMIN_TOKEN'); return; }
+
+    try{
+      const url = base + '/export?token=' + encodeURIComponent(token) + '&format=csv';
+      const r = await fetch(url, { method:'GET' });
+      const csv = await r.text();
+      if(!r.ok){
+        setMsg('导出失败：HTTP ' + r.status);
+        return;
+      }
+
+      // 触发下载
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'verify-codes-export.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+
+      setMsg('CSV 已导出', true);
+    }catch(e){
+      setMsg('导出失败：' + (e && e.message ? e.message : String(e)));
+    }
+  }
+
+  // init from localStorage
+  (function init(){
+    const base = localStorage.getItem(LS_BASE) || '';
+    const token = localStorage.getItem(LS_TOKEN) || '';
+    if(base) $('baseUrl').value = base;
+    if(token) $('token').value = token;
+    $('remember').checked = !!token;
+
+    $('loadBtn').addEventListener('click', loadData);
+    $('csvBtn').addEventListener('click', exportCsv);
+    $('search').addEventListener('input', applyFilters);
+    $('onlyUnused').addEventListener('change', applyFilters);
+  })();
+</script>
+</body>
+</html>
