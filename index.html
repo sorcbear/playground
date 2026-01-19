@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <title>Playground</title>
@@ -20,8 +20,13 @@
       width: 100%;
       height: 100%;
       display: flex;
+      flex-direction: column;
+      gap: 14px;
       align-items: center;
       justify-content: center;
+      padding: 18px;
+      box-sizing: border-box;
+      text-align: center;
     }
 
     button {
@@ -35,18 +40,235 @@
       cursor: pointer;
     }
 
-    button:hover {
-      background: #000000;
-      color: #ffffff;
+    button:hover { background: #000000; color: #ffffff; }
+    button:disabled { opacity: .45; cursor: default; }
+
+    .status {
+      min-height: 28px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #111;
+      user-select: none;
+      white-space: pre-wrap;
+    }
+    .hint {
+      font-size: 14px;
+      color: #111;
+      user-select: none;
+      white-space: pre-wrap;
+    }
+    .countdown {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: .5px;
     }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <button onclick="location.href='./rotate/'">
+    <div class="status" id="status"></div>
+
+    <button id="startBtn">
       START GAME
     </button>
+
+    <div class="hint" id="hint"></div>
   </div>
+
+<script>
+(() => {
+  // ===== 跳转目标（按你的原始按钮：去 ./rotate/） =====
+  const NEXT_URL = "./rotate/";
+
+  // ===== 倒计时设置 =====
+  const PRE_COUNTDOWN_SEC = 3;   // 点击后 3,2,1
+  const POST_COUNTDOWN_SEC = 10; // 播放开始后 10 秒跳转
+
+  // ===== 音乐节奏设置（每个按键间隔一致） =====
+  const NOTE_GAP_SEC = 0.25;     // 相邻音之间间隔（固定）
+  const NOTE_DUR_SEC = 0.22;     // 单音持续（建议略小于间隔）
+
+  // ===== 下面是“刚才那个代码”里的正确答案音乐（target）+ 音色合成（playTone） =====
+  const KEYS = [
+    {c:"green",n:"so",m:55},
+    {c:"green",n:"la",m:57},
+    {c:"green",n:"si",m:59},
+    {c:"red",n:"do",m:60},
+    {c:"red",n:"re",m:62},
+    {c:"red",n:"mi",m:64},
+    {c:"red",n:"fa",m:65},
+    {c:"red",n:"so",m:67},
+    {c:"red",n:"la",m:69},
+    {c:"red",n:"si",m:71},
+    {c:"blue",n:"do",m:72},
+    {c:"blue",n:"re",m:74},
+    {c:"blue",n:"mi",m:76},
+    {c:"blue",n:"fa",m:77},
+    {c:"blue",n:"so",m:79},
+    {c:"blue",n:"la",m:81},
+  ];
+
+  // 正确答案对应的音乐（原 target）
+  const target = [
+    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
+    ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
+    ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
+    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
+  ];
+
+  function targetToMidiSeq(){
+    const seq = [];
+    for(const [tc, tn] of target){
+      const idx = KEYS.findIndex(k => k.c===tc && k.n===tn);
+      if(idx >= 0) seq.push(KEYS[idx].m);
+    }
+    return seq;
+  }
+  const CORRECT_MIDI_SEQ = targetToMidiSeq();
+
+  // ===== WebAudio（音色与播放） =====
+  let audioCtx = null;
+  let audioEnabled = false;
+
+  function ensureAudioCtx(){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!audioCtx) audioCtx = new AC();
+    return audioCtx;
+  }
+
+  async function enableAudio(){
+    const ctx = ensureAudioCtx();
+    if(ctx.state === "suspended") await ctx.resume();
+    audioEnabled = true;
+  }
+
+  function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+
+  function playTone(freq, duration=1.25){
+    if(!audioEnabled || !audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    // 3 振荡器叠加：sine + triangle + square（与原代码一致）
+    const o1 = audioCtx.createOscillator();
+    const o2 = audioCtx.createOscillator();
+    const o3 = audioCtx.createOscillator();
+    o1.type = "sine";
+    o2.type = "triangle";
+    o3.type = "square";
+
+    o1.frequency.setValueAtTime(freq, now);
+    o2.frequency.setValueAtTime(freq * 2, now);
+    o3.frequency.setValueAtTime(freq * 4, now);
+
+    const g1 = audioCtx.createGain(); g1.gain.value = 1.0;
+    const g2 = audioCtx.createGain(); g2.gain.value = 0.55;
+    const g3 = audioCtx.createGain(); g3.gain.value = 0.06;
+
+    // 包络（与原代码一致）
+    const amp = audioCtx.createGain();
+    amp.gain.setValueAtTime(0.0001, now);
+    amp.gain.linearRampToValueAtTime(0.33, now + 0.015);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    // 低通滤波（与原代码一致）
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(Math.min(freq * 6, 9000), now);
+    lp.Q.value = 0.85;
+
+    o1.connect(g1); g1.connect(amp);
+    o2.connect(g2); g2.connect(amp);
+    o3.connect(g3); g3.connect(amp);
+    amp.connect(lp); lp.connect(audioCtx.destination);
+
+    o1.start(now); o2.start(now); o3.start(now);
+    const stopAt = now + duration + 0.10;
+    o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
+  }
+
+  function playCorrectMelodyFixedGap(){
+    // 用 setTimeout 排队播放，确保每个音间隔一致
+    CORRECT_MIDI_SEQ.forEach((midi, i) => {
+      setTimeout(() => {
+        playTone(midiToFreq(midi), NOTE_DUR_SEC);
+      }, Math.round(i * NOTE_GAP_SEC * 1000));
+    });
+  }
+
+  // ===== UI & 逻辑 =====
+  const startBtn = document.getElementById("startBtn");
+  const statusEl = document.getElementById("status");
+  const hintEl = document.getElementById("hint");
+
+  let running = false;
+  let timers = [];
+
+  function clearTimers(){
+    timers.forEach(id => clearTimeout(id));
+    timers = [];
+  }
+
+  function schedule(fn, ms){
+    const id = setTimeout(fn, ms);
+    timers.push(id);
+    return id;
+  }
+
+  function setStatus(text){
+    statusEl.textContent = text || "";
+  }
+
+  startBtn.addEventListener("click", async () => {
+    if(running) return;
+    running = true;
+    startBtn.disabled = true;
+    clearTimers();
+    hintEl.textContent = "";
+
+    // 点击按钮属于用户手势：这里直接启用声音（iOS 也需要这个）
+    try{
+      await enableAudio();
+    }catch(e){
+      // 不阻断流程，但声音可能播不出来
+    }
+
+    // 1) 倒计时 3,2,1
+    let t = PRE_COUNTDOWN_SEC;
+    const tickPre = () => {
+      setStatus(`倒计时：${t}`);
+      if(t <= 0){
+        // 2) 提示文字
+        hintEl.textContent = "好像听到一段奇怪的音乐";
+        // 3) 播放正确音乐
+        schedule(() => playCorrectMelodyFixedGap(), 300);
+        // 4) 开始 10 秒倒计时并跳转
+        schedule(() => startPostCountdown(POST_COUNTDOWN_SEC), 0);
+        return;
+      }
+      t--;
+      schedule(tickPre, 1000);
+    };
+    tickPre();
+  });
+
+  function startPostCountdown(sec){
+    let left = sec;
+    const tick = () => {
+      setStatus(`进入下一页倒计时：${left}s`);
+      if(left <= 0){
+        location.href = NEXT_URL;
+        return;
+      }
+      left--;
+      schedule(tick, 1000);
+    };
+    tick();
+  }
+
+  // 初始化
+  setStatus("");
+})();
+</script>
 </body>
 </html>
