@@ -6,13 +6,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
+    :root{
+      /* ===== 尺度标准（只改这里即可全站统一）===== */
+      --maxw: 720px;
+      --panelw: 420px;
+
+      --fs-body: 16px;     /* 正文 */
+      --lh-body: 1.7;
+
+      --fs-hint: 18px;     /* 提示/标题 */
+      --lh-hint: 1.6;
+
+      --fs-status: 18px;   /* 状态 */
+      --fw-status: 700;
+
+      --fs-btn: 16px;      /* 按钮文字 */
+      --fw-btn: 600;
+      --h-btn: 52px;       /* 按钮高度 */
+
+      --fs-input: 16px;    /* 输入框文字 */
+      --h-input: 52px;     /* 输入框高度 */
+
+      --gap: 18px;
+      --gap-tight: 12px;
+
+      --c-text: #111;
+      --c-muted: #444;
+      --c-danger: #b00020;
+      --c-border: #000;
+    }
+
     html, body{
       margin:0;
       padding:0;
       width:100%;
       height:100%;
-      background:#ffffff;
+      background:#fff;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      color: var(--c-text);
     }
 
     .container{
@@ -22,76 +55,113 @@
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:18px;
+      gap: var(--gap);
       padding:18px;
       box-sizing:border-box;
       text-align:center;
     }
 
+    /* 主叙事/提示 */
     .hint{
-      min-height:48px;
-      font-size:16px;
-      line-height:1.7;
-      color:#111;
-      white-space:pre-wrap;
+      width: min(var(--maxw), 92vw);
+      min-height: 56px;
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      color: var(--c-text);
+      white-space: pre-wrap;
       user-select:none;
+      margin: 0;
     }
 
+    /* 状态 */
     .status{
-      min-height:26px;
-      font-size:18px;
-      font-weight:700;
-      letter-spacing:.5px;
-      color:#111;
+      width: min(var(--maxw), 92vw);
+      min-height: 28px;
+      font-size: var(--fs-status);
+      font-weight: var(--fw-status);
+      letter-spacing: 0; /* 标准化：去掉字距避免中英文不一致 */
+      color: var(--c-text);
       user-select:none;
+      margin: 0;
     }
 
+    /* 输入面板 */
     .panel{
-      width:min(520px, 92vw);
+      width: min(var(--panelw), 92vw);
       display:none;
       flex-direction:column;
-      gap:10px;
-      align-items:center;
+      gap: var(--gap-tight);
+      align-items:stretch;
+    }
+
+    .panel .label{
+      font-size: var(--fs-hint);   /* “请输入游戏码”归入提示层级 */
+      line-height: var(--lh-hint);
+      color: var(--c-text);
+      user-select:none;
+      margin-bottom: 2px;
     }
 
     .panel input{
       width:100%;
-      height:46px;
+      height: var(--h-input);
       padding:0 14px;
       box-sizing:border-box;
-      font-size:16px;
-      border:2px solid #000;
-      border-radius:10px;
+      font-size: var(--fs-input);
+      border:2px solid var(--c-border);
+      border-radius:12px;
       outline:none;
       text-transform:uppercase;
-      letter-spacing:1px;
+      letter-spacing: 0; /* 标准化：输入也不拉字距 */
     }
 
-    .panel .row{
-      width:100%;
+    .row{
       display:flex;
-      gap:10px;
+      gap:12px;
+      width:100%;
     }
 
     button{
-      padding:16px 36px;
-      font-size:18px;
-      font-weight:600;
-      letter-spacing:1px;
-      background:#ffffff;
-      color:#000000;
-      border:2px solid #000000;
+      height: var(--h-btn);
+      padding: 0 18px;
+      box-sizing: border-box;
+      font-size: var(--fs-btn);
+      font-weight: var(--fw-btn);
+      letter-spacing: 0; /* 标准化：按钮不拉字距 */
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
       cursor:pointer;
+      border-radius: 0; /* 保持你原本“硬朗”风格，可按需改成 10px */
     }
 
-    button:hover{ background:#000000; color:#ffffff; }
+    button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
 
-    .small{
-      font-size:13px;
-      color:#444;
-      line-height:1.5;
+    /* 错误提示 */
+    .err{
+      min-height: 20px;
+      font-size: 14px; /* 错误信息可比正文略小，但固定 */
+      line-height: 1.5;
+      color: var(--c-danger);
       user-select:none;
+    }
+
+    /* 主按钮容器：用于在某些阶段彻底隐藏 */
+    .mainWrap{
+      display:flex;
+      justify-content:center;
+      width: min(var(--maxw), 92vw);
+    }
+
+    /* 手机上稍微紧凑一点 */
+    @media (max-width: 420px){
+      :root{
+        --fs-hint: 17px;
+        --fs-status: 17px;
+        --h-btn: 50px;
+        --h-input: 50px;
+      }
     }
   </style>
 </head>
@@ -103,37 +173,32 @@
 
     <!-- 核销输入区 -->
     <div class="panel" id="panel">
-      <div class="small">请输入游戏码</div>
+      <div class="label">请输入游戏码</div>
       <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" inputmode="latin" />
       <div class="row">
         <button id="verifyBtn" style="flex:1;">验证</button>
-        <button id="cancelBtn" class="secondary" style="flex:1;">取消</button>
+        <button id="cancelBtn" style="flex:1;">取消</button>
       </div>
-      <div class="small" id="err" style="color:#b00020; min-height:18px;"></div>
+      <div class="err" id="err"></div>
     </div>
 
-    <button id="mainBtn">确定</button>
+    <!-- 主按钮：用容器包起来，方便某些阶段直接不显示 -->
+    <div class="mainWrap" id="mainWrap">
+      <button id="mainBtn" style="min-width: 220px;">确定</button>
+    </div>
   </div>
 
 <script>
 (() => {
-  // =========================
-  // 云函数 verify 接口
-  // =========================
   const VERIFY_ENDPOINT = "https://1396901144-84o46m5fmk.ap-shanghai.tencentscf.com/verify";
-
-  // 通过后跳转到下一个页面
   const NEXT_URL = "./rotate/";
-
-  // 通行证 localStorage key（后续页面靠它防直链）
   const PASS_KEY = "playground_pass_v1";
 
-  // ===== 音乐节奏设置（每个按键间隔一致） =====
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
   const COUNTDOWN_SEC = 10;
 
-  // ===== 来自你“钢琴谜题”代码：正确答案音乐（原版）=====
+  // ===== 原版音乐 =====
   const KEYS = [
     {c:"green",n:"so",m:55},
     {c:"green",n:"la",m:57},
@@ -170,7 +235,6 @@
   }
   const CORRECT_MIDI_SEQ = targetToMidiSeq();
 
-  // ===== WebAudio：音色合成（原版）=====
   let audioCtx = null;
   let audioEnabled = false;
 
@@ -235,7 +299,6 @@
     });
   }
 
-  // ===== 工具：通行证 =====
   function setPass(){
     const token = "pass_" + Math.random().toString(36).slice(2) + "_" + Date.now();
     localStorage.setItem(PASS_KEY, token);
@@ -244,7 +307,7 @@
     return !!localStorage.getItem(PASS_KEY);
   }
 
-  // ===== 选项A：URL 参数 reset=1 强制回到输入验证码 =====
+  // reset=1 强制回到输入码
   const params = new URLSearchParams(location.search);
   if (params.get("reset") === "1") {
     localStorage.removeItem(PASS_KEY);
@@ -260,19 +323,17 @@
   }
 
   async function verifyCode(code){
-    const payload = { code };
     const r = await fetch(VERIFY_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ code }),
     });
-
     const data = await r.json().catch(() => ({}));
     return { httpOk: r.ok, data };
   }
 
-  // ===== 页面流程 =====
   const mainBtn = document.getElementById("mainBtn");
+  const mainWrap = document.getElementById("mainWrap");
   const hintEl = document.getElementById("hint");
   const statusEl = document.getElementById("status");
 
@@ -282,12 +343,11 @@
   const cancelBtn = document.getElementById("cancelBtn");
   const errEl = document.getElementById("err");
 
-  // phase:
-  // 0: 初始确认页
-  // 1: 输入核销码页
-  // 2: 验证成功过渡(1秒)
-  // 3: 验证后“开始游戏”页
-  // 4: 音乐+倒计时进行中
+  // 0: 确认页
+  // 1: 输入码页
+  // 2: 验证成功过渡(1s)
+  // 3: 开始游戏页
+  // 4: 音乐+倒计时
   let phase = 0;
   let timers = [];
 
@@ -309,9 +369,14 @@
     errEl.textContent = msg || "";
   }
 
+  function showMain(show){
+    mainWrap.style.display = show ? "flex" : "none";
+  }
+
   function render(){
     if(phase === 0){
       showPanel(false);
+      showMain(true);
       mainBtn.disabled = false;
       mainBtn.textContent = "确定";
       hintEl.textContent = "确定要玩这个游戏吗？\n这可能影响你和其他人的命运......";
@@ -322,17 +387,16 @@
 
     if(phase === 1){
       showPanel(true);
-      mainBtn.disabled = true;
-      mainBtn.textContent = "确定";
+      showMain(false);          // ✅ 验证界面不显示“确定/开始游戏”按钮
       hintEl.textContent = "";
       statusEl.textContent = "";
+      setError("");
       return;
     }
 
     if(phase === 2){
       showPanel(false);
-      mainBtn.disabled = true;
-      mainBtn.textContent = "确定";
+      showMain(false);          // 过渡阶段也不显示主按钮
       hintEl.textContent = "";
       statusEl.textContent = "验证成功";
       setError("");
@@ -341,6 +405,7 @@
 
     if(phase === 3){
       showPanel(false);
+      showMain(true);
       mainBtn.disabled = false;
       mainBtn.textContent = "开始游戏";
       hintEl.textContent = "";
@@ -351,10 +416,10 @@
 
     if(phase === 4){
       showPanel(false);
+      showMain(true);
       mainBtn.disabled = true;
       mainBtn.textContent = "开始游戏";
       hintEl.textContent = "好像听到一段诡异的音乐......";
-      // status 由倒计时更新
       return;
     }
   }
@@ -377,9 +442,7 @@
     phase = 4;
     clearTimers();
     render();
-
     try{ await enableAudio(); }catch(e){}
-
     playCorrectMelodyFixedGap();
     startCountdown10s();
   }
@@ -398,23 +461,15 @@
 
     try{
       const { httpOk, data } = await verifyCode(code);
-
       const ok = !!data.ok;
       const reason = String(data.reason || "");
 
       if(ok && reason === "verified"){
         setPass();
-
-        // 验证成功过渡 1 秒
         phase = 2;
         clearTimers();
         render();
-
-        schedule(() => {
-          phase = 3;
-          render();
-        }, 1000);
-
+        schedule(() => { phase = 3; render(); }, 1000);
         return;
       }
 
@@ -444,7 +499,6 @@
     }
   }
 
-  // ===== 事件 =====
   mainBtn.addEventListener("click", async () => {
     if(phase === 0){
       phase = 1;
@@ -454,7 +508,6 @@
       codeInput.focus();
       return;
     }
-
     if(phase === 3){
       await startMusicAndCountdown();
       return;
@@ -472,14 +525,9 @@
     if(e.key === "Enter") doVerify();
   });
 
-  // ===== 初始化：已验证设备直接进“开始游戏”页 =====
-  if (hasPass()) {
-    phase = 3;
-  } else {
-    phase = 0;
-  }
+  // 初始化：已验证设备直接进“开始游戏”页
+  phase = hasPass() ? 3 : 0;
   render();
-
 })();
 </script>
 </body>
