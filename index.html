@@ -7,10 +7,8 @@
 
   <style>
     :root{
-      /* ===== 页面版心 ===== */
       --maxw: 720px;
 
-      /* ===== 字体层级 ===== */
       --fs-body: 16px;
       --lh-body: 1.7;
 
@@ -20,156 +18,131 @@
       --fs-status: 18px;
       --fw-status: 700;
 
-      /* ===== 控件标准尺寸（你要的“固定尺寸”）===== */
       --ctl-h: 48px;
-      --w-mainbtn: 240px;   /* “确定/开始游戏” */
-      --w-input: 360px;     /* 输入框 */
-      --w-subbtn: 160px;    /* “验证/取消” */
+      --w-mainbtn: 240px;
+      --w-input: 360px;
+      --w-subbtn: 160px;
 
-      /* ===== 间距 ===== */
       --gap: 18px;
       --gap-tight: 12px;
 
-      /* ===== 颜色 ===== */
       --c-text: #111;
-      --c-muted: #444;
       --c-danger: #b00020;
       --c-border: #000;
     }
 
     html, body{
-      margin:0;
-      padding:0;
-      width:100%;
-      height:100%;
+      margin:0; padding:0; width:100%; height:100%;
       background:#fff;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
-      color: var(--c-text);
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+      color:var(--c-text);
     }
-
-    /* 统一：按钮/输入框继承字体 */
     button, input{ font-family: inherit; }
 
     .container{
-      width:100%;
-      height:100%;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap: var(--gap);
-      padding:18px;
-      box-sizing:border-box;
+      width:100%; height:100%;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:var(--gap);
+      padding:18px; box-sizing:border-box;
       text-align:center;
     }
 
     .hint{
-      width: min(var(--maxw), 92vw);
-      min-height: 56px;
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      white-space: pre-wrap;
+      width:min(var(--maxw), 92vw);
+      min-height:56px;
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      white-space:pre-wrap;
       user-select:none;
       margin:0;
     }
 
     .status{
-      width: min(var(--maxw), 92vw);
-      min-height: 28px;
-      font-size: var(--fs-status);
-      font-weight: var(--fw-status);
-      letter-spacing: 0;
+      width:min(var(--maxw), 92vw);
+      min-height:28px;
+      font-size:var(--fs-status);
+      font-weight:var(--fw-status);
+      letter-spacing:0;
       user-select:none;
       margin:0;
     }
 
-    /* ===== 输入面板（不再超宽）===== */
     .panel{
-      width: min(var(--maxw), 92vw);
+      width:min(var(--maxw), 92vw);
       display:none;
       flex-direction:column;
-      gap: var(--gap-tight);
+      gap:var(--gap-tight);
       align-items:center;
     }
 
     .panel .label{
-      width: min(var(--w-input), 92vw);
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
+      width:min(var(--w-input), 92vw);
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
       user-select:none;
       margin:0;
     }
 
     .panel input{
-      width: min(var(--w-input), 92vw);
-      height: var(--ctl-h);
+      width:min(var(--w-input), 92vw);
+      height:var(--ctl-h);
       padding:0 14px;
       box-sizing:border-box;
-      font-size: var(--fs-body);
+      font-size:var(--fs-body);
       border:2px solid var(--c-border);
       border-radius:12px;
       outline:none;
       text-transform:uppercase;
-      letter-spacing: 0;
+      letter-spacing:0;
     }
 
     .row{
       display:flex;
       gap:12px;
-      width: min(calc(var(--w-subbtn) * 2 + 12px), 92vw);
+      width:min(calc(var(--w-subbtn) * 2 + 12px), 92vw);
       justify-content:center;
       align-items:center;
-      margin-top: 2px;
+      margin-top:2px;
     }
 
     button{
-      height: var(--ctl-h);
-      padding: 0 18px;
-      box-sizing: border-box;
-      font-size: var(--fs-body);
-      font-weight: 600;
-      letter-spacing: 0;
+      height:var(--ctl-h);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-body);
+      font-weight:600;
+      letter-spacing:0;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
     }
-
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
 
-    /* 子按钮固定宽 */
-    .row button{
-      width: var(--w-subbtn);
-    }
+    .row button{ width:var(--w-subbtn); }
 
-    /* 错误提示 */
     .err{
-      width: min(var(--w-input), 92vw);
-      min-height: 20px;
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--c-danger);
+      width:min(var(--w-input), 92vw);
+      min-height:20px;
+      font-size:14px;
+      line-height:1.5;
+      color:var(--c-danger);
       user-select:none;
       text-align:center;
     }
 
-    /* 主按钮容器 */
     .mainWrap{
       display:flex;
       justify-content:center;
-      width: min(var(--maxw), 92vw);
+      width:min(var(--maxw), 92vw);
     }
+    #mainBtn{ width:var(--w-mainbtn); }
 
-    /* 主按钮固定宽 */
-    #mainBtn{
-      width: var(--w-mainbtn);
-    }
-
-    /* 手机上略微收紧 */
     @media (max-width: 420px){
       :root{
         --w-input: 320px;
@@ -188,7 +161,6 @@
     <div class="hint" id="hint"></div>
     <div class="status" id="status"></div>
 
-    <!-- 核销输入区 -->
     <div class="panel" id="panel">
       <div class="label">请输入游戏码</div>
       <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" inputmode="latin" />
@@ -199,7 +171,6 @@
       <div class="err" id="err"></div>
     </div>
 
-    <!-- 主按钮：某些阶段隐藏 -->
     <div class="mainWrap" id="mainWrap">
       <button id="mainBtn">确定</button>
     </div>
@@ -207,125 +178,16 @@
 
 <script>
 (() => {
-  // =========================
-  // 云函数 verify 接口
-  // =========================
   const VERIFY_ENDPOINT = "https://1396901144-84o46m5fmk.ap-shanghai.tencentscf.com/verify";
-
-  // 通过后跳转到下一个页面
-  const NEXT_URL = "./rotate/";
-
-  // 通行证 localStorage key（后续页面靠它防直链）
   const PASS_KEY = "playground_pass_v1";
+  const NEXT_URL = "./start.html";
 
-  // ===== 音乐节奏设置（每个按键间隔一致） =====
-  const NOTE_GAP_SEC = 0.25;
-  const NOTE_DUR_SEC = 0.22;
-  const COUNTDOWN_SEC = 10;
-
-  // ===== 来自你“钢琴谜题”代码：正确答案音乐（原版）=====
-  const KEYS = [
-    {c:"green",n:"so",m:55},
-    {c:"green",n:"la",m:57},
-    {c:"green",n:"si",m:59},
-    {c:"red",n:"do",m:60},
-    {c:"red",n:"re",m:62},
-    {c:"red",n:"mi",m:64},
-    {c:"red",n:"fa",m:65},
-    {c:"red",n:"so",m:67},
-    {c:"red",n:"la",m:69},
-    {c:"red",n:"si",m:71},
-    {c:"blue",n:"do",m:72},
-    {c:"blue",n:"re",m:74},
-    {c:"blue",n:"mi",m:76},
-    {c:"blue",n:"fa",m:77},
-    {c:"blue",n:"so",m:79},
-    {c:"blue",n:"la",m:81},
-  ];
-
-  const target = [
-    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
-    ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
-    ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
-    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
-  ];
-
-  function targetToMidiSeq(){
-    const seq = [];
-    for(const [tc, tn] of target){
-      const idx = KEYS.findIndex(k => k.c===tc && k.n===tn);
-      if(idx >= 0) seq.push(KEYS[idx].m);
-    }
-    return seq;
-  }
-  const CORRECT_MIDI_SEQ = targetToMidiSeq();
-
-  // ===== WebAudio：音色合成（原版）=====
-  let audioCtx = null;
-  let audioEnabled = false;
-
-  function ensureAudioCtx(){
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if(!audioCtx) audioCtx = new AC();
-    return audioCtx;
+  // reset=1：清通行证，强制回到输入码流程
+  const params = new URLSearchParams(location.search);
+  if (params.get("reset") === "1") {
+    localStorage.removeItem(PASS_KEY);
   }
 
-  async function enableAudio(){
-    const ctx = ensureAudioCtx();
-    if(ctx.state === "suspended") await ctx.resume();
-    audioEnabled = true;
-  }
-
-  function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
-
-  function playTone(freq, duration=1.25){
-    if(!audioEnabled || !audioCtx) return;
-    const now = audioCtx.currentTime;
-
-    const o1 = audioCtx.createOscillator();
-    const o2 = audioCtx.createOscillator();
-    const o3 = audioCtx.createOscillator();
-    o1.type = "sine";
-    o2.type = "triangle";
-    o3.type = "square";
-
-    o1.frequency.setValueAtTime(freq, now);
-    o2.frequency.setValueAtTime(freq * 2, now);
-    o3.frequency.setValueAtTime(freq * 4, now);
-
-    const g1 = audioCtx.createGain(); g1.gain.value = 1.0;
-    const g2 = audioCtx.createGain(); g2.gain.value = 0.55;
-    const g3 = audioCtx.createGain(); g3.gain.value = 0.06;
-
-    const amp = audioCtx.createGain();
-    amp.gain.setValueAtTime(0.0001, now);
-    amp.gain.linearRampToValueAtTime(0.33, now + 0.015);
-    amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    const lp = audioCtx.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(Math.min(freq * 6, 9000), now);
-    lp.Q.value = 0.85;
-
-    o1.connect(g1); g1.connect(amp);
-    o2.connect(g2); g2.connect(amp);
-    o3.connect(g3); g3.connect(amp);
-    amp.connect(lp); lp.connect(audioCtx.destination);
-
-    o1.start(now); o2.start(now); o3.start(now);
-    const stopAt = now + duration + 0.10;
-    o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
-  }
-
-  function playCorrectMelodyFixedGap(){
-    CORRECT_MIDI_SEQ.forEach((midi, i) => {
-      setTimeout(() => {
-        playTone(midiToFreq(midi), NOTE_DUR_SEC);
-      }, Math.round(i * NOTE_GAP_SEC * 1000));
-    });
-  }
-
-  // ===== 工具：通行证 =====
   function setPass(){
     const token = "pass_" + Math.random().toString(36).slice(2) + "_" + Date.now();
     localStorage.setItem(PASS_KEY, token);
@@ -334,10 +196,10 @@
     return !!localStorage.getItem(PASS_KEY);
   }
 
-  // ===== 选项A：URL 参数 reset=1 强制回到输入验证码 =====
-  const params = new URLSearchParams(location.search);
-  if (params.get("reset") === "1") {
-    localStorage.removeItem(PASS_KEY);
+  // 若已验证，直接进 start 页
+  if (hasPass()) {
+    location.replace(NEXT_URL);
+    return;
   }
 
   function normalizeCode(s){
@@ -359,7 +221,6 @@
     return { httpOk: r.ok, data };
   }
 
-  // ===== 页面元素 =====
   const mainBtn = document.getElementById("mainBtn");
   const mainWrap = document.getElementById("mainWrap");
   const hintEl = document.getElementById("hint");
@@ -372,11 +233,9 @@
   const errEl = document.getElementById("err");
 
   // phase:
-  // 0: 初始确认页
-  // 1: 输入核销码页
+  // 0: 确认页
+  // 1: 输入码页
   // 2: 验证成功过渡(1秒)
-  // 3: 验证后“开始游戏”页
-  // 4: 音乐+倒计时进行中
   let phase = 0;
   let timers = [];
 
@@ -390,15 +249,9 @@
     return id;
   }
 
-  function showPanel(show){
-    panel.style.display = show ? "flex" : "none";
-  }
-  function showMain(show){
-    mainWrap.style.display = show ? "flex" : "none";
-  }
-  function setError(msg){
-    errEl.textContent = msg || "";
-  }
+  function showPanel(show){ panel.style.display = show ? "flex" : "none"; }
+  function showMain(show){ mainWrap.style.display = show ? "flex" : "none"; }
+  function setError(msg){ errEl.textContent = msg || ""; }
 
   function render(){
     if(phase === 0){
@@ -414,7 +267,7 @@
 
     if(phase === 1){
       showPanel(true);
-      showMain(false); // 验证界面隐藏上个界面的按钮
+      showMain(false);
       hintEl.textContent = "";
       statusEl.textContent = "";
       setError("");
@@ -429,51 +282,6 @@
       setError("");
       return;
     }
-
-    if(phase === 3){
-      showPanel(false);
-      showMain(true);
-      mainBtn.disabled = false;
-      mainBtn.textContent = "开始游戏";
-      hintEl.textContent = "";
-      statusEl.textContent = "";
-      setError("");
-      return;
-    }
-
-    if(phase === 4){
-      showPanel(false);
-      showMain(true);
-      mainBtn.disabled = true;
-      mainBtn.textContent = "开始游戏";
-      hintEl.textContent = "好像听到一段诡异的音乐......";
-      return;
-    }
-  }
-
-  function startCountdown10s(){
-    let left = COUNTDOWN_SEC;
-    const tick = () => {
-      statusEl.textContent = `倒计时：${left}`;
-      if(left <= 0){
-        location.href = NEXT_URL;
-        return;
-      }
-      left--;
-      schedule(tick, 1000);
-    };
-    tick();
-  }
-
-  async function startMusicAndCountdown(){
-    phase = 4;
-    clearTimers();
-    render();
-
-    try{ await enableAudio(); }catch(e){}
-
-    playCorrectMelodyFixedGap();
-    startCountdown10s();
   }
 
   async function doVerify(){
@@ -490,7 +298,6 @@
 
     try{
       const { httpOk, data } = await verifyCode(code);
-
       const ok = !!data.ok;
       const reason = String(data.reason || "");
 
@@ -502,8 +309,7 @@
         render();
 
         schedule(() => {
-          phase = 3;
-          render();
+          location.href = NEXT_URL;
         }, 1000);
 
         return;
@@ -535,20 +341,13 @@
     }
   }
 
-  // ===== 事件 =====
-  mainBtn.addEventListener("click", async () => {
+  mainBtn.addEventListener("click", () => {
     if(phase === 0){
       phase = 1;
       clearTimers();
       render();
       codeInput.value = "";
       codeInput.focus();
-      return;
-    }
-
-    if(phase === 3){
-      await startMusicAndCountdown();
-      return;
     }
   });
 
@@ -563,8 +362,6 @@
     if(e.key === "Enter") doVerify();
   });
 
-  // ===== 初始化：已验证设备直接进“开始游戏”页 =====
-  phase = hasPass() ? 3 : 0;
   render();
 })();
 </script>
