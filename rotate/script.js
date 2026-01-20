@@ -1,13 +1,12 @@
 (() => {
   // ===== PASSKEY GATE（二次保险）=====
-  const PASSKEY_KEY = "PASSKEY_OK_V1";
+  const PASS_KEY = "playground_pass_v1";
   const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
   try{
-    const ok = (sessionStorage.getItem(PASSKEY_KEY) === "1") || (localStorage.getItem(PASSKEY_KEY) === "1");
-    if(!ok){
+    if (!localStorage.getItem(PASS_KEY)) {
       const next = encodeURIComponent(location.href);
       location.replace(VERIFY_URL + "?next=" + next);
-      return; // 终止后续逻辑
+      return;
     }
   }catch(e){
     location.replace(VERIFY_URL);
@@ -24,6 +23,7 @@
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "canon";
 
+  // 返回时恢复正确样子
   const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
 
   const params = new URLSearchParams(location.search);
@@ -46,6 +46,7 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
+  // 只改按钮文案，不改颜色
   const BTN_TEXT_DEFAULT = "提交答案";
   let btnTextTimer = null;
 
@@ -200,6 +201,7 @@
     }, 1000);
   }
 
+  // 稳定 hash + PRNG
   function xmur3(str) {
     let h = 1779033703 ^ str.length;
     for (let i = 0; i < str.length; i++) {
@@ -259,6 +261,7 @@
     };
   }
 
+  // 更稳的图片加载：onload 兜底
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -315,14 +318,17 @@
     }
   }
 
+  // iOS Safari bfcache：pageshow 一定触发
   window.addEventListener("pageshow", (e) => {
     const navType = getNavType();
 
+    // 返回：恢复正确样子
     if ((e.persisted || navType === "back_forward") && sessionStorage.getItem(SOLVED_KEY) === "1") {
       restoreSolvedUI();
       return;
     }
 
+    // 刷新/正常进入：回初始
     if (navType === "reload" || navType === "navigate") {
       sessionStorage.removeItem(SOLVED_KEY);
       resetAllToInitial();
