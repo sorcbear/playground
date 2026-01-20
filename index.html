@@ -20,7 +20,6 @@
       --lh-hint: 1.6;
 
       --fw-status: 700;
-
       --ctl-h: 48px;
 
       --gap: 18px;
@@ -42,30 +41,31 @@
     }
     button, input{ font-family: inherit; }
 
-    /* ✅ 三段式：顶部信息区 / 中间居中区 / 底部对称留白
-       解决“验证页偏下”的根因（视觉居中 vs 数学居中）。 */
+    /* ✅ 关键：改成 1fr / auto / 1fr，使“中间块”天然居中
+       顶部信息区是否显示都不会影响中间居中。 */
     .container{
       width:100%;
       min-height:100svh;
       display:grid;
-      grid-template-rows: auto 1fr 1fr;
+      grid-template-rows: 1fr auto 1fr;
       padding:18px;
       box-sizing:border-box;
       text-align:center;
     }
 
-    /* 顶部信息区：固定高度，避免不同 phase 高度变化导致跳动 */
+    /* 顶部信息区（仅验证流程会用：显示“验证成功”等） */
     .top{
       display:flex;
       flex-direction:column;
       align-items:center;
       gap:var(--gap-tight);
-      padding-top:6px;
+      justify-content:flex-start;
     }
 
+    /* 顶部 hint/status 固定高度：验证阶段稳定；确认阶段会隐藏 top */
     .hint{
       width:min(var(--maxw), 92vw);
-      height:72px; /* 容纳两行提示 */
+      height:72px;
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
       white-space:pre-wrap;
@@ -91,7 +91,7 @@
       justify-content:center;
     }
 
-    /* 中间主操作区：真正居中（无论顶部有没有文字） */
+    /* 中间主操作区：永远居中 */
     .center{
       display:flex;
       flex-direction:column;
@@ -100,12 +100,18 @@
       gap:var(--gap);
     }
 
-    /* 底部占位（不放内容，仅用于对称留白） */
-    .bottom{
-      /* 空即可 */
+    /* 确认页专用：把“提示文字+按钮”作为一个整体居中（你要的“从前的确定界面”） */
+    .intro{
+      width:min(var(--maxw), 92vw);
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      white-space:pre-wrap;
+      user-select:none;
+      margin:0;
+      display:none; /* 仅 phase 0 显示 */
     }
 
-    /* ===== 输入面板 ===== */
+    /* ===== 输入面板（验证页）===== */
     .panel{
       width:min(var(--maxw), 92vw);
       display:none;
@@ -164,7 +170,7 @@
 
     .err{
       width:min(var(--w-panel), 92vw);
-      height:20px;        /* 固定高度，避免出现错误时整体位移 */
+      height:20px;
       font-size:14px;
       line-height:20px;
       color:var(--c-danger);
@@ -173,7 +179,7 @@
       margin:0;
     }
 
-    /* ===== 主按钮 ===== */
+    /* 主按钮 */
     .mainWrap{
       display:flex;
       justify-content:center;
@@ -196,14 +202,18 @@
 
 <body>
   <div class="container">
-    <!-- 顶部信息区 -->
-    <div class="top">
+    <!-- 顶部信息区（验证流程用；确认页会隐藏） -->
+    <div class="top" id="top">
       <div class="hint" id="hint"></div>
       <div class="status" id="status"></div>
     </div>
 
-    <!-- 中间主操作区（真正居中） -->
+    <!-- 中间居中区 -->
     <div class="center">
+      <!-- ✅ 确认页提示（从前的确定界面：在中间块里居中） -->
+      <div class="intro" id="intro"></div>
+
+      <!-- 验证面板 -->
       <div class="panel" id="panel">
         <div class="label">请输入游戏码</div>
         <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" inputmode="latin" />
@@ -214,13 +224,14 @@
         <div class="err" id="err"></div>
       </div>
 
+      <!-- 主按钮（仅确认页显示） -->
       <div class="mainWrap" id="mainWrap">
         <button id="mainBtn">确定</button>
       </div>
     </div>
 
     <!-- 底部对称留白（空） -->
-    <div class="bottom"></div>
+    <div></div>
   </div>
 
 <script>
@@ -229,7 +240,7 @@
   const PASS_KEY = "playground_pass_v1";
   const NEXT_URL = "./start.html";
 
-  // reset=1：清通行证，强制回到输入码流程
+  // reset=1：清通行证
   const params = new URLSearchParams(location.search);
   if (params.get("reset") === "1") {
     localStorage.removeItem(PASS_KEY);
@@ -267,8 +278,11 @@
   }
 
   // DOM
+  const topEl     = document.getElementById("top");
   const hintEl    = document.getElementById("hint");
   const statusEl  = document.getElementById("status");
+
+  const introEl   = document.getElementById("intro");
 
   const panel     = document.getElementById("panel");
   const codeInput = document.getElementById("codeInput");
@@ -280,8 +294,8 @@
   const mainBtn   = document.getElementById("mainBtn");
 
   // phase:
-  // 0: 确认页
-  // 1: 输入码页
+  // 0: 确认页（旧风格：文字+按钮居中）
+  // 1: 输入码页（现在的验证界面）
   // 2: 验证成功过渡(1秒)
   let phase = 0;
   let timers = [];
@@ -296,24 +310,34 @@
     return id;
   }
 
-  function showPanel(show){ panel.style.display = show ? "flex" : "none"; }
-  function showMain(show){ mainWrap.style.display = show ? "flex" : "none"; }
+  function show(el, on, display="flex"){ el.style.display = on ? display : "none"; }
   function setError(msg){ errEl.textContent = msg || ""; }
 
   function render(){
     if(phase === 0){
-      showPanel(false);
-      showMain(true);
-      mainBtn.disabled = false;
-      hintEl.textContent = "确定要玩这个游戏吗？\n这可能影响你和其他人的命运......";
+      // ✅ 确认页：隐藏 top，把提示文字放在中间块里整体居中
+      show(topEl, false);
+      show(panel, false);
+      show(mainWrap, true, "flex");
+      show(introEl, true, "block");
+
+      introEl.textContent = "确定要玩这个游戏吗？\n这可能影响你和其他人的命运......";
+
+      // 顶部清空（即使隐藏也保持干净）
+      hintEl.textContent = "";
       statusEl.textContent = "";
       setError("");
+      mainBtn.disabled = false;
       return;
     }
 
     if(phase === 1){
-      showPanel(true);
-      showMain(false);
+      // 验证页：显示 top（但内容为空），显示 panel
+      show(topEl, true, "flex");
+      show(introEl, false);
+      show(panel, true, "flex");
+      show(mainWrap, false);
+
       hintEl.textContent = "";
       statusEl.textContent = "";
       setError("");
@@ -321,8 +345,12 @@
     }
 
     if(phase === 2){
-      showPanel(false);
-      showMain(false);
+      // 过渡：顶部显示“验证成功”
+      show(topEl, true, "flex");
+      show(introEl, false);
+      show(panel, false);
+      show(mainWrap, false);
+
       hintEl.textContent = "";
       statusEl.textContent = "验证成功";
       setError("");
@@ -382,8 +410,6 @@
     }finally{
       verifyBtn.disabled = false;
       cancelBtn.disabled = false;
-
-      // 防止某些浏览器 focus 造成滚动：尽量不滚动
       try{ codeInput.focus({ preventScroll: true }); }catch(e){ codeInput.focus(); }
       codeInput.select();
     }
@@ -394,7 +420,7 @@
     clearTimers();
     render();
 
-    // 进入输入码页：避免浏览器自动滚动扰动视觉
+    // 避免部分浏览器 focus 带来滚动扰动
     requestAnimationFrame(() => {
       window.scrollTo(0, 0);
       setTimeout(() => {
