@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      --maxw: 720px;
+
+      --fs-body: 16px;
+      --lh-body: 1.7;
+
+      --fs-hint: 18px;
+      --lh-hint: 1.6;
+
+      --fs-status: 18px;
+      --fw-status: 700;
+
+      --ctl-h: 48px;
+      --w-mainbtn: 240px;
+
+      --gap: 18px;
+
+      --c-text: #111;
+      --c-border: #000;
+    }
+
+    html, body{
+      margin:0; padding:0; width:100%; height:100%;
+      background:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+      color:var(--c-text);
+    }
+    button{ font-family: inherit; }
+
+    .container{
+      width:100%; height:100%;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:var(--gap);
+      padding:18px; box-sizing:border-box;
+      text-align:center;
+    }
+
+    .hint{
+      width:min(var(--maxw), 92vw);
+      min-height:56px;
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      white-space:pre-wrap;
+      user-select:none;
+      margin:0;
+    }
+
+    .status{
+      width:min(var(--maxw), 92vw);
+      min-height:28px;
+      font-size:var(--fs-status);
+      font-weight:var(--fw-status);
+      letter-spacing:0;
+      user-select:none;
+      margin:0;
+    }
+
+    button{
+      width:var(--w-mainbtn);
+      height:var(--ctl-h);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-body);
+      font-weight:600;
+      letter-spacing:0;
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+    }
+    button:hover{ background:#000; color:#fff; }
+    button:disabled{ opacity:.45; cursor:default; }
+
+    @media (max-width: 420px){
+      :root{
+        --w-mainbtn: 220px;
+        --ctl-h: 46px;
+        --fs-hint: 17px;
+        --fs-status: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="hint" id="hint"></div>
+    <div class="status" id="status"></div>
+    <button id="startBtn">开始游戏</button>
+  </div>
+
+<script>
+(() => {
+  const PASS_KEY = "playground_pass_v1";
+  const INDEX_URL = "./index.html";
+  const NEXT_URL = "./rotate/";
+
+  const NOTE_GAP_SEC = 0.25;
+  const NOTE_DUR_SEC = 0.22;
+  const COUNTDOWN_SEC = 10;
+
+  // reset=1：清通行证并回到 index
+  const params = new URLSearchParams(location.search);
+  if (params.get("reset") === "1") {
+    localStorage.removeItem(PASS_KEY);
+    location.replace(INDEX_URL);
+    return;
+  }
+
+  // 未验证不能进 start 页
+  if (!localStorage.getItem(PASS_KEY)) {
+    location.replace(INDEX_URL);
+    return;
+  }
+
+  // ===== 原版音乐 =====
+  const KEYS = [
+    {c:"green",n:"so",m:55},
+    {c:"green",n:"la",m:57},
+    {c:"green",n:"si",m:59},
+    {c:"red",n:"do",m:60},
+    {c:"red",n:"re",m:62},
+    {c:"red",n:"mi",m:64},
+    {c:"red",n:"fa",m:65},
+    {c:"red",n:"so",m:67},
+    {c:"red",n:"la",m:69},
+    {c:"red",n:"si",m:71},
+    {c:"blue",n:"do",m:72},
+    {c:"blue",n:"re",m:74},
+    {c:"blue",n:"mi",m:76},
+    {c:"blue",n:"fa",m:77},
+    {c:"blue",n:"so",m:79},
+    {c:"blue",n:"la",m:81},
+  ];
+
+  const target = [
+    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
+    ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
+    ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
+    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
+  ];
+
+  function targetToMidiSeq(){
+    const seq = [];
+    for(const [tc, tn] of target){
+      const idx = KEYS.findIndex(k => k.c===tc && k.n===tn);
+      if(idx >= 0) seq.push(KEYS[idx].m);
+    }
+    return seq;
+  }
+  const CORRECT_MIDI_SEQ = targetToMidiSeq();
+
+  let audioCtx = null;
+  let audioEnabled = false;
+
+  function ensureAudioCtx(){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!audioCtx) audioCtx = new AC();
+    return audioCtx;
+  }
+
+  async function enableAudio(){
+    const ctx = ensureAudioCtx();
+    if(ctx.state === "suspended") await ctx.resume();
+    audioEnabled = true;
+  }
+
+  function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+
+  function playTone(freq, duration=1.25){
+    if(!audioEnabled || !audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const o1 = audioCtx.createOscillator();
+    const o2 = audioCtx.createOscillator();
+    const o3 = audioCtx.createOscillator();
+    o1.type = "sine";
+    o2.type = "triangle";
+    o3.type = "square";
+
+    o1.frequency.setValueAtTime(freq, now);
+    o2.frequency.setValueAtTime(freq * 2, now);
+    o3.frequency.setValueAtTime(freq * 4, now);
+
+    const g1 = audioCtx.createGain(); g1.gain.value = 1.0;
+    const g2 = audioCtx.createGain(); g2.gain.value = 0.55;
+    const g3 = audioCtx.createGain(); g3.gain.value = 0.06;
+
+    const amp = audioCtx.createGain();
+    amp.gain.setValueAtTime(0.0001, now);
+    amp.gain.linearRampToValueAtTime(0.33, now + 0.015);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(Math.min(freq * 6, 9000), now);
+    lp.Q.value = 0.85;
+
+    o1.connect(g1); g1.connect(amp);
+    o2.connect(g2); g2.connect(amp);
+    o3.connect(g3); g3.connect(amp);
+    amp.connect(lp); lp.connect(audioCtx.destination);
+
+    o1.start(now); o2.start(now); o3.start(now);
+    const stopAt = now + duration + 0.10;
+    o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
+  }
+
+  function playCorrectMelodyFixedGap(){
+    CORRECT_MIDI_SEQ.forEach((midi, i) => {
+      setTimeout(() => {
+        playTone(midiToFreq(midi), NOTE_DUR_SEC);
+      }, Math.round(i * NOTE_GAP_SEC * 1000));
+    });
+  }
+
+  const hintEl = document.getElementById("hint");
+  const statusEl = document.getElementById("status");
+  const startBtn = document.getElementById("startBtn");
+
+  hintEl.textContent = "";   // 初始：空
+  statusEl.textContent = ""; // 初始：空
+
+  let timers = [];
+  function clearTimers(){
+    timers.forEach(id => clearTimeout(id));
+    timers = [];
+  }
+  function schedule(fn, ms){
+    const id = setTimeout(fn, ms);
+    timers.push(id);
+    return id;
+  }
+
+  function startCountdown10s(){
+    let left = COUNTDOWN_SEC;
+    const tick = () => {
+      statusEl.textContent = `倒计时：${left}`;
+      if(left <= 0){
+        location.href = NEXT_URL;
+        return;
+      }
+      left--;
+      schedule(tick, 1000);
+    };
+    tick();
+  }
+
+  async function startFlow(){
+    startBtn.disabled = true;
+    hintEl.textContent = "好像听到一段诡异的音乐......";
+    statusEl.textContent = "";
+
+    clearTimers();
+
+    // 必须在“点击开始”这条用户手势链里解锁音频
+    try{ await enableAudio(); }catch(e){}
+
+    playCorrectMelodyFixedGap();
+    startCountdown10s();
+  }
+
+  startBtn.addEventListener("click", startFlow);
+})();
+</script>
+</body>
+</html>
