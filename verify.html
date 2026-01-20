@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Verify</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      --maxw: 720px;
+      --w-panel: 360px;
+
+      --fs-body: 16px;
+      --fs-hint: 18px;
+      --fs-status: 18px;
+
+      --lh-body: 1.7;
+      --lh-hint: 1.6;
+
+      --fw-status: 700;
+      --ctl-h: 48px;
+
+      --gap: 18px;
+      --gap-tight: 12px;
+
+      --c-text:#111;
+      --c-border:#000;
+      --c-danger:#b00020;
+    }
+
+    html, body{
+      margin:0; padding:0;
+      width:100%; height:100%;
+      background:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+      color:var(--c-text);
+    }
+    button, input{ font-family:inherit; }
+
+    .page{
+      min-height:100svh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      box-sizing:border-box;
+      text-align:center;
+    }
+
+    .card{
+      width:min(var(--maxw), 92vw);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:var(--gap);
+    }
+
+    .label{
+      width:min(var(--w-panel), 92vw);
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      user-select:none;
+      margin:0;
+    }
+
+    input{
+      width:min(var(--w-panel), 92vw);
+      height:var(--ctl-h);
+      padding:0 14px;
+      box-sizing:border-box;
+      font-size:var(--fs-body);
+      border:2px solid var(--c-border);
+      border-radius:12px;
+      outline:none;
+      text-transform:uppercase;
+      letter-spacing:0;
+    }
+
+    .row{
+      width:min(var(--w-panel), 92vw);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    button{
+      height:var(--ctl-h);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-body);
+      font-weight:600;
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+    }
+    button:hover{ background:#000; color:#fff; }
+    button:disabled{ opacity:.45; cursor:default; }
+    .row button{ flex:1; }
+
+    .status{
+      width:min(var(--w-panel), 92vw);
+      height:28px;
+      font-size:var(--fs-status);
+      font-weight:var(--fw-status);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      margin:0;
+    }
+
+    .err{
+      width:min(var(--w-panel), 92vw);
+      height:20px;
+      font-size:14px;
+      line-height:20px;
+      color:var(--c-danger);
+      user-select:none;
+      text-align:center;
+      margin:0;
+    }
+
+    @media (max-width:420px){
+      :root{
+        --w-panel: 320px;
+        --ctl-h: 46px;
+        --fs-hint: 17px;
+        --fs-status: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="card">
+      <div class="label">请输入游戏码</div>
+
+      <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" inputmode="latin" />
+
+      <div class="row">
+        <button id="verifyBtn">验证</button>
+        <button id="cancelBtn">取消</button>
+      </div>
+
+      <div class="status" id="status"></div>
+      <div class="err" id="err"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const VERIFY_ENDPOINT = "https://1396901144-84o46m5fmk.ap-shanghai.tencentscf.com/verify";
+  const PASS_KEY  = "playground_pass_v1";
+  const INDEX_URL = "./";
+  const START_URL = "./start.html";
+
+  // reset=1：清通行证（调试用）
+  const params = new URLSearchParams(location.search);
+  if (params.get("reset") === "1") {
+    localStorage.removeItem(PASS_KEY);
+  }
+
+  // 已验证：直接去 start
+  if (localStorage.getItem(PASS_KEY)) {
+    location.replace(START_URL);
+    return;
+  }
+
+  const codeInput = document.getElementById("codeInput");
+  const verifyBtn = document.getElementById("verifyBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+  const statusEl  = document.getElementById("status");
+  const errEl     = document.getElementById("err");
+
+  function setPass(){
+    const token = "pass_" + Math.random().toString(36).slice(2) + "_" + Date.now();
+    localStorage.setItem(PASS_KEY, token);
+  }
+
+  function normalizeCode(s){
+    return String(s || "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "")
+      .replace(/—/g, "-")
+      .replace(/–/g, "-");
+  }
+
+  function setError(msg){ errEl.textContent = msg || ""; }
+  function setStatus(msg){ statusEl.textContent = msg || ""; }
+
+  async function verifyCode(code){
+    const r = await fetch(VERIFY_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const data = await r.json().catch(() => ({}));
+    return { httpOk: r.ok, data };
+  }
+
+  async function doVerify(){
+    const code = normalizeCode(codeInput.value);
+    if(!code){
+      setError("请输入游戏码");
+      return;
+    }
+
+    verifyBtn.disabled = true;
+    cancelBtn.disabled = true;
+    setError("");
+    setStatus("验证中...");
+
+    try{
+      const { httpOk, data } = await verifyCode(code);
+      const ok = !!data.ok;
+      const reason = String(data.reason || "");
+
+      if(ok && reason === "verified"){
+        setPass();
+        setStatus("验证成功");
+        setTimeout(() => location.href = START_URL, 700);
+        return;
+      }
+
+      if(!ok && reason === "already_used"){
+        setStatus("");
+        setError("该游戏码已被使用");
+        return;
+      }
+
+      if(!ok && reason === "not_found"){
+        setStatus("");
+        setError("游戏码不存在");
+        return;
+      }
+
+      setStatus("");
+      const msg = data.message ? String(data.message) : (httpOk ? "验证失败" : "网络错误");
+      setError(msg);
+    }catch(e){
+      setStatus("");
+      setError("网络错误，请重试");
+    }finally{
+      verifyBtn.disabled = false;
+      cancelBtn.disabled = false;
+      try{ codeInput.focus({ preventScroll:true }); }catch(e){ codeInput.focus(); }
+      codeInput.select();
+    }
+  }
+
+  cancelBtn.addEventListener("click", () => {
+    location.href = INDEX_URL;
+  });
+
+  verifyBtn.addEventListener("click", doVerify);
+  codeInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter") doVerify();
+  });
+
+  // 初始聚焦（尽量不滚动）
+  requestAnimationFrame(() => {
+    window.scrollTo(0, 0);
+    setTimeout(() => {
+      try{ codeInput.focus({ preventScroll:true }); }catch(e){ codeInput.focus(); }
+      window.scrollTo(0, 0);
+    }, 50);
+  });
+})();
+</script>
+</body>
+</html>
