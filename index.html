@@ -4,9 +4,13 @@
   <meta charset="utf-8" />
   <title>Playground</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <style>
     :root{
+      /* 中间内容区域宽度 */
       --w-card: 520px;
+
+      /* 按钮宽度 */
       --w-btn: 200px;
 
       --fs-body: 16px;
@@ -17,12 +21,13 @@
 
       --c-text:#111;
       --c-border:#000;
-      --c-muted:#666;
     }
 
     html, body{
-      margin:0; padding:0;
-      width:100%; height:100%;
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
       background:#fff;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
       font-size:var(--fs-body);
@@ -40,38 +45,32 @@
       box-sizing:border-box;
     }
 
+    /* 中间区域 */
     .card{
       width:min(var(--w-card), 96vw);
       display:flex;
       flex-direction:column;
-      align-items:center;
+      align-items:center; /* 整体居中 */
       text-align:center;
     }
 
+    /* 文本块 */
     .intro{
       width:100%;
       font-size:var(--fs-text);
       line-height:var(--lh-text);
+      text-align:center;
       user-select:none;
       margin:0;
     }
     .intro + .intro{ margin-top:12px; }
 
-    .btnCol{
+    /* 按钮区域 */
+    .btnRow{
       width:100%;
       display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:12px;
+      justify-content:center;
       margin-top:64px;
-    }
-
-    .hint{
-      margin-top:14px;
-      font-size:14px;
-      color:var(--c-muted);
-      min-height:18px;
-      user-select:none;
     }
 
     button{
@@ -85,7 +84,11 @@
       cursor:pointer;
       border-radius:0;
     }
-    button:hover{ background:#000; color:#fff; }
+
+    button:hover{
+      background:#000;
+      color:#fff;
+    }
 
     @media (max-width:420px){
       :root{
@@ -104,61 +107,66 @@
       <div class="intro">确定要玩这个游戏吗？</div>
       <div class="intro">这可能会影响到你和其他人的命运...</div>
 
-      <div class="btnCol">
-        <button id="goVerifyBtn">确定</button>
-        <button id="goStartBtn" style="display:none;">继续游戏</button>
+      <div class="btnRow">
+        <button id="goBtn">确定</button>
       </div>
-
-      <div class="hint" id="hint"></div>
     </div>
   </div>
 
 <script>
 (() => {
-  // 与 verify/start 统一
+  // ===== 与 verify/start 统一 =====
   const PASS_KEY = "playground_pass";
   const PASS_VER_KEY = "playground_ver";
   const PASS_VER = "v1";
 
+  // 方案1：记录最近访问页面
+  const LAST_KEY = "playground_last_page";
+
+  // 你的站点结构：https://sorcbear.github.io/playground/...
   const BASE = "/playground";
   const VERIFY_URL = BASE + "/verify.html";
   const START_URL  = BASE + "/start.html";
 
-  const hintEl = document.getElementById("hint");
-  const goVerifyBtn = document.getElementById("goVerifyBtn");
-  const goStartBtn  = document.getElementById("goStartBtn");
+  const btn = document.getElementById("goBtn");
 
-  // reset=1：清票（调试）
+  // reset=1：清通行证 + 清进度（调试/回收）
   const params = new URLSearchParams(location.search);
   if (params.get("reset") === "1") {
     localStorage.removeItem(PASS_KEY);
     localStorage.removeItem(PASS_VER_KEY);
-    location.replace(BASE + "/");
+    localStorage.removeItem(LAST_KEY);
+    location.replace(BASE + "/"); // 去掉参数，避免循环清
     return;
   }
 
-  // index 永远不拦截，只根据是否已验证来“显示额外入口”
+  // 是否已验证
   const pass = localStorage.getItem(PASS_KEY);
   const ver  = localStorage.getItem(PASS_VER_KEY);
   const verified = !!pass && ver === PASS_VER;
 
-  if (verified) {
-    hintEl.textContent = "该设备已验证，可以直接继续游戏，或重新验证。";
-    goStartBtn.style.display = "block";
-  } else {
-    hintEl.textContent = "";
-    goStartBtn.style.display = "none";
+  function safeLastUrl(){
+    const last = localStorage.getItem(LAST_KEY);
+    if (!last) return START_URL;
+
+    // 只允许回到本站 /playground 下的路径，避免被写入异常 URL
+    if (typeof last !== "string") return START_URL;
+    if (!last.startsWith(BASE + "/")) return START_URL;
+
+    return last;
   }
 
-  // “确定”永远去 verify（满足你要求）
-  goVerifyBtn.addEventListener("click", () => {
-    location.href = VERIFY_URL;
-  });
-
-  // 已验证设备可直接进 start（可选入口）
-  goStartBtn.addEventListener("click", () => {
-    location.href = START_URL;
-  });
+  if (verified) {
+    btn.textContent = "继续游戏";
+    btn.addEventListener("click", () => {
+      location.href = safeLastUrl();
+    });
+  } else {
+    btn.textContent = "确定";
+    btn.addEventListener("click", () => {
+      location.href = VERIFY_URL;
+    });
+  }
 })();
 </script>
 </body>
