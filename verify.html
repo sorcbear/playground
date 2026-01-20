@@ -155,19 +155,28 @@
 
 <script>
 (() => {
+  // ====== 你的后端验证接口 ======
   const VERIFY_ENDPOINT = "https://1396901144-84o46m5fmk.ap-shanghai.tencentscf.com/verify";
-  const PASS_KEY  = "playground_pass_v1";
-  const INDEX_URL = "./";
-  const START_URL = "./start.html";
+
+  // ====== 与 start.html / 其他页面统一的 gate ======
+  const PASS_KEY = "playground_pass";
+  const PASS_VER_KEY = "playground_ver";
+  const PASS_VER = "v1"; // 未来想让所有人重新输入：改成 "v2" 并重新部署即可
+
+  // 你确认的路径结构：https://sorcbear.github.io/playground/verify.html
+  const BASE = "/playground";
+  const INDEX_URL = BASE + "/";           // 回到入口
+  const START_URL = BASE + "/start.html"; // 验证后去 start
 
   // reset=1：清通行证（调试用）
   const params = new URLSearchParams(location.search);
   if (params.get("reset") === "1") {
     localStorage.removeItem(PASS_KEY);
+    localStorage.removeItem(PASS_VER_KEY);
   }
 
-  // 已验证：直接去 start
-  if (localStorage.getItem(PASS_KEY)) {
+  // 已验证且版本匹配：直接去 start
+  if (localStorage.getItem(PASS_KEY) && localStorage.getItem(PASS_VER_KEY) === PASS_VER) {
     location.replace(START_URL);
     return;
   }
@@ -177,11 +186,6 @@
   const cancelBtn = document.getElementById("cancelBtn");
   const statusEl  = document.getElementById("status");
   const errEl     = document.getElementById("err");
-
-  function setPass(){
-    const token = "pass_" + Math.random().toString(36).slice(2) + "_" + Date.now();
-    localStorage.setItem(PASS_KEY, token);
-  }
 
   function normalizeCode(s){
     return String(s || "")
@@ -194,6 +198,13 @@
 
   function setError(msg){ errEl.textContent = msg || ""; }
   function setStatus(msg){ statusEl.textContent = msg || ""; }
+
+  function setPass(passId){
+    // 如果后端有返回 passId，就用它；没有就生成本地 token
+    const token = passId || ("pass_" + Math.random().toString(36).slice(2) + "_" + Date.now());
+    localStorage.setItem(PASS_KEY, token);
+    localStorage.setItem(PASS_VER_KEY, PASS_VER);
+  }
 
   async function verifyCode(code){
     const r = await fetch(VERIFY_ENDPOINT, {
@@ -222,8 +233,9 @@
       const ok = !!data.ok;
       const reason = String(data.reason || "");
 
+      // 约定：ok=true 且 reason="verified" 表示验证通过
       if(ok && reason === "verified"){
-        setPass();
+        setPass(data.passId);
         setStatus("验证成功");
         setTimeout(() => location.href = START_URL, 700);
         return;
