@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>Playground</title>
+  <title>Start Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
@@ -28,7 +28,8 @@
     }
 
     html, body{
-      margin:0; padding:0; width:100%; height:100%;
+      margin:0; padding:0;
+      width:100%; height:100%;
       background:#fff;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
       font-size:var(--fs-body);
@@ -39,10 +40,13 @@
 
     .container{
       width:100%; height:100%;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
       gap:var(--gap);
-      padding:18px; box-sizing:border-box;
+      padding:18px;
+      box-sizing:border-box;
       text-align:center;
     }
 
@@ -61,7 +65,6 @@
       min-height:28px;
       font-size:var(--fs-status);
       font-weight:var(--fw-status);
-      letter-spacing:0;
       user-select:none;
       margin:0;
     }
@@ -73,7 +76,6 @@
       box-sizing:border-box;
       font-size:var(--fs-body);
       font-weight:600;
-      letter-spacing:0;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
@@ -103,29 +105,41 @@
 
 <script>
 (() => {
-  const PASS_KEY = "playground_pass_v1";
-  const INDEX_URL = "./index.html";
-  const NEXT_URL = "./rotate/";
+  // =====================================================
+  // ① 与 verify.html 完全一致的 gate 配置（不要乱改）
+  // =====================================================
+  const PASS_KEY = "playground_pass";
+  const PASS_VER_KEY = "playground_ver";
+  const PASS_VER = "v1"; // 想让所有人重输：改成 v2 并重新部署
 
+  const BASE = "/playground";
+  const INDEX_URL = BASE + "/";
+  const NEXT_URL  = BASE + "/rotate/";
+
+  // reset=1：强制清除通行证（调试 / 回收）
+  const params = new URLSearchParams(location.search);
+  if (params.get("reset") === "1") {
+    localStorage.removeItem(PASS_KEY);
+    localStorage.removeItem(PASS_VER_KEY);
+    location.replace(INDEX_URL);
+    return;
+  }
+
+  // 轻 gate：没票 or 版本不对 → 回入口
+  const pass = localStorage.getItem(PASS_KEY);
+  const ver  = localStorage.getItem(PASS_VER_KEY);
+  if (!pass || ver !== PASS_VER) {
+    location.replace(INDEX_URL);
+    return;
+  }
+
+  // =====================================================
+  // ② 游戏开始逻辑
+  // =====================================================
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
   const COUNTDOWN_SEC = 10;
 
-  // reset=1：清通行证并回到 index
-  const params = new URLSearchParams(location.search);
-  if (params.get("reset") === "1") {
-    localStorage.removeItem(PASS_KEY);
-    location.replace(INDEX_URL);
-    return;
-  }
-
-  // 未验证不能进 start 页
-  if (!localStorage.getItem(PASS_KEY)) {
-    location.replace(INDEX_URL);
-    return;
-  }
-
-  // ===== 原版音乐 =====
   const KEYS = [
     {c:"green",n:"so",m:55},
     {c:"green",n:"la",m:57},
@@ -153,14 +167,18 @@
   ];
 
   function targetToMidiSeq(){
-    const seq = [];
-    for(const [tc, tn] of target){
-      const idx = KEYS.findIndex(k => k.c===tc && k.n===tn);
-      if(idx >= 0) seq.push(KEYS[idx].m);
-    }
-    return seq;
+    return target.map(([tc,tn]) =>
+      KEYS.find(k => k.c===tc && k.n===tn)?.m
+    ).filter(Boolean);
   }
   const CORRECT_MIDI_SEQ = targetToMidiSeq();
+
+  const hintEl = document.getElementById("hint");
+  const statusEl = document.getElementById("status");
+  const startBtn = document.getElementById("startBtn");
+
+  hintEl.textContent = "";
+  statusEl.textContent = "";
 
   let audioCtx = null;
   let audioEnabled = false;
@@ -179,72 +197,42 @@
 
   function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
 
-  function playTone(freq, duration=1.25){
+  function playTone(freq, duration){
     if(!audioEnabled || !audioCtx) return;
     const now = audioCtx.currentTime;
 
-    const o1 = audioCtx.createOscillator();
-    const o2 = audioCtx.createOscillator();
-    const o3 = audioCtx.createOscillator();
-    o1.type = "sine";
-    o2.type = "triangle";
-    o3.type = "square";
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
 
-    o1.frequency.setValueAtTime(freq, now);
-    o2.frequency.setValueAtTime(freq * 2, now);
-    o3.frequency.setValueAtTime(freq * 4, now);
+    o.type = "sine";
+    o.frequency.setValueAtTime(freq, now);
 
-    const g1 = audioCtx.createGain(); g1.gain.value = 1.0;
-    const g2 = audioCtx.createGain(); g2.gain.value = 0.55;
-    const g3 = audioCtx.createGain(); g3.gain.value = 0.06;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.3, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-    const amp = audioCtx.createGain();
-    amp.gain.setValueAtTime(0.0001, now);
-    amp.gain.linearRampToValueAtTime(0.33, now + 0.015);
-    amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    o.connect(g);
+    g.connect(audioCtx.destination);
 
-    const lp = audioCtx.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(Math.min(freq * 6, 9000), now);
-    lp.Q.value = 0.85;
-
-    o1.connect(g1); g1.connect(amp);
-    o2.connect(g2); g2.connect(amp);
-    o3.connect(g3); g3.connect(amp);
-    amp.connect(lp); lp.connect(audioCtx.destination);
-
-    o1.start(now); o2.start(now); o3.start(now);
-    const stopAt = now + duration + 0.10;
-    o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
+    o.start(now);
+    o.stop(now + duration + 0.05);
   }
 
-  function playCorrectMelodyFixedGap(){
+  function playMelody(){
     CORRECT_MIDI_SEQ.forEach((midi, i) => {
       setTimeout(() => {
         playTone(midiToFreq(midi), NOTE_DUR_SEC);
-      }, Math.round(i * NOTE_GAP_SEC * 1000));
+      }, i * NOTE_GAP_SEC * 1000);
     });
   }
 
-  const hintEl = document.getElementById("hint");
-  const statusEl = document.getElementById("status");
-  const startBtn = document.getElementById("startBtn");
-
-  hintEl.textContent = "";   // 初始：空
-  statusEl.textContent = ""; // 初始：空
-
   let timers = [];
   function clearTimers(){
-    timers.forEach(id => clearTimeout(id));
+    timers.forEach(t => clearTimeout(t));
     timers = [];
   }
-  function schedule(fn, ms){
-    const id = setTimeout(fn, ms);
-    timers.push(id);
-    return id;
-  }
 
-  function startCountdown10s(){
+  function startCountdown(){
     let left = COUNTDOWN_SEC;
     const tick = () => {
       statusEl.textContent = `倒计时：${left}`;
@@ -253,7 +241,7 @@
         return;
       }
       left--;
-      schedule(tick, 1000);
+      timers.push(setTimeout(tick, 1000));
     };
     tick();
   }
@@ -264,12 +252,10 @@
     statusEl.textContent = "";
 
     clearTimers();
-
-    // 必须在“点击开始”这条用户手势链里解锁音频
     try{ await enableAudio(); }catch(e){}
 
-    playCorrectMelodyFixedGap();
-    startCountdown10s();
+    playMelody();
+    startCountdown();
   }
 
   startBtn.addEventListener("click", startFlow);
