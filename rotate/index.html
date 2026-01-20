@@ -9,20 +9,31 @@
        未验证：跳回 https://sorcbear.github.io/playground/index.html
        使用与你 start 页相同的 key：playground_pass_v1
   -->
-  <script>
-  (function(){
-    const PASS_KEY = "playground_pass_v1";
-    const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
-    try{
-      if(!localStorage.getItem(PASS_KEY)){
+    <script>
+    (function(){
+      const PASS_KEY = "playground_pass_v1";
+      const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
+
+      function safeGet(storage, key){
+        try { return storage.getItem(key); } catch(e) { return null; }
+      }
+
+      const pass =
+        safeGet(window.localStorage, PASS_KEY) ||
+        safeGet(window.sessionStorage, PASS_KEY);
+
+  // 可选：临时调试用（需要就把 debug=1 加到 url）
+  // if (new URLSearchParams(location.search).get("debug") === "1") {
+  //   alert("pass=" + pass);
+  // }
+
+      if(!pass){
         const next = encodeURIComponent(location.href);
         location.replace(VERIFY_URL + "?next=" + next);
       }
-    }catch(e){
-      location.replace(VERIFY_URL);
-    }
-  })();
-  </script>
+    })();
+    </script>
+
 
   <style>
     :root{
