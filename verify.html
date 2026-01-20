@@ -236,7 +236,7 @@
       // 约定：ok=true 且 reason="verified" 表示验证通过
       if(ok && reason === "verified"){
         setPass(data.passId);
-        setStatus("验证成功");
+        setStatus("验证成功，跳转中...");
         setTimeout(() => location.href = START_URL, 700);
         return;
       }
