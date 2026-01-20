@@ -4,13 +4,9 @@
   <meta charset="utf-8" />
   <title>Playground</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <style>
     :root{
-      /* 中间内容区域宽度 */
       --w-card: 520px;
-
-      /* 按钮宽度 */
       --w-btn: 200px;
 
       --fs-body: 16px;
@@ -21,13 +17,12 @@
 
       --c-text:#111;
       --c-border:#000;
+      --c-muted:#666;
     }
 
     html, body{
-      margin:0;
-      padding:0;
-      width:100%;
-      height:100%;
+      margin:0; padding:0;
+      width:100%; height:100%;
       background:#fff;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
       font-size:var(--fs-body);
@@ -45,34 +40,38 @@
       box-sizing:border-box;
     }
 
-    /* 中间区域 */
     .card{
       width:min(var(--w-card), 96vw);
       display:flex;
       flex-direction:column;
-      align-items:center; /* ✅ 整体居中 */
+      align-items:center;
+      text-align:center;
     }
 
-    /* 文本块 */
     .intro{
       width:100%;
       font-size:var(--fs-text);
       line-height:var(--lh-text);
-      text-align:center;   /* ✅ 两句话都居中 */
       user-select:none;
       margin:0;
     }
+    .intro + .intro{ margin-top:12px; }
 
-    .intro + .intro{
-      margin-top:12px;     /* 两句话之间的间距 */
-    }
-
-    /* 按钮区域 */
-    .btnRow{
+    .btnCol{
       width:100%;
       display:flex;
-      justify-content:center;
-      margin-top:64px;     /* 文案与按钮拉开距离 */
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+      margin-top:64px;
+    }
+
+    .hint{
+      margin-top:14px;
+      font-size:14px;
+      color:var(--c-muted);
+      min-height:18px;
+      user-select:none;
     }
 
     button{
@@ -86,11 +85,7 @@
       cursor:pointer;
       border-radius:0;
     }
-
-    button:hover{
-      background:#000;
-      color:#fff;
-    }
+    button:hover{ background:#000; color:#fff; }
 
     @media (max-width:420px){
       :root{
@@ -109,30 +104,60 @@
       <div class="intro">确定要玩这个游戏吗？</div>
       <div class="intro">这可能会影响到你和其他人的命运...</div>
 
-      <div class="btnRow">
-        <button id="goBtn">确定</button>
+      <div class="btnCol">
+        <button id="goVerifyBtn">确定</button>
+        <button id="goStartBtn" style="display:none;">继续游戏</button>
       </div>
+
+      <div class="hint" id="hint"></div>
     </div>
   </div>
 
 <script>
 (() => {
-  const PASS_KEY = "playground_pass_v1";
-  const VERIFY_URL = "./verify.html";
-  const START_URL  = "./start.html";
+  // 与 verify/start 统一
+  const PASS_KEY = "playground_pass";
+  const PASS_VER_KEY = "playground_ver";
+  const PASS_VER = "v1";
 
+  const BASE = "/playground";
+  const VERIFY_URL = BASE + "/verify.html";
+  const START_URL  = BASE + "/start.html";
+
+  const hintEl = document.getElementById("hint");
+  const goVerifyBtn = document.getElementById("goVerifyBtn");
+  const goStartBtn  = document.getElementById("goStartBtn");
+
+  // reset=1：清票（调试）
   const params = new URLSearchParams(location.search);
   if (params.get("reset") === "1") {
     localStorage.removeItem(PASS_KEY);
-  }
-
-  if (localStorage.getItem(PASS_KEY)) {
-    location.replace(START_URL);
+    localStorage.removeItem(PASS_VER_KEY);
+    location.replace(BASE + "/");
     return;
   }
 
-  document.getElementById("goBtn").addEventListener("click", () => {
+  // index 永远不拦截，只根据是否已验证来“显示额外入口”
+  const pass = localStorage.getItem(PASS_KEY);
+  const ver  = localStorage.getItem(PASS_VER_KEY);
+  const verified = !!pass && ver === PASS_VER;
+
+  if (verified) {
+    hintEl.textContent = "该设备已验证，可以直接继续游戏，或重新验证。";
+    goStartBtn.style.display = "block";
+  } else {
+    hintEl.textContent = "";
+    goStartBtn.style.display = "none";
+  }
+
+  // “确定”永远去 verify（满足你要求）
+  goVerifyBtn.addEventListener("click", () => {
     location.href = VERIFY_URL;
+  });
+
+  // 已验证设备可直接进 start（可选入口）
+  goStartBtn.addEventListener("click", () => {
+    location.href = START_URL;
   });
 })();
 </script>
