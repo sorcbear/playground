@@ -136,6 +136,8 @@
     localStorage.removeItem(PASS_KEY);
     localStorage.removeItem(PASS_VER_KEY);
     localStorage.removeItem(LAST_KEY);
+      // 关键：防止在跳转前短暂渲染旧状态（iOS 尤其明显）
+    document.documentElement.style.display = "none";
     location.replace(BASE + "/"); // 去掉参数，避免循环清
     return;
   }
