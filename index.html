@@ -7,35 +7,36 @@
 
   <style>
     :root{
-      --maxw: 720px;
-
-      /* ✅ 中间区域宽度（文案左对齐在此区域内） */
+      /* 中间内容区域宽度 */
       --w-card: 340px;
 
-      /* ✅ 按钮更短 */
+      /* 按钮宽度（比之前短） */
       --w-btn: 200px;
 
       --fs-body: 16px;
-      --fs-hint: 18px;
-      --lh-hint: 1.7;
+      --fs-text: 18px;
+      --lh-text: 1.7;
 
-      --ctl-h: 48px;
-      --gap: 18px;
+      --btn-h: 48px;
 
       --c-text:#111;
       --c-border:#000;
     }
 
     html, body{
-      margin:0; padding:0;
-      width:100%; height:100%;
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
       background:#fff;
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
       font-size:var(--fs-body);
       color:var(--c-text);
     }
+
     button{ font-family:inherit; }
 
+    /* 页面整体居中 */
     .page{
       min-height:100svh;
       display:flex;
@@ -45,37 +46,35 @@
       box-sizing:border-box;
     }
 
-    /* ✅ 中间区域：整体居中，但内部内容按你的需要排版 */
+    /* 中间区域 */
     .card{
-      width: min(var(--w-card), 92vw);
+      width:min(var(--w-card), 92vw);
       display:flex;
       flex-direction:column;
-      align-items:flex-start;   /* ✅ 文案/内容从左起 */
-      gap:var(--gap);
+      align-items:flex-start; /* 内容左对齐 */
     }
 
+    /* 文本块：不强制换行 */
     .intro{
       width:100%;
-      font-size:var(--fs-hint);
-      line-height:var(--lh-hint);
-      white-space:pre-wrap;     /* ✅ 保留换行 */
-      text-align:left;          /* ✅ 两行都居左 */
+      font-size:var(--fs-text);
+      line-height:var(--lh-text);
+      text-align:left;
       user-select:none;
       margin:0;
     }
 
-    /* ✅ 按钮不再拉满：更短；默认在区域内居中显示 */
+    /* 按钮区域：与文字拉开距离 */
     .btnRow{
       width:100%;
       display:flex;
-      justify-content:center;   /* 如果你希望按钮也左对齐，改成 flex-start */
+      justify-content:center;
+      margin-top:64px; /* ← 关键：拉开文字和按钮距离（≈4行） */
     }
 
     button{
-      height:var(--ctl-h);
       width:var(--w-btn);
-      padding:0 18px;
-      box-sizing:border-box;
+      height:var(--btn-h);
       font-size:var(--fs-body);
       font-weight:600;
       background:#fff;
@@ -84,14 +83,18 @@
       cursor:pointer;
       border-radius:0;
     }
-    button:hover{ background:#000; color:#fff; }
+
+    button:hover{
+      background:#000;
+      color:#fff;
+    }
 
     @media (max-width:420px){
       :root{
         --w-card: 320px;
         --w-btn: 180px;
-        --ctl-h: 46px;
-        --fs-hint: 17px;
+        --btn-h: 46px;
+        --fs-text: 17px;
       }
     }
   </style>
@@ -100,8 +103,9 @@
 <body>
   <div class="page">
     <div class="card">
-      <div class="intro">    确定要玩这个游戏吗？
-    这可能影响你和其他人的命运...</div>
+      <div class="intro">
+确定要玩这个游戏吗？这可能影响你和其他人的命运...
+      </div>
 
       <div class="btnRow">
         <button id="goBtn">确定</button>
@@ -120,7 +124,7 @@
     localStorage.removeItem(PASS_KEY);
   }
 
-  // 已验证：直接去 start
+  // 已验证直接进 start
   if (localStorage.getItem(PASS_KEY)) {
     location.replace(START_URL);
     return;
