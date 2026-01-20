@@ -50,7 +50,7 @@
       text-align:center;
     }
 
-    /* ✅ 初始不占位，按钮更“真居中” */
+    /* 初始不占位，按钮更“真居中” */
     .hint,
     .status{
       display:none;
@@ -108,20 +108,18 @@
 <script>
 (() => {
   // =====================================================
-  // ① 与 verify.html 完全一致的 gate 配置（不要乱改）
+  // ① 取消 gate：允许直接访问 start.html
+  //    但保留 reset 与进度记录（其它不变）
   // =====================================================
   const PASS_KEY = "playground_pass";
   const PASS_VER_KEY = "playground_ver";
-  const PASS_VER = "v1"; // 想让所有人重输：改成 v2 并重新部署
-
-  // 方案1：记录最近访问页面
   const LAST_KEY = "playground_last_page";
 
   const BASE = "/playground";
   const INDEX_URL = BASE + "/";
   const NEXT_URL  = BASE + "/rotate/";
 
-  // reset=1：强制清除通行证（调试 / 回收）
+  // reset=1：清除通行证/版本/进度（调试 / 回收）
   const params = new URLSearchParams(location.search);
   if (params.get("reset") === "1") {
     localStorage.removeItem(PASS_KEY);
@@ -131,19 +129,11 @@
     return;
   }
 
-  // 轻 gate：没票 or 版本不对 → 回入口
-  const pass = localStorage.getItem(PASS_KEY);
-  const ver  = localStorage.getItem(PASS_VER_KEY);
-  if (!pass || ver !== PASS_VER) {
-    location.replace(INDEX_URL);
-    return;
-  }
-
-  // ✅ 方案1：只要成功进入 start，就记录进度为 start
+  // ✅ 方案1：进入 start 就记录进度为 start（不需要验证也照样记录）
   localStorage.setItem(LAST_KEY, BASE + "/start.html");
 
   // =====================================================
-  // ② 游戏开始逻辑
+  // ② 游戏开始逻辑（保持不变）
   // =====================================================
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
@@ -186,7 +176,7 @@
   const statusEl = document.getElementById("status");
   const startBtn = document.getElementById("startBtn");
 
-  // ✅ 初始不显示提示/状态，不占位
+  // 初始不显示提示/状态，不占位
   hintEl.textContent = "";
   statusEl.textContent = "";
   hintEl.style.display = "none";
@@ -261,7 +251,7 @@
   async function startFlow(){
     startBtn.disabled = true;
 
-    // ✅ 点击后再显示提示与倒计时区域
+    // 点击后再显示提示与倒计时区域
     hintEl.style.display = "block";
     statusEl.style.display = "block";
 
