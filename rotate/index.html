@@ -25,7 +25,7 @@
       --h-btn: 52px;
 
       --fs-input: 16px;
-      --h-input: 52px;
+      --h-input: 40px;     /* 输入框高度：更贴合文字 */
 
       --gap: 18px;
       --gap-tight: 12px;
@@ -89,7 +89,7 @@
       border-bottom: 0.5px solid var(--line);
       overflow:hidden;
       cursor:pointer;
-      background: #dcdcdc; /* 图片没出来时也不至于全白 */
+      background: #dcdcdc;
     }
     .tile[data-last-col="1"]{ border-right:none; }
     .tile[data-last-row="1"]{ border-bottom:none; }
@@ -104,11 +104,11 @@
       display:block;
     }
 
-    /* 正确地址：输入框-路-输入框-号 */
+    /* 正确地址：输入框-路-输入框-号（正文尺寸） */
     .answerRow{
       margin-top: var(--gap);
       display:flex;
-      align-items:center;
+      align-items:center;          /* 关键：与输入框垂直对齐 */
       gap: 8px;
       flex-wrap:wrap;
       font-size: var(--fs-body);
@@ -123,46 +123,51 @@
       font-weight: 400;
     }
 
-    /* 直角输入框 */
+    /* 直角输入框，行高=高度，避免上下空 */
     .ansInput{
       width: 4.2em;
-      height: 36px; 
+      height: var(--h-input);
       padding: 0 8px;
       border: 2px solid var(--c-border);
-      border-radius: 0;         /* 直角 */
+      border-radius: 0;
       outline: none;
       background:#fff;
       color: var(--c-text);
       font-size: var(--fs-input);
-      line-height: 36px;
+      line-height: var(--h-input);
       text-align: center;
     }
     .ansInput:focus{
       box-shadow: 0 0 0 2px rgba(0,0,0,.10);
     }
 
-    /* 按钮：默认白 -> hover 黑（白色转黑色） */
+    /* 按钮居中，并与上面多空约两行正文 */
     .btnRow{
-      margin-top: 64px; 
+      margin-top: 56px;           /* 多空2行左右 */
       display:flex;
-      justify-content: center;
+      justify-content:center;
     }
+
+    /* 按钮：默认黑底白字，hover 白底黑字 */
     .primaryBtn{
       height: var(--h-btn);
-      min-width: 160px;
-      padding: 0 18px;
+      min-width: 260px;
+      padding: 0 22px;
       border: 2px solid var(--c-border);
-      border-radius: 0;         /* 直角 */
-      background: #fff;         /* 默认白底 */
-      color: #000;              /* 默认黑字 */
+      border-radius: 0;
+
+      background: #000;
+      color: #fff;
+
       font-size: var(--fs-btn);
       font-weight: var(--fw-btn);
+
       cursor: pointer;
       transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
     }
-    .primaryBtn:hover{
-      background: #000;         /* hover 黑底 */
-      color: #fff;              /* hover 白字 */
+    .primaryBtn:hover:not(:disabled){
+      background: #fff;
+      color: #000;
     }
     .primaryBtn:active{ transform: translateY(1px); }
     .primaryBtn:disabled{
@@ -175,7 +180,7 @@
 
 <body>
   <div class="wrap">
-    <div class="titleLine">点击拼图方块，完成拼图。然后输入正确的起点地址并提交答案。这就是一切的起点。（可横屏操作）</div>
+    <div class="titleLine">完成拼图后，输入正确的起点地址并提交答案。这就是一切的起点。</div>
 
     <div class="boardShell">
       <div id="board" class="board" aria-label="拼图区域"></div>
@@ -194,6 +199,6 @@
     </div>
   </div>
 
-  <script src="./script.js?v=20260120a"></script>
+  <script src="./script.js?v=20260120b"></script>
 </body>
 </html>
