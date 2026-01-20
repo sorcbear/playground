@@ -23,6 +23,9 @@
 
       --gap: 18px;
 
+      /* ✅ 与 index 页面完全一致的“仪式间距” */
+      --space-action: 64px;
+
       --c-text: #111;
       --c-border: #000;
     }
@@ -50,7 +53,7 @@
       text-align:center;
     }
 
-    /* 初始不占位，按钮更“真居中” */
+    /* 初始不占位，保证按钮真居中 */
     .hint,
     .status{
       display:none;
@@ -69,6 +72,14 @@
       font-size:var(--fs-status);
       font-weight:var(--fw-status);
       line-height:1.4;
+    }
+
+    /* ✅ 按钮行：与 index 相同的 64px 间距 */
+    .btnRow{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      margin-top: var(--space-action);
     }
 
     button{
@@ -102,39 +113,16 @@
   <div class="container">
     <div class="hint" id="hint"></div>
     <div class="status" id="status"></div>
-    <button id="startBtn">开始游戏</button>
+
+    <div class="btnRow">
+      <button id="startBtn">开始游戏</button>
+    </div>
   </div>
 
 <script>
 (() => {
-  // =====================================================
-  // ① 取消 gate：允许直接访问 start.html
-  //    但保留 reset 与进度记录（其它不变）
-  // =====================================================
-  const PASS_KEY = "playground_pass";
-  const PASS_VER_KEY = "playground_ver";
-  const LAST_KEY = "playground_last_page";
+  const NEXT_URL = "/playground/rotate/";
 
-  const BASE = "/playground";
-  const INDEX_URL = BASE + "/";
-  const NEXT_URL  = BASE + "/rotate/";
-
-  // reset=1：清除通行证/版本/进度（调试 / 回收）
-  const params = new URLSearchParams(location.search);
-  if (params.get("reset") === "1") {
-    localStorage.removeItem(PASS_KEY);
-    localStorage.removeItem(PASS_VER_KEY);
-    localStorage.removeItem(LAST_KEY);
-    location.replace(INDEX_URL);
-    return;
-  }
-
-  // ✅ 方案1：进入 start 就记录进度为 start（不需要验证也照样记录）
-  localStorage.setItem(LAST_KEY, BASE + "/start.html");
-
-  // =====================================================
-  // ② 游戏开始逻辑（保持不变）
-  // =====================================================
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
   const COUNTDOWN_SEC = 10;
@@ -176,7 +164,6 @@
   const statusEl = document.getElementById("status");
   const startBtn = document.getElementById("startBtn");
 
-  // 初始不显示提示/状态，不占位
   hintEl.textContent = "";
   statusEl.textContent = "";
   hintEl.style.display = "none";
@@ -251,7 +238,6 @@
   async function startFlow(){
     startBtn.disabled = true;
 
-    // 点击后再显示提示与倒计时区域
     hintEl.style.display = "block";
     statusEl.style.display = "block";
 
