@@ -9,15 +9,13 @@
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "canon";
 
-  // ✅ 仅用于“返回时恢复正确样子”
+  // 仅用于“返回时恢复正确样子”
   const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
 
   const params = new URLSearchParams(location.search);
   const k = (params.get("k") || DEFAULT_K).trim();
 
   const board = document.getElementById("board");
-  const messageEl = document.getElementById("message");
-  const btnUndo = document.getElementById("btnUndo");
   const btnSubmit = document.getElementById("btnSubmit");
 
   const ansRoad = document.getElementById("ansRoad");
@@ -35,10 +33,27 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  function setMessage(text, type = "") {
-    messageEl.classList.remove("ok", "bad");
-    if (type) messageEl.classList.add(type);
-    messageEl.textContent = text;
+  // ====== 用按钮文字做状态提示（代替 message 框）======
+  const BTN_TEXT_DEFAULT = "提交答案";
+  let btnTextTimer = null;
+
+  function clearBtnHint() {
+    if (btnTextTimer) {
+      clearTimeout(btnTextTimer);
+      btnTextTimer = null;
+    }
+  }
+
+  function setBtnText(text, ms = 900) {
+    if (!btnSubmit) return;
+    clearBtnHint();
+    btnSubmit.textContent = text;
+    if (ms > 0) {
+      btnTextTimer = setTimeout(() => {
+        btnSubmit.textContent = BTN_TEXT_DEFAULT;
+        btnTextTimer = null;
+      }, ms);
+    }
   }
 
   function clearCountdown() {
@@ -50,7 +65,6 @@
 
   function setDisabledAll(on) {
     btnSubmit.disabled = on;
-    btnUndo.disabled = on;
     ansRoad.disabled = on;
     ansNo.disabled = on;
   }
@@ -68,7 +82,6 @@
       if (nav && nav[0] && nav[0].type) return nav[0].type;
     } catch {}
     // 兜底（老浏览器）
-    // eslint-disable-next-line no-restricted-globals
     if (performance && performance.navigation) {
       const t = performance.navigation.type;
       if (t === 1) return "reload";
@@ -103,20 +116,14 @@
     applyRotation(i);
   }
 
-  function resetToSeed() {
-    if (locked) return;
-    curSteps = seedSteps.slice();
-    applyAllRotations();
-    setMessage("已重置。");
-  }
-
   function resetAllToInitial() {
     unlockUI();
     curSteps = seedSteps.slice();
     applyAllRotations();
     ansRoad.value = "";
     ansNo.value = "";
-    setMessage("开始吧。");
+    btnSubmit.textContent = BTN_TEXT_DEFAULT;
+    clearBtnHint();
   }
 
   function buildBoard() {
@@ -149,8 +156,9 @@
   }
 
   function restoreSolvedUI() {
-    // 恢复“正确提交后的样子”，但不做倒计时、不锁按钮
+    // 恢复“正确提交后的样子”，不倒计时、不锁按钮
     unlockUI();
+    clearBtnHint();
 
     curSteps = new Array(TILE_COUNT).fill(0);
     applyAllRotations();
@@ -158,18 +166,20 @@
     ansRoad.value = ANSWER_ROAD;
     ansNo.value = ANSWER_NO;
 
-    setMessage("答案已确认。", "ok");
+    // 提示一下即可（不需要常驻状态框）
+    setBtnText("答案已确认", 900);
   }
 
   function startCountdownAndRedirect() {
-    // ✅ 记住已完成：只用于“从下一页返回时恢复”
+    // 记住已完成：只用于“从下一页返回时恢复”
     sessionStorage.setItem(SOLVED_KEY, "1");
 
     locked = true;
     setDisabledAll(true);
+    clearBtnHint();
 
     let left = COUNTDOWN_SECONDS;
-    setMessage(`答案正确，即将进入下一题（${left}）`, "ok");
+    btnSubmit.textContent = `答案正确（${left}）`;
 
     clearCountdown();
     countdownTimer = setInterval(() => {
@@ -179,7 +189,7 @@
         location.href = NEXT_URL;
         return;
       }
-      setMessage(`答案正确，即将进入下一题（${left}）`, "ok");
+      btnSubmit.textContent = `答案正确（${left}）`;
     }, 1000);
   }
 
@@ -223,8 +233,7 @@
   }
 
   function wireButtons() {
-    btnUndo.onclick = resetToSeed;
-
+    // 回车提交
     [ansRoad, ansNo].forEach(el => {
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter") btnSubmit.click();
@@ -237,8 +246,13 @@
       const okPuzzle = isPuzzleSolved();
       const okAns = isAnswerSolved();
 
-      if (okPuzzle && okAns) startCountdownAndRedirect();
-      else setMessage("try again", "bad");
+      if (okPuzzle && okAns) {
+        startCountdownAndRedirect();
+      } else {
+        // 失败提示：只在按钮上短暂显示
+        // 你也可以改成更短：setBtnText("错误", 700);
+        setBtnText("不正确，再试一次", 900);
+      }
     };
   }
 
@@ -276,8 +290,8 @@
     setTileImages();
     applyAllRotations();
 
-    // ✅ 刷新/正常进入：回初始，并清除“已完成标记”
-    // ✅ 返回：恢复“正确提交后的样子”
+    // 刷新/正常进入：回初始，并清除“已完成标记”
+    // 返回：恢复“正确提交后的样子”
     const navType = getNavType();
     if (navType === "back_forward" && sessionStorage.getItem(SOLVED_KEY) === "1") {
       restoreSolvedUI();
@@ -287,7 +301,7 @@
     }
   }
 
-  // ✅ 关键：iOS Safari 返回时 init 可能不运行（bfcache），但 pageshow 一定会触发
+  // iOS Safari 返回时 init 可能不运行（bfcache），但 pageshow 一定会触发
   window.addEventListener("pageshow", (e) => {
     const navType = getNavType();
 
@@ -300,13 +314,12 @@
     // 刷新/正常进入：清标记并回初始
     if (navType === "reload" || navType === "navigate") {
       sessionStorage.removeItem(SOLVED_KEY);
-      // 若是 bfcache 恢复但不是 back_forward（少数情况），也强制回初始
-      // 这里不 reload，直接重置 UI 即可
       resetAllToInitial();
     }
   });
 
   init().catch(() => {
-    setMessage("图片加载失败。", "bad");
+    // 图片失败：按钮提示即可
+    setBtnText("图片加载失败", 1500);
   });
 })();
