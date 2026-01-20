@@ -7,29 +7,30 @@
 
   <style>
     :root{
-      /* ===== 尺度标准（只改这里即可全站统一）===== */
+      /* ===== 页面版心 ===== */
       --maxw: 720px;
-      --panelw: 420px;
 
-      --fs-body: 16px;     /* 正文 */
+      /* ===== 字体层级 ===== */
+      --fs-body: 16px;
       --lh-body: 1.7;
 
-      --fs-hint: 18px;     /* 提示/标题 */
+      --fs-hint: 18px;
       --lh-hint: 1.6;
 
-      --fs-status: 18px;   /* 状态 */
+      --fs-status: 18px;
       --fw-status: 700;
 
-      --fs-btn: 16px;      /* 按钮文字 */
-      --fw-btn: 600;
-      --h-btn: 52px;       /* 按钮高度 */
+      /* ===== 控件标准尺寸（你要的“固定尺寸”）===== */
+      --ctl-h: 48px;
+      --w-mainbtn: 240px;   /* “确定/开始游戏” */
+      --w-input: 360px;     /* 输入框 */
+      --w-subbtn: 160px;    /* “验证/取消” */
 
-      --fs-input: 16px;    /* 输入框文字 */
-      --h-input: 52px;     /* 输入框高度 */
-
+      /* ===== 间距 ===== */
       --gap: 18px;
       --gap-tight: 12px;
 
+      /* ===== 颜色 ===== */
       --c-text: #111;
       --c-muted: #444;
       --c-danger: #b00020;
@@ -48,6 +49,9 @@
       color: var(--c-text);
     }
 
+    /* 统一：按钮/输入框继承字体 */
+    button, input{ font-family: inherit; }
+
     .container{
       width:100%;
       height:100%;
@@ -61,106 +65,119 @@
       text-align:center;
     }
 
-    /* 主叙事/提示 */
     .hint{
       width: min(var(--maxw), 92vw);
       min-height: 56px;
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
-      color: var(--c-text);
       white-space: pre-wrap;
       user-select:none;
-      margin: 0;
+      margin:0;
     }
 
-    /* 状态 */
     .status{
       width: min(var(--maxw), 92vw);
       min-height: 28px;
       font-size: var(--fs-status);
       font-weight: var(--fw-status);
-      letter-spacing: 0; /* 标准化：去掉字距避免中英文不一致 */
-      color: var(--c-text);
+      letter-spacing: 0;
       user-select:none;
-      margin: 0;
+      margin:0;
     }
 
-    /* 输入面板 */
+    /* ===== 输入面板（不再超宽）===== */
     .panel{
-      width: min(var(--panelw), 92vw);
+      width: min(var(--maxw), 92vw);
       display:none;
       flex-direction:column;
       gap: var(--gap-tight);
-      align-items:stretch;
+      align-items:center;
     }
 
     .panel .label{
-      font-size: var(--fs-hint);   /* “请输入游戏码”归入提示层级 */
+      width: min(var(--w-input), 92vw);
+      font-size: var(--fs-hint);
       line-height: var(--lh-hint);
-      color: var(--c-text);
       user-select:none;
-      margin-bottom: 2px;
+      margin:0;
     }
 
     .panel input{
-      width:100%;
-      height: var(--h-input);
+      width: min(var(--w-input), 92vw);
+      height: var(--ctl-h);
       padding:0 14px;
       box-sizing:border-box;
-      font-size: var(--fs-input);
+      font-size: var(--fs-body);
       border:2px solid var(--c-border);
       border-radius:12px;
       outline:none;
       text-transform:uppercase;
-      letter-spacing: 0; /* 标准化：输入也不拉字距 */
+      letter-spacing: 0;
     }
 
     .row{
       display:flex;
       gap:12px;
-      width:100%;
+      width: min(calc(var(--w-subbtn) * 2 + 12px), 92vw);
+      justify-content:center;
+      align-items:center;
+      margin-top: 2px;
     }
 
     button{
-      height: var(--h-btn);
+      height: var(--ctl-h);
       padding: 0 18px;
       box-sizing: border-box;
-      font-size: var(--fs-btn);
-      font-weight: var(--fw-btn);
-      letter-spacing: 0; /* 标准化：按钮不拉字距 */
+      font-size: var(--fs-body);
+      font-weight: 600;
+      letter-spacing: 0;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
-      border-radius: 0; /* 保持你原本“硬朗”风格，可按需改成 10px */
+      border-radius:0;
     }
 
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
 
+    /* 子按钮固定宽 */
+    .row button{
+      width: var(--w-subbtn);
+    }
+
     /* 错误提示 */
     .err{
+      width: min(var(--w-input), 92vw);
       min-height: 20px;
-      font-size: 14px; /* 错误信息可比正文略小，但固定 */
+      font-size: 14px;
       line-height: 1.5;
       color: var(--c-danger);
       user-select:none;
+      text-align:center;
     }
 
-    /* 主按钮容器：用于在某些阶段彻底隐藏 */
+    /* 主按钮容器 */
     .mainWrap{
       display:flex;
       justify-content:center;
       width: min(var(--maxw), 92vw);
     }
 
-    /* 手机上稍微紧凑一点 */
+    /* 主按钮固定宽 */
+    #mainBtn{
+      width: var(--w-mainbtn);
+    }
+
+    /* 手机上略微收紧 */
     @media (max-width: 420px){
       :root{
+        --w-input: 320px;
+        --w-subbtn: 148px;
+        --w-mainbtn: 220px;
+        --ctl-h: 46px;
         --fs-hint: 17px;
         --fs-status: 17px;
-        --h-btn: 50px;
-        --h-input: 50px;
       }
     }
   </style>
@@ -176,29 +193,37 @@
       <div class="label">请输入游戏码</div>
       <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" inputmode="latin" />
       <div class="row">
-        <button id="verifyBtn" style="flex:1;">验证</button>
-        <button id="cancelBtn" style="flex:1;">取消</button>
+        <button id="verifyBtn">验证</button>
+        <button id="cancelBtn">取消</button>
       </div>
       <div class="err" id="err"></div>
     </div>
 
-    <!-- 主按钮：用容器包起来，方便某些阶段直接不显示 -->
+    <!-- 主按钮：某些阶段隐藏 -->
     <div class="mainWrap" id="mainWrap">
-      <button id="mainBtn" style="min-width: 220px;">确定</button>
+      <button id="mainBtn">确定</button>
     </div>
   </div>
 
 <script>
 (() => {
+  // =========================
+  // 云函数 verify 接口
+  // =========================
   const VERIFY_ENDPOINT = "https://1396901144-84o46m5fmk.ap-shanghai.tencentscf.com/verify";
+
+  // 通过后跳转到下一个页面
   const NEXT_URL = "./rotate/";
+
+  // 通行证 localStorage key（后续页面靠它防直链）
   const PASS_KEY = "playground_pass_v1";
 
+  // ===== 音乐节奏设置（每个按键间隔一致） =====
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
   const COUNTDOWN_SEC = 10;
 
-  // ===== 原版音乐 =====
+  // ===== 来自你“钢琴谜题”代码：正确答案音乐（原版）=====
   const KEYS = [
     {c:"green",n:"so",m:55},
     {c:"green",n:"la",m:57},
@@ -235,6 +260,7 @@
   }
   const CORRECT_MIDI_SEQ = targetToMidiSeq();
 
+  // ===== WebAudio：音色合成（原版）=====
   let audioCtx = null;
   let audioEnabled = false;
 
@@ -299,6 +325,7 @@
     });
   }
 
+  // ===== 工具：通行证 =====
   function setPass(){
     const token = "pass_" + Math.random().toString(36).slice(2) + "_" + Date.now();
     localStorage.setItem(PASS_KEY, token);
@@ -307,7 +334,7 @@
     return !!localStorage.getItem(PASS_KEY);
   }
 
-  // reset=1 强制回到输入码
+  // ===== 选项A：URL 参数 reset=1 强制回到输入验证码 =====
   const params = new URLSearchParams(location.search);
   if (params.get("reset") === "1") {
     localStorage.removeItem(PASS_KEY);
@@ -332,6 +359,7 @@
     return { httpOk: r.ok, data };
   }
 
+  // ===== 页面元素 =====
   const mainBtn = document.getElementById("mainBtn");
   const mainWrap = document.getElementById("mainWrap");
   const hintEl = document.getElementById("hint");
@@ -343,11 +371,12 @@
   const cancelBtn = document.getElementById("cancelBtn");
   const errEl = document.getElementById("err");
 
-  // 0: 确认页
-  // 1: 输入码页
-  // 2: 验证成功过渡(1s)
-  // 3: 开始游戏页
-  // 4: 音乐+倒计时
+  // phase:
+  // 0: 初始确认页
+  // 1: 输入核销码页
+  // 2: 验证成功过渡(1秒)
+  // 3: 验证后“开始游戏”页
+  // 4: 音乐+倒计时进行中
   let phase = 0;
   let timers = [];
 
@@ -364,13 +393,11 @@
   function showPanel(show){
     panel.style.display = show ? "flex" : "none";
   }
-
-  function setError(msg){
-    errEl.textContent = msg || "";
-  }
-
   function showMain(show){
     mainWrap.style.display = show ? "flex" : "none";
+  }
+  function setError(msg){
+    errEl.textContent = msg || "";
   }
 
   function render(){
@@ -387,7 +414,7 @@
 
     if(phase === 1){
       showPanel(true);
-      showMain(false);          // ✅ 验证界面不显示“确定/开始游戏”按钮
+      showMain(false); // 验证界面隐藏上个界面的按钮
       hintEl.textContent = "";
       statusEl.textContent = "";
       setError("");
@@ -396,7 +423,7 @@
 
     if(phase === 2){
       showPanel(false);
-      showMain(false);          // 过渡阶段也不显示主按钮
+      showMain(false);
       hintEl.textContent = "";
       statusEl.textContent = "验证成功";
       setError("");
@@ -442,7 +469,9 @@
     phase = 4;
     clearTimers();
     render();
+
     try{ await enableAudio(); }catch(e){}
+
     playCorrectMelodyFixedGap();
     startCountdown10s();
   }
@@ -461,15 +490,22 @@
 
     try{
       const { httpOk, data } = await verifyCode(code);
+
       const ok = !!data.ok;
       const reason = String(data.reason || "");
 
       if(ok && reason === "verified"){
         setPass();
+
         phase = 2;
         clearTimers();
         render();
-        schedule(() => { phase = 3; render(); }, 1000);
+
+        schedule(() => {
+          phase = 3;
+          render();
+        }, 1000);
+
         return;
       }
 
@@ -499,6 +535,7 @@
     }
   }
 
+  // ===== 事件 =====
   mainBtn.addEventListener("click", async () => {
     if(phase === 0){
       phase = 1;
@@ -508,6 +545,7 @@
       codeInput.focus();
       return;
     }
+
     if(phase === 3){
       await startMusicAndCountdown();
       return;
@@ -525,7 +563,7 @@
     if(e.key === "Enter") doVerify();
   });
 
-  // 初始化：已验证设备直接进“开始游戏”页
+  // ===== 初始化：已验证设备直接进“开始游戏”页 =====
   phase = hasPass() ? 3 : 0;
   render();
 })();
