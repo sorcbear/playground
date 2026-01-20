@@ -29,9 +29,9 @@
     }
 
     .hint{
-      min-height:28px;
+      min-height:48px;
       font-size:16px;
-      line-height:1.6;
+      line-height:1.7;
       color:#111;
       white-space:pre-wrap;
       user-select:none;
@@ -97,80 +97,35 @@
 </head>
 
 <body>
-  <div class="container">
-    <div class="hint" id="hint"></div>
-    <div class="status" id="status"></div>
+<div class="container">
+  <div class="hint" id="hint"></div>
+  <div class="status" id="status"></div>
 
-    <!-- 核销输入区 -->
-    <div class="panel" id="panel">
-      <div class="small">请输入游戏码</div>
-      <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" inputmode="latin" />
-      <div class="row">
-        <button id="verifyBtn" style="flex:1;">验证</button>
-        <button id="cancelBtn" class="secondary" style="flex:1;">取消</button>
-      </div>
-      <div class="small" id="err" style="color:#b00020; min-height:18px;"></div>
+  <div class="panel" id="panel">
+    <div class="small">请输入游戏码</div>
+    <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" />
+    <div class="row">
+      <button id="verifyBtn" style="flex:1;">验证</button>
+      <button id="cancelBtn" style="flex:1;">取消</button>
     </div>
-
-    <button id="mainBtn">确定</button>
+    <div class="small" id="err" style="color:#b00020; min-height:18px;"></div>
   </div>
+
+  <button id="mainBtn">确定</button>
+</div>
 
 <script>
 (() => {
-  // =========================
-  // 你需要改这里：云函数 verify 接口
-  // =========================
   const VERIFY_ENDPOINT = "https://1396901144-84o46m5fmk.ap-shanghai.tencentscf.com/verify";
-
-  // 通过后跳转到下一个页面
   const NEXT_URL = "./rotate/";
-
-  // 通行证 localStorage key（后续页面靠它防直链）
   const PASS_KEY = "playground_pass_v1";
 
-  // ===== 音乐节奏设置（每个按键间隔一致） =====
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
   const COUNTDOWN_SEC = 10;
 
-  // ===== 来自你“钢琴谜题”代码：正确答案音乐 =====
-  const KEYS = [
-    {c:"green",n:"so",m:55},
-    {c:"green",n:"la",m:57},
-    {c:"green",n:"si",m:59},
-    {c:"red",n:"do",m:60},
-    {c:"red",n:"re",m:62},
-    {c:"red",n:"mi",m:64},
-    {c:"red",n:"fa",m:65},
-    {c:"red",n:"so",m:67},
-    {c:"red",n:"la",m:69},
-    {c:"red",n:"si",m:71},
-    {c:"blue",n:"do",m:72},
-    {c:"blue",n:"re",m:74},
-    {c:"blue",n:"mi",m:76},
-    {c:"blue",n:"fa",m:77},
-    {c:"blue",n:"so",m:79},
-    {c:"blue",n:"la",m:81},
-  ];
+  const CORRECT_MIDI_SEQ = [60,64,67,72,76,67,72,76];
 
-  const target = [
-    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
-    ["red","do"],["red","re"],["red","la"],["blue","re"],["blue","fa"],["red","la"],["blue","re"],["blue","fa"],
-    ["green","si"],["red","re"],["red","so"],["blue","re"],["blue","fa"],["red","so"],["blue","re"],["blue","fa"],
-    ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
-  ];
-
-  function targetToMidiSeq(){
-    const seq = [];
-    for(const [tc, tn] of target){
-      const idx = KEYS.findIndex(k => k.c===tc && k.n===tn);
-      if(idx >= 0) seq.push(KEYS[idx].m);
-    }
-    return seq;
-  }
-  const CORRECT_MIDI_SEQ = targetToMidiSeq();
-
-  // ===== WebAudio：音色合成 =====
   let audioCtx = null;
   let audioEnabled = false;
 
@@ -188,270 +143,141 @@
 
   function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
 
-  function playTone(freq, duration=1.25){
+  function playTone(freq, duration){
     if(!audioEnabled || !audioCtx) return;
-    const now = audioCtx.currentTime;
-
-    const o1 = audioCtx.createOscillator();
-    const o2 = audioCtx.createOscillator();
-    const o3 = audioCtx.createOscillator();
-    o1.type = "sine";
-    o2.type = "triangle";
-    o3.type = "square";
-
-    o1.frequency.setValueAtTime(freq, now);
-    o2.frequency.setValueAtTime(freq * 2, now);
-    o3.frequency.setValueAtTime(freq * 4, now);
-
-    const g1 = audioCtx.createGain(); g1.gain.value = 1.0;
-    const g2 = audioCtx.createGain(); g2.gain.value = 0.55;
-    const g3 = audioCtx.createGain(); g3.gain.value = 0.06;
-
-    const amp = audioCtx.createGain();
-    amp.gain.setValueAtTime(0.0001, now);
-    amp.gain.linearRampToValueAtTime(0.33, now + 0.015);
-    amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    const lp = audioCtx.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(Math.min(freq * 6, 9000), now);
-    lp.Q.value = 0.85;
-
-    o1.connect(g1); g1.connect(amp);
-    o2.connect(g2); g2.connect(amp);
-    o3.connect(g3); g3.connect(amp);
-    amp.connect(lp); lp.connect(audioCtx.destination);
-
-    o1.start(now); o2.start(now); o3.start(now);
-    const stopAt = now + duration + 0.10;
-    o1.stop(stopAt); o2.stop(stopAt); o3.stop(stopAt);
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = "sine";
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.001, audioCtx.currentTime);
+    g.gain.linearRampToValueAtTime(0.25, audioCtx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    o.connect(g).connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + duration);
   }
 
-  function playCorrectMelodyFixedGap(){
-    CORRECT_MIDI_SEQ.forEach((midi, i) => {
-      setTimeout(() => {
-        playTone(midiToFreq(midi), NOTE_DUR_SEC);
-      }, Math.round(i * NOTE_GAP_SEC * 1000));
+  function playMelody(){
+    CORRECT_MIDI_SEQ.forEach((m,i)=>{
+      setTimeout(()=>playTone(midiToFreq(m), NOTE_DUR_SEC), i*NOTE_GAP_SEC*1000);
     });
   }
 
-  // ===== 工具：通行证 =====
   function setPass(){
-    const token = "pass_" + Math.random().toString(36).slice(2) + "_" + Date.now();
-    localStorage.setItem(PASS_KEY, token);
+    localStorage.setItem(PASS_KEY, "pass_"+Date.now());
   }
 
   function normalizeCode(s){
-    return String(s || "")
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, "")
-      .replace(/—/g, "-")
-      .replace(/–/g, "-");
+    return String(s||"").trim().toUpperCase().replace(/\s+/g,"");
   }
 
   async function verifyCode(code){
-    const payload = { code };
-    const r = await fetch(VERIFY_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    const r = await fetch(VERIFY_ENDPOINT,{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({code})
     });
-    const data = await r.json().catch(() => ({}));
-    return { httpOk: r.ok, data };
+    const data = await r.json().catch(()=>({}));
+    return data;
   }
 
-  // ===== 页面元素 =====
-  const mainBtn = document.getElementById("mainBtn");
   const hintEl = document.getElementById("hint");
   const statusEl = document.getElementById("status");
-
   const panel = document.getElementById("panel");
-  const codeInput = document.getElementById("codeInput");
+  const mainBtn = document.getElementById("mainBtn");
   const verifyBtn = document.getElementById("verifyBtn");
   const cancelBtn = document.getElementById("cancelBtn");
+  const codeInput = document.getElementById("codeInput");
   const errEl = document.getElementById("err");
 
-  // ===== 状态机 =====
-  // 0: 初始确认页
-  // 1: 输入码验证页
-  // 2: 验证成功后的“开始游戏”页
-  // 3: 音乐+倒计时进行中
+  // 0 确认页
+  // 1 验证页
+  // 2 验证成功过渡
+  // 3 开始游戏页
+  // 4 音乐倒计时
   let phase = 0;
   let timers = [];
 
-  function clearTimers(){
-    timers.forEach(id => clearTimeout(id));
-    timers = [];
-  }
-  function schedule(fn, ms){
-    const id = setTimeout(fn, ms);
-    timers.push(id);
-    return id;
-  }
-
-  function showPanel(show){
-    panel.style.display = show ? "flex" : "none";
-  }
-
-  function setError(msg){
-    errEl.textContent = msg || "";
-  }
+  function clearTimers(){ timers.forEach(t=>clearTimeout(t)); timers=[]; }
+  function delay(fn,ms){ const t=setTimeout(fn,ms); timers.push(t); }
 
   function render(){
-    // 清理一些共用状态
-    statusEl.textContent = statusEl.textContent || "";
-
-    if(phase === 0){
-      showPanel(false);
-      mainBtn.disabled = false;
-      mainBtn.textContent = "确定";
-      hintEl.textContent = "确定要玩这个游戏吗？这可能会影响你和其他人的命运......";
-      statusEl.textContent = "";
-      setError("");
-      return;
+    if(phase===0){
+      hintEl.textContent = "确定要玩这个游戏吗？\n这可能影响你和其他人的命运......";
+      panel.style.display="none";
+      mainBtn.disabled=false;
+      mainBtn.textContent="确定";
+      statusEl.textContent="";
     }
-
-    if(phase === 1){
-      // 验证页：按钮可以当“确定验证”动作，也可以留作无意义（这里禁用，避免误解）
-      showPanel(true);
-      mainBtn.disabled = true;
-      mainBtn.textContent = "确定";
-      hintEl.textContent = "";
-      statusEl.textContent = "";
-      return;
+    if(phase===1){
+      hintEl.textContent="";
+      panel.style.display="flex";
+      mainBtn.disabled=true;
+      statusEl.textContent="";
     }
-
-    if(phase === 2){
-      // 验证成功后：显示“开始游戏”按钮
-      showPanel(false);
-      mainBtn.disabled = false;
-      mainBtn.textContent = "开始游戏";
-      hintEl.textContent = "";
-      statusEl.textContent = "";
-      setError("");
-      return;
+    if(phase===2){
+      panel.style.display="none";
+      mainBtn.disabled=true;
+      hintEl.textContent="";
+      statusEl.textContent="验证成功";
     }
-
-    if(phase === 3){
-      // 进行中：按钮锁定，文案“游戏开始了”
-      showPanel(false);
-      mainBtn.disabled = true;
-      mainBtn.textContent = "开始游戏";
-      hintEl.textContent = "好像听到一段诡异的音乐...";
-      // status 由倒计时更新
-      return;
+    if(phase===3){
+      panel.style.display="none";
+      mainBtn.disabled=false;
+      mainBtn.textContent="开始游戏";
+      hintEl.textContent="";
+      statusEl.textContent="";
+    }
+    if(phase===4){
+      panel.style.display="none";
+      mainBtn.disabled=true;
+      hintEl.textContent="好像听到一段诡异的音乐......";
     }
   }
 
-  function startCountdown10s(){
+  function startCountdown(){
     let left = COUNTDOWN_SEC;
-    const tick = () => {
-      statusEl.textContent = `倒计时：${left}`;
-      if(left <= 0){
-        location.href = NEXT_URL;
-        return;
-      }
-      left--;
-      schedule(tick, 1000);
+    const tick=()=>{
+      statusEl.textContent=`倒计时：${left}`;
+      if(left<=0){ location.href=NEXT_URL; return; }
+      left--; delay(tick,1000);
     };
     tick();
   }
 
-  async function startMusicAndCountdown(){
-    phase = 3;
-    clearTimers();
+  async function startGame(){
+    phase=4;
     render();
-
-    // 解锁音频（必须在用户手势触发链路里）
-    try{ await enableAudio(); }catch(e){}
-
-    playCorrectMelodyFixedGap();
-    startCountdown10s();
+    await enableAudio();
+    playMelody();
+    startCountdown();
   }
 
-  async function doVerify(){
+  mainBtn.onclick=()=>{
+    if(phase===0){ phase=1; render(); codeInput.focus(); }
+    else if(phase===3){ startGame(); }
+  };
+
+  cancelBtn.onclick=()=>{
+    phase=0; render();
+  };
+
+  verifyBtn.onclick=async()=>{
     const code = normalizeCode(codeInput.value);
-    if(!code){
-      setError("请输入游戏码");
-      return;
-    }
-
-    verifyBtn.disabled = true;
-    cancelBtn.disabled = true;
-    setError("");
-    statusEl.textContent = "验证中...";
-
-    try{
-      const { httpOk, data } = await verifyCode(code);
-      const ok = !!data.ok;
-      const reason = String(data.reason || "");
-
-      if(ok && reason === "verified"){
-        setPass();
-        phase = 2; // 验证成功 -> 开始游戏页
-        clearTimers();
-        render();
-        return;
-      }
-
-      if(!ok && reason === "already_used"){
-        statusEl.textContent = "";
-        setError("该游戏码已被使用");
-        return;
-      }
-
-      if(!ok && reason === "not_found"){
-        statusEl.textContent = "";
-        setError("游戏码不存在");
-        return;
-      }
-
-      statusEl.textContent = "";
-      const msg = data.message ? String(data.message) : (httpOk ? "验证失败" : "网络错误");
-      setError(msg);
-    }catch(e){
-      statusEl.textContent = "";
-      setError("网络错误，请重试");
-    }finally{
-      verifyBtn.disabled = false;
-      cancelBtn.disabled = false;
-      codeInput.focus();
-      codeInput.select();
-    }
-  }
-
-  // ===== 事件绑定 =====
-  mainBtn.addEventListener("click", async () => {
-    if(phase === 0){
-      // 初始确认 -> 验证页
-      phase = 1;
+    if(!code){ errEl.textContent="请输入游戏码"; return; }
+    statusEl.textContent="验证中...";
+    const r = await verifyCode(code);
+    if(r.ok && r.reason==="verified"){
+      setPass();
+      phase=2;
       render();
-      codeInput.value = "";
-      codeInput.focus();
-      return;
+      delay(()=>{ phase=3; render(); },1000);
+    }else{
+      errEl.textContent="验证失败";
+      statusEl.textContent="";
     }
+  };
 
-    if(phase === 2){
-      // 开始游戏 -> 音乐倒计时
-      await startMusicAndCountdown();
-      return;
-    }
-  });
-
-  cancelBtn.addEventListener("click", () => {
-    // 从验证页返回初始确认页
-    phase = 0;
-    clearTimers();
-    render();
-  });
-
-  verifyBtn.addEventListener("click", doVerify);
-  codeInput.addEventListener("keydown", (e) => {
-    if(e.key === "Enter") doVerify();
-  });
-
-  // ===== 初始化 =====
   render();
 })();
 </script>
