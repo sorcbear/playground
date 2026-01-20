@@ -7,21 +7,21 @@
 
   <style>
     :root{
-      --maxw: 720px;
+      /* ===== 全项目尺寸规范（验证页落地版）===== */
+      --maxw: 720px;     /* 文本最大宽 */
+      --w-panel: 360px;  /* 输入框 + 按钮组统一宽（关键） */
+      --w-mainbtn: 240px;
 
       --fs-body: 16px;
-      --lh-body: 1.7;
-
       --fs-hint: 18px;
+      --fs-status: 18px;
+
+      --lh-body: 1.7;
       --lh-hint: 1.6;
 
-      --fs-status: 18px;
       --fw-status: 700;
 
       --ctl-h: 48px;
-      --w-mainbtn: 240px;
-      --w-input: 360px;
-      --w-subbtn: 160px;
 
       --gap: 18px;
       --gap-tight: 12px;
@@ -46,7 +46,8 @@
       display:flex; flex-direction:column;
       align-items:center; justify-content:center;
       gap:var(--gap);
-      padding:18px; box-sizing:border-box;
+      padding:18px;
+      box-sizing:border-box;
       text-align:center;
     }
 
@@ -70,6 +71,7 @@
       margin:0;
     }
 
+    /* ===== 输入面板 ===== */
     .panel{
       width:min(var(--maxw), 92vw);
       display:none;
@@ -79,7 +81,7 @@
     }
 
     .panel .label{
-      width:min(var(--w-input), 92vw);
+      width:min(var(--w-panel), 92vw);
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
       user-select:none;
@@ -87,7 +89,7 @@
     }
 
     .panel input{
-      width:min(var(--w-input), 92vw);
+      width:min(var(--w-panel), 92vw);
       height:var(--ctl-h);
       padding:0 14px;
       box-sizing:border-box;
@@ -99,11 +101,12 @@
       letter-spacing:0;
     }
 
+    /* 关键：按钮行与输入框同宽，并且等分 */
     .row{
+      width:min(var(--w-panel), 92vw);
       display:flex;
       gap:12px;
-      width:min(calc(var(--w-subbtn) * 2 + 12px), 92vw);
-      justify-content:center;
+      justify-content:space-between;
       align-items:center;
       margin-top:2px;
     }
@@ -124,10 +127,10 @@
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
 
-    .row button{ width:var(--w-subbtn); }
+    .row button{ flex:1; } /* 等分占满，左右对齐输入框 */
 
     .err{
-      width:min(var(--w-input), 92vw);
+      width:min(var(--w-panel), 92vw);
       min-height:20px;
       font-size:14px;
       line-height:1.5;
@@ -136,6 +139,7 @@
       text-align:center;
     }
 
+    /* ===== 主按钮 ===== */
     .mainWrap{
       display:flex;
       justify-content:center;
@@ -145,8 +149,7 @@
 
     @media (max-width: 420px){
       :root{
-        --w-input: 320px;
-        --w-subbtn: 148px;
+        --w-panel: 320px;
         --w-mainbtn: 220px;
         --ctl-h: 46px;
         --fs-hint: 17px;
@@ -161,6 +164,7 @@
     <div class="hint" id="hint"></div>
     <div class="status" id="status"></div>
 
+    <!-- 输入核销码 -->
     <div class="panel" id="panel">
       <div class="label">请输入游戏码</div>
       <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" inputmode="latin" />
@@ -171,6 +175,7 @@
       <div class="err" id="err"></div>
     </div>
 
+    <!-- 主按钮（确认页用；输入码/过渡阶段隐藏） -->
     <div class="mainWrap" id="mainWrap">
       <button id="mainBtn">确定</button>
     </div>
@@ -180,7 +185,7 @@
 (() => {
   const VERIFY_ENDPOINT = "https://1396901144-84o46m5fmk.ap-shanghai.tencentscf.com/verify";
   const PASS_KEY = "playground_pass_v1";
-  const NEXT_URL = "./start.html";
+  const NEXT_URL = "./start.html"; // 验证成功后去播放页
 
   // reset=1：清通行证，强制回到输入码流程
   const params = new URLSearchParams(location.search);
@@ -192,11 +197,9 @@
     const token = "pass_" + Math.random().toString(36).slice(2) + "_" + Date.now();
     localStorage.setItem(PASS_KEY, token);
   }
-  function hasPass(){
-    return !!localStorage.getItem(PASS_KEY);
-  }
+  function hasPass(){ return !!localStorage.getItem(PASS_KEY); }
 
-  // 若已验证，直接进 start 页
+  // 已验证：直接去 start 页
   if (hasPass()) {
     location.replace(NEXT_URL);
     return;
@@ -221,16 +224,17 @@
     return { httpOk: r.ok, data };
   }
 
-  const mainBtn = document.getElementById("mainBtn");
-  const mainWrap = document.getElementById("mainWrap");
-  const hintEl = document.getElementById("hint");
-  const statusEl = document.getElementById("status");
+  // DOM
+  const mainBtn   = document.getElementById("mainBtn");
+  const mainWrap  = document.getElementById("mainWrap");
+  const hintEl    = document.getElementById("hint");
+  const statusEl  = document.getElementById("status");
 
-  const panel = document.getElementById("panel");
+  const panel     = document.getElementById("panel");
   const codeInput = document.getElementById("codeInput");
   const verifyBtn = document.getElementById("verifyBtn");
   const cancelBtn = document.getElementById("cancelBtn");
-  const errEl = document.getElementById("err");
+  const errEl     = document.getElementById("err");
 
   // phase:
   // 0: 确认页
@@ -258,7 +262,6 @@
       showPanel(false);
       showMain(true);
       mainBtn.disabled = false;
-      mainBtn.textContent = "确定";
       hintEl.textContent = "确定要玩这个游戏吗？\n这可能影响你和其他人的命运......";
       statusEl.textContent = "";
       setError("");
@@ -303,7 +306,6 @@
 
       if(ok && reason === "verified"){
         setPass();
-
         phase = 2;
         clearTimers();
         render();
@@ -341,6 +343,7 @@
     }
   }
 
+  // 事件
   mainBtn.addEventListener("click", () => {
     if(phase === 0){
       phase = 1;
