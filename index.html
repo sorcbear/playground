@@ -7,10 +7,7 @@
 
   <style>
     :root{
-      /* 中间内容区域宽度 */
       --w-card: 520px;
-
-      /* 按钮宽度 */
       --w-btn: 200px;
 
       --fs-body: 16px;
@@ -45,27 +42,23 @@
       box-sizing:border-box;
     }
 
-    /* 中间区域 */
     .card{
       width:min(var(--w-card), 96vw);
       display:flex;
       flex-direction:column;
-      align-items:center; /* 整体居中 */
+      align-items:center;
       text-align:center;
     }
 
-    /* 文本块 */
     .intro{
       width:100%;
       font-size:var(--fs-text);
       line-height:var(--lh-text);
-      text-align:center;
       user-select:none;
       margin:0;
     }
     .intro + .intro{ margin-top:12px; }
 
-    /* 按钮区域 */
     .btnRow{
       width:100%;
       display:flex;
@@ -115,60 +108,13 @@
 
 <script>
 (() => {
-  // ===== 与 verify/start 统一 =====
-  const PASS_KEY = "playground_pass";
-  const PASS_VER_KEY = "playground_ver";
-  const PASS_VER = "v1";
-
-  // 方案1：记录最近访问页面
-  const LAST_KEY = "playground_last_page";
-
-  // 你的站点结构：https://sorcbear.github.io/playground/...
+  // 直接跳转 start，不做任何判断
   const BASE = "/playground";
-  const VERIFY_URL = BASE + "/verify.html";
-  const START_URL  = BASE + "/start.html";
+  const START_URL = BASE + "/start.html";
 
-  const btn = document.getElementById("goBtn");
-
-  // reset=1：清通行证 + 清进度（调试/回收）
-  const params = new URLSearchParams(location.search);
-  if (params.get("reset") === "1") {
-    localStorage.removeItem(PASS_KEY);
-    localStorage.removeItem(PASS_VER_KEY);
-    localStorage.removeItem(LAST_KEY);
-      // 关键：防止在跳转前短暂渲染旧状态（iOS 尤其明显）
-    document.documentElement.style.display = "none";
-    location.replace(BASE + "/"); // 去掉参数，避免循环清
-    return;
-  }
-
-  // 是否已验证
-  const pass = localStorage.getItem(PASS_KEY);
-  const ver  = localStorage.getItem(PASS_VER_KEY);
-  const verified = !!pass && ver === PASS_VER;
-
-  function safeLastUrl(){
-    const last = localStorage.getItem(LAST_KEY);
-    if (!last) return START_URL;
-
-    // 只允许回到本站 /playground 下的路径，避免被写入异常 URL
-    if (typeof last !== "string") return START_URL;
-    if (!last.startsWith(BASE + "/")) return START_URL;
-
-    return last;
-  }
-
-  if (verified) {
-    btn.textContent = "继续游戏";
-    btn.addEventListener("click", () => {
-      location.href = safeLastUrl();
-    });
-  } else {
-    btn.textContent = "确定";
-    btn.addEventListener("click", () => {
-      location.href = VERIFY_URL;
-    });
-  }
+  document.getElementById("goBtn").addEventListener("click", () => {
+    location.href = START_URL;
+  });
 })();
 </script>
 </body>
