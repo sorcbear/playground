@@ -148,7 +148,9 @@
       justify-content:center;
     }
 
-/* 按钮：默认白底黑字，hover 黑底白字 */
+/* ===== 提交按钮（最终稳定版） ===== */
+/* 默认：白底黑字；PC hover 才反转；手机无 hover；无点击闪动 */
+
     .primaryBtn{
       height: var(--h-btn);
       min-width: 260px;
@@ -156,33 +158,23 @@
 
       border: 2px solid var(--c-border);
       border-radius: 0;
-  
-      background: #fff;   /* 默认：白底 */
-      color: #000;        /* 默认：黑字 */
+
+      background: #fff;        /* 默认白底 */
+      color: #000;             /* 默认黑字 */
 
       font-size: var(--fs-btn);
       font-weight: var(--fw-btn);
 
       cursor: pointer;
-      transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
+
+      transition: background-color 120ms ease, color 120ms ease;
+
+  /* 关键：彻底关闭 iOS 点击高亮与 callout */
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
     }
 
-/* 默认：白底黑字 */
-    .primaryBtn{
-      height: var(--h-btn);
-      min-width: 260px;
-      padding: 0 22px;
-      border: 2px solid var(--c-border);
-      border-radius: 0;
-      background: #fff;
-      color: #000;
-      font-size: var(--fs-btn);
-      font-weight: var(--fw-btn);
-      cursor: pointer;
-      transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
-    }
-
-     /* 只在“真的有 hover”的设备上启用反转（PC/鼠标） */
+/* 只在支持 hover 的设备（PC / 鼠标）上启用反转 */
     @media (hover: hover) and (pointer: fine){
       .primaryBtn:hover:not(:disabled){
         background: #000;
@@ -190,7 +182,7 @@
       }
     }
 
-/* 触屏设备（iPhone 等）明确禁止 hover 反转，避免黏住 */
+/* 触屏设备明确禁止 hover 反转，防止 Safari 黏住 */
     @media (hover: none){
       .primaryBtn:hover:not(:disabled){
         background: #fff;
@@ -198,23 +190,17 @@
       }
     }
 
-    .primaryBtn:active{ transform: translateY(1px); }
-
-    .primaryBtn:disabled{
-      opacity: .55;
-      cursor: not-allowed;
+/* 点击不下沉、不闪 */
+    .primaryBtn:active{
       transform: none;
     }
 
-
-    .primaryBtn:active{ transform: translateY(1px); }
-
-/* 禁用：不改变黑白逻辑，只降低透明度 */
+/* 禁用态：不改配色，只降透明度 */
     .primaryBtn:disabled{
       opacity: .55;
       cursor: not-allowed;
-      transform: none;
     }
+
 
   </style>
 </head>
