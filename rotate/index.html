@@ -17,15 +17,15 @@
       --fs-hint: 18px;     /* 提示/标题 */
       --lh-hint: 1.6;
 
-      --fs-status: 18px;   /* 状态（本页不强制使用） */
+      --fs-status: 18px;
       --fw-status: 700;
 
-      --fs-btn: 16px;      /* 按钮文字 */
+      --fs-btn: 16px;
       --fw-btn: 600;
-      --h-btn: 52px;       /* 按钮高度 */
+      --h-btn: 52px;
 
-      --fs-input: 16px;    /* 输入框文字 */
-      --h-input: 52px;     /* 输入框高度 */
+      --fs-input: 16px;
+      --h-input: 52px;
 
       --gap: 18px;
       --gap-tight: 12px;
@@ -35,8 +35,7 @@
       --c-danger: #b00020;
       --c-border: #000;
 
-      /* 本页补充：轻边线/圆角/背景 */
-      --radius: 18px;
+      /* 本页补充 */
       --line: rgba(0,0,0,.10);
       --line2: rgba(0,0,0,.18);
       --bg: #fff;
@@ -51,10 +50,7 @@
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       -webkit-text-size-adjust: 100%;
     }
-    input, button, textarea, select{
-      font-family: inherit;
-      font-size: inherit;
-    }
+    input, button{ font-family: inherit; font-size: inherit; }
 
     .wrap{
       max-width: var(--maxw);
@@ -62,62 +58,22 @@
       padding: 18px 14px 28px;
     }
 
-    /* 标题 + 正文都居左 */
-    .pageTitle{
+    /* 只保留这一句：当作“标题” */
+    .titleLine{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
-      margin: 4px 0 10px;
-      text-align: left;
-      letter-spacing: .01em;
-    }
-
-    .opHint{
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
-      color: var(--c-muted);
-      margin: 0 0 var(--gap-tight);
-      text-align: left;
-    }
-
-    /* 新增：操作 UI 规范（沿用你现有“文字块”风格：左对齐 + 边框 + 轻背景） */
-    .opSpec{
-      border: 1px solid var(--line2);
-      border-radius: 14px;
-      background: #ffffff;
-      padding: 12px 12px;
-      margin: 0 0 var(--gap);
-      text-align: left;
-    }
-    .opSpecTitle{
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      font-weight: 700;
-      margin: 0 0 6px;
-    }
-    .opSpecBody{
-      margin: 0;
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
-      color: var(--c-text);
-      white-space: pre-wrap;
-    }
-
-    .bodyText{
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
-      color: var(--c-text);
-      margin: 0 0 var(--gap-tight);
+      margin: 4px 0 var(--gap);
       text-align: left;
       white-space: pre-wrap;
     }
 
     .boardShell{
       border: 1px solid var(--line2);
-      border-radius: var(--radius);
       overflow: hidden;
       background: #eaeaea;
     }
+
     .board{
       display:grid;
       grid-template-columns: repeat(7, 1fr);
@@ -127,14 +83,17 @@
       user-select:none;
       touch-action: manipulation;
     }
+
     .tile{
       border-right: 0.5px solid var(--line);
       border-bottom: 0.5px solid var(--line);
       overflow:hidden;
       cursor:pointer;
+      background: #dcdcdc; /* 图片没出来时也不至于全白 */
     }
     .tile[data-last-col="1"]{ border-right:none; }
     .tile[data-last-row="1"]{ border-bottom:none; }
+
     .tile img{
       width:100%;
       height:100%;
@@ -142,9 +101,10 @@
       transition: transform 120ms ease;
       pointer-events:none;
       user-select:none;
+      display:block;
     }
 
-    /* “正确地址：输入框-路-输入框-号” */
+    /* 正确地址：输入框-路-输入框-号 */
     .answerRow{
       margin-top: var(--gap);
       display:flex;
@@ -160,14 +120,16 @@
       font-size: var(--fs-body);
       line-height: 1;
       color: var(--c-text);
+      font-weight: 400;
     }
 
+    /* 直角输入框 */
     .ansInput{
       width: 4.2em;
       height: var(--h-input);
       padding: 0 10px;
-      border: 1px solid var(--c-border);
-      border-radius: 14px;
+      border: 2px solid var(--c-border);
+      border-radius: 0;         /* 直角 */
       outline: none;
       background:#fff;
       color: var(--c-text);
@@ -179,7 +141,7 @@
       box-shadow: 0 0 0 2px rgba(0,0,0,.10);
     }
 
-    /* 单按钮：仿“开始游戏按钮”黑白切换效果 */
+    /* 按钮：默认白 -> hover 黑（白色转黑色） */
     .btnRow{
       margin-top: var(--gap);
       display:flex;
@@ -189,22 +151,20 @@
       height: var(--h-btn);
       min-width: 160px;
       padding: 0 18px;
-      border-radius: 14px;
       border: 2px solid var(--c-border);
-      background: #000;
-      color: #fff;
+      border-radius: 0;         /* 直角 */
+      background: #fff;         /* 默认白底 */
+      color: #000;              /* 默认黑字 */
       font-size: var(--fs-btn);
       font-weight: var(--fw-btn);
       cursor: pointer;
       transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
     }
     .primaryBtn:hover{
-      background: #fff;
-      color: #000;
+      background: #000;         /* hover 黑底 */
+      color: #fff;              /* hover 白字 */
     }
-    .primaryBtn:active{
-      transform: translateY(1px);
-    }
+    .primaryBtn:active{ transform: translateY(1px); }
     .primaryBtn:disabled{
       opacity: .55;
       cursor: not-allowed;
@@ -215,24 +175,12 @@
 
 <body>
   <div class="wrap">
-    <div class="pageTitle">请寻找游戏的起点。</div>
-    <div class="opHint">可横屏操作</div>
+    <div class="titleLine">完成拼图后，输入正确的起点地址并提交答案。这就是一切的起点。</div>
 
-    <!-- 新增：操作 UI 规范（按你要求“用现在的格式”做成一个块） -->
-    <div class="opSpec" aria-label="操作规范">
-      <div class="opSpecTitle">操作说明</div>
-      <p class="opSpecBody">点击拼图方块可旋转。完成拼图后，输入正确的起点地址并提交。</p>
-    </div>
-
-    <!-- 下面直接跟正文 -->
-    <div class="bodyText">请完成拼图并输入正确起点。</div>
-
-    <!-- 拼图 -->
     <div class="boardShell">
       <div id="board" class="board" aria-label="拼图区域"></div>
     </div>
 
-    <!-- 正确地址输入 -->
     <div class="answerRow" aria-label="正确地址输入">
       <span class="fixedWord">正确地址：</span>
       <input id="ansRoad" class="ansInput" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="路名" />
@@ -241,12 +189,11 @@
       <span class="fixedWord">号</span>
     </div>
 
-    <!-- 单按钮：提交答案 -->
     <div class="btnRow">
       <button id="btnSubmit" class="primaryBtn">提交答案</button>
     </div>
   </div>
 
-  <script src="./script.js?v=20260116f"></script>
+  <script src="./script.js?v=20260120a"></script>
 </body>
 </html>
