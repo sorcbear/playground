@@ -1,4 +1,7 @@
 (() => {
+  // =========================
+  // PASSKEY GATE（与 index.html 同逻辑）
+  // =========================
   const PASS_KEY = "playground_pass_v1";
   const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
 
@@ -16,11 +19,9 @@
     return;
   }
 
-  // ===== 下面才是你原来的 rotate 逻辑（保持不变）=====
-  // ...
-})();
-
-
+  // =========================
+  // ROTATE 主逻辑
+  // =========================
   const ROWS = 4;
   const COLS = 7;
   const TILE_COUNT = ROWS * COLS;
@@ -269,7 +270,14 @@
     };
   }
 
-  // 更稳的图片加载：onload 兜底
+  // 更稳的图片加载：相对路径转为绝对 URL + 加 cache bust
+  function resolveImageURL() {
+    // image.png 必须与 rotate 的 html 在同一目录
+    const u = new URL("image.png", location.href);
+    u.searchParams.set("v", "20260120d"); // 你想更新图片时改这个
+    return u.toString();
+  }
+
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -280,7 +288,7 @@
           resolve(img);
         }
       };
-      img.onerror = () => reject(new Error("image load failed"));
+      img.onerror = () => reject(new Error("image load failed: " + url));
       img.src = url;
     });
   }
@@ -313,7 +321,9 @@
     seedSteps = deriveSeed();
     curSteps  = seedSteps.slice();
 
-    await sliceImageToTiles("./image.png");
+    const imgURL = resolveImageURL();
+    await sliceImageToTiles(imgURL);
+
     setTileImages();
     applyAllRotations();
 
@@ -343,7 +353,8 @@
     }
   });
 
-  init().catch(() => {
+  init().catch((err) => {
+    console.error(err);
     setBtnText("图片加载失败", 1500);
   });
 })();
