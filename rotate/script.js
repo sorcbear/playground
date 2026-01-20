@@ -1,17 +1,25 @@
 (() => {
-  // ===== PASSKEY GATE（二次保险）=====
   const PASS_KEY = "playground_pass_v1";
   const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
-  try{
-    if (!localStorage.getItem(PASS_KEY)) {
-      const next = encodeURIComponent(location.href);
-      location.replace(VERIFY_URL + "?next=" + next);
-      return;
-    }
-  }catch(e){
-    location.replace(VERIFY_URL);
+
+  function safeGet(storage, key){
+    try { return storage.getItem(key); } catch(e) { return null; }
+  }
+
+  const pass =
+    safeGet(window.localStorage, PASS_KEY) ||
+    safeGet(window.sessionStorage, PASS_KEY);
+
+  if(!pass){
+    const next = encodeURIComponent(location.href);
+    location.replace(VERIFY_URL + "?next=" + next);
     return;
   }
+
+  // ===== 下面才是你原来的 rotate 逻辑（保持不变）=====
+  // ...
+})();
+
 
   const ROWS = 4;
   const COLS = 7;
