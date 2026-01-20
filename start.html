@@ -112,6 +112,9 @@
   const PASS_VER_KEY = "playground_ver";
   const PASS_VER = "v1"; // 想让所有人重输：改成 v2 并重新部署
 
+  // 方案1：记录最近访问页面
+  const LAST_KEY = "playground_last_page";
+
   const BASE = "/playground";
   const INDEX_URL = BASE + "/";
   const NEXT_URL  = BASE + "/rotate/";
@@ -121,6 +124,7 @@
   if (params.get("reset") === "1") {
     localStorage.removeItem(PASS_KEY);
     localStorage.removeItem(PASS_VER_KEY);
+    localStorage.removeItem(LAST_KEY);
     location.replace(INDEX_URL);
     return;
   }
@@ -132,6 +136,9 @@
     location.replace(INDEX_URL);
     return;
   }
+
+  // ✅ 方案1：只要成功进入 start，就记录进度为 start
+  localStorage.setItem(LAST_KEY, BASE + "/start.html");
 
   // =====================================================
   // ② 游戏开始逻辑
