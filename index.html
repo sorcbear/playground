@@ -112,7 +112,7 @@
       <div class="small" id="err" style="color:#b00020; min-height:18px;"></div>
     </div>
 
-    <button id="mainBtn">开始游戏</button>
+    <button id="mainBtn">确定</button>
   </div>
 
 <script>
@@ -237,7 +237,6 @@
 
   // ===== 工具：通行证 =====
   function setPass(){
-    // 本机随机生成一个通行证即可（不需要后端参与）
     const token = "pass_" + Math.random().toString(36).slice(2) + "_" + Date.now();
     localStorage.setItem(PASS_KEY, token);
   }
@@ -258,13 +257,11 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
-    // 兼容：即使后端返回 200，也要看 body.ok/reason
     const data = await r.json().catch(() => ({}));
     return { httpOk: r.ok, data };
   }
 
-  // ===== 页面流程 =====
+  // ===== 页面元素 =====
   const mainBtn = document.getElementById("mainBtn");
   const hintEl = document.getElementById("hint");
   const statusEl = document.getElementById("status");
@@ -275,7 +272,12 @@
   const cancelBtn = document.getElementById("cancelBtn");
   const errEl = document.getElementById("err");
 
-  let phase = 0; // 0: 初始；1: 等待确定；2: 输入核销码；3: 已开始(播放+倒计时)
+  // ===== 状态机 =====
+  // 0: 初始确认页
+  // 1: 输入码验证页
+  // 2: 验证成功后的“开始游戏”页
+  // 3: 音乐+倒计时进行中
+  let phase = 0;
   let timers = [];
 
   function clearTimers(){
@@ -296,6 +298,52 @@
     errEl.textContent = msg || "";
   }
 
+  function render(){
+    // 清理一些共用状态
+    statusEl.textContent = statusEl.textContent || "";
+
+    if(phase === 0){
+      showPanel(false);
+      mainBtn.disabled = false;
+      mainBtn.textContent = "确定";
+      hintEl.textContent = "确定要玩这个游戏吗？这可能会影响你和其他人的命运......";
+      statusEl.textContent = "";
+      setError("");
+      return;
+    }
+
+    if(phase === 1){
+      // 验证页：按钮可以当“确定验证”动作，也可以留作无意义（这里禁用，避免误解）
+      showPanel(true);
+      mainBtn.disabled = true;
+      mainBtn.textContent = "确定";
+      hintEl.textContent = "";
+      statusEl.textContent = "";
+      return;
+    }
+
+    if(phase === 2){
+      // 验证成功后：显示“开始游戏”按钮
+      showPanel(false);
+      mainBtn.disabled = false;
+      mainBtn.textContent = "开始游戏";
+      hintEl.textContent = "";
+      statusEl.textContent = "";
+      setError("");
+      return;
+    }
+
+    if(phase === 3){
+      // 进行中：按钮锁定，文案“游戏开始了”
+      showPanel(false);
+      mainBtn.disabled = true;
+      mainBtn.textContent = "开始游戏";
+      hintEl.textContent = "游戏开始了";
+      // status 由倒计时更新
+      return;
+    }
+  }
+
   function startCountdown10s(){
     let left = COUNTDOWN_SEC;
     const tick = () => {
@@ -310,13 +358,10 @@
     tick();
   }
 
-  async function startGameFlow(){
+  async function startMusicAndCountdown(){
     phase = 3;
-    mainBtn.disabled = true;
-    showPanel(false);
-    hintEl.textContent = "好像听到一段奇怪的音乐";
-    statusEl.textContent = "";
     clearTimers();
+    render();
 
     // 解锁音频（必须在用户手势触发链路里）
     try{ await enableAudio(); }catch(e){}
@@ -324,44 +369,6 @@
     playCorrectMelodyFixedGap();
     startCountdown10s();
   }
-
-  // 初始文案
-  hintEl.textContent = "";
-  statusEl.textContent = "";
-
-  mainBtn.addEventListener("click", async () => {
-    if(phase === 0){
-      phase = 1;
-      hintEl.textContent = "确定要开始吗？这可能会影响你和另一些人的命运。";
-      statusEl.textContent = "";
-      mainBtn.textContent = "确定";
-      return;
-    }
-
-    if(phase === 1){
-      // 进入核销码输入
-      phase = 2;
-      mainBtn.disabled = true;
-      showPanel(true);
-      setError("");
-      hintEl.textContent = "";
-      statusEl.textContent = "";
-      codeInput.value = "";
-      codeInput.focus();
-      return;
-    }
-  });
-
-  cancelBtn.addEventListener("click", () => {
-    // 返回到“确定前”状态
-    phase = 1;
-    showPanel(false);
-    mainBtn.disabled = false;
-    mainBtn.textContent = "确定";
-    hintEl.textContent = "确定要开始吗？这可能会影响你和另一些人的命运。";
-    statusEl.textContent = "";
-    setError("");
-  });
 
   async function doVerify(){
     const code = normalizeCode(codeInput.value);
@@ -377,21 +384,17 @@
 
     try{
       const { httpOk, data } = await verifyCode(code);
-
-      // 后端不一定用 HTTP 状态表达业务结果，所以以 data 为准
       const ok = !!data.ok;
       const reason = String(data.reason || "");
 
       if(ok && reason === "verified"){
-        // 通过：写通行证，然后开始后续流程
         setPass();
-        statusEl.textContent = "";
-        await startGameFlow();
+        phase = 2; // 验证成功 -> 开始游戏页
+        clearTimers();
+        render();
         return;
       }
 
-      // 你如果希望“同一设备重复进入不再需要码”，就不要把 already_used 当成功
-      // 这里按严格一次性：already_used 就失败提示
       if(!ok && reason === "already_used"){
         statusEl.textContent = "";
         setError("该游戏码已被使用");
@@ -404,7 +407,6 @@
         return;
       }
 
-      // 兜底
       statusEl.textContent = "";
       const msg = data.message ? String(data.message) : (httpOk ? "验证失败" : "网络错误");
       setError(msg);
@@ -419,11 +421,38 @@
     }
   }
 
+  // ===== 事件绑定 =====
+  mainBtn.addEventListener("click", async () => {
+    if(phase === 0){
+      // 初始确认 -> 验证页
+      phase = 1;
+      render();
+      codeInput.value = "";
+      codeInput.focus();
+      return;
+    }
+
+    if(phase === 2){
+      // 开始游戏 -> 音乐倒计时
+      await startMusicAndCountdown();
+      return;
+    }
+  });
+
+  cancelBtn.addEventListener("click", () => {
+    // 从验证页返回初始确认页
+    phase = 0;
+    clearTimers();
+    render();
+  });
+
   verifyBtn.addEventListener("click", doVerify);
   codeInput.addEventListener("keydown", (e) => {
     if(e.key === "Enter") doVerify();
   });
 
+  // ===== 初始化 =====
+  render();
 })();
 </script>
 </body>
