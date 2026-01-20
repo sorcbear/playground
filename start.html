@@ -50,23 +50,25 @@
       text-align:center;
     }
 
-    .hint{
+    /* ✅ 初始不占位，按钮更“真居中” */
+    .hint,
+    .status{
+      display:none;
       width:min(var(--maxw), 92vw);
-      min-height:56px;
-      font-size:var(--fs-hint);
-      line-height:var(--lh-hint);
-      white-space:pre-wrap;
       user-select:none;
       margin:0;
+      white-space:pre-wrap;
+    }
+
+    .hint{
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
     }
 
     .status{
-      width:min(var(--maxw), 92vw);
-      min-height:28px;
       font-size:var(--fs-status);
       font-weight:var(--fw-status);
-      user-select:none;
-      margin:0;
+      line-height:1.4;
     }
 
     button{
@@ -184,8 +186,11 @@
   const statusEl = document.getElementById("status");
   const startBtn = document.getElementById("startBtn");
 
+  // ✅ 初始不显示提示/状态，不占位
   hintEl.textContent = "";
   statusEl.textContent = "";
+  hintEl.style.display = "none";
+  statusEl.style.display = "none";
 
   let audioCtx = null;
   let audioEnabled = false;
@@ -255,6 +260,11 @@
 
   async function startFlow(){
     startBtn.disabled = true;
+
+    // ✅ 点击后再显示提示与倒计时区域
+    hintEl.style.display = "block";
+    statusEl.style.display = "block";
+
     hintEl.textContent = "好像听到一段诡异的音乐...";
     statusEl.textContent = "";
 
