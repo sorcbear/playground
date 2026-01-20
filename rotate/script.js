@@ -1,4 +1,19 @@
 (() => {
+  // ===== PASSKEY GATE（二次保险）=====
+  const PASSKEY_KEY = "PASSKEY_OK_V1";
+  const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
+  try{
+    const ok = (sessionStorage.getItem(PASSKEY_KEY) === "1") || (localStorage.getItem(PASSKEY_KEY) === "1");
+    if(!ok){
+      const next = encodeURIComponent(location.href);
+      location.replace(VERIFY_URL + "?next=" + next);
+      return; // 终止后续逻辑
+    }
+  }catch(e){
+    location.replace(VERIFY_URL);
+    return;
+  }
+
   const ROWS = 4;
   const COLS = 7;
   const TILE_COUNT = ROWS * COLS;
@@ -7,9 +22,8 @@
   const COUNTDOWN_SECONDS = 3;
 
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
-  const DEFAULT_K = "beta";
+  const DEFAULT_K = "canon";
 
-  // 仅用于“从下一页返回时恢复正确样子”
   const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
 
   const params = new URLSearchParams(location.search);
@@ -32,7 +46,6 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  // 仅改按钮文案，不改颜色
   const BTN_TEXT_DEFAULT = "提交答案";
   let btnTextTimer = null;
 
@@ -187,7 +200,6 @@
     }, 1000);
   }
 
-  // 稳定 hash + PRNG
   function xmur3(str) {
     let h = 1779033703 ^ str.length;
     for (let i = 0; i < str.length; i++) {
@@ -247,7 +259,6 @@
     };
   }
 
-  // 更稳的图片加载：onload 兜底
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
