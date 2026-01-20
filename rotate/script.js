@@ -20,7 +20,6 @@
   const ansRoad = document.getElementById("ansRoad");
   const ansNo = document.getElementById("ansNo");
 
-  // 正确答案
   const ANSWER_ROAD = "天平";
   const ANSWER_NO = "41";
 
@@ -33,7 +32,7 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  // 用按钮文字做反馈
+  // 仅改按钮文案，不改颜色
   const BTN_TEXT_DEFAULT = "提交答案";
   let btnTextTimer = null;
 
@@ -248,7 +247,7 @@
     };
   }
 
-  // 更稳的图片加载：onload 为主，decode 仅作为“可用则用”
+  // 更稳的图片加载：onload 兜底
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -292,8 +291,6 @@
     seedSteps = deriveSeed();
     curSteps  = seedSteps.slice();
 
-    // 关键：这里路径必须与你的文件同级
-    // 也就是 rotate/index.html 与 rotate/image.png 同目录时，才用 "./image.png"
     await sliceImageToTiles("./image.png");
     setTileImages();
     applyAllRotations();
@@ -322,7 +319,6 @@
   });
 
   init().catch(() => {
-    // 图片加载失败：仍然允许用户操作（只是没图），并提示你去检查路径
     setBtnText("图片加载失败", 1500);
   });
 })();
