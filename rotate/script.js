@@ -1,27 +1,4 @@
 (() => {
-  // =========================
-  // PASSKEY GATE（与 index.html 同逻辑）
-  // =========================
-  const PASS_KEY = "playground_pass_v1";
-  const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
-
-  function safeGet(storage, key){
-    try { return storage.getItem(key); } catch(e) { return null; }
-  }
-
-  const pass =
-    safeGet(window.localStorage, PASS_KEY) ||
-    safeGet(window.sessionStorage, PASS_KEY);
-
-  if(!pass){
-    const next = encodeURIComponent(location.href);
-    location.replace(VERIFY_URL + "?next=" + next);
-    return;
-  }
-
-  // =========================
-  // ROTATE 主逻辑
-  // =========================
   const ROWS = 4;
   const COLS = 7;
   const TILE_COUNT = ROWS * COLS;
@@ -30,9 +7,9 @@
   const COUNTDOWN_SECONDS = 3;
 
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
-  const DEFAULT_K = "alpha";
+  const DEFAULT_K = "beta";
 
-  // 返回时恢复正确样子
+  // 仅用于“从下一页返回时恢复正确样子”
   const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
 
   const params = new URLSearchParams(location.search);
@@ -55,7 +32,7 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  // 只改按钮文案，不改颜色
+  // 仅改按钮文案，不改颜色
   const BTN_TEXT_DEFAULT = "提交答案";
   let btnTextTimer = null;
 
@@ -270,14 +247,7 @@
     };
   }
 
-  // 更稳的图片加载：相对路径转为绝对 URL + 加 cache bust
-  function resolveImageURL() {
-    // image.png 必须与 rotate 的 html 在同一目录
-    const u = new URL("image.png", location.href);
-    u.searchParams.set("v", "20260120d"); // 你想更新图片时改这个
-    return u.toString();
-  }
-
+  // 更稳的图片加载：onload 兜底
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -288,7 +258,7 @@
           resolve(img);
         }
       };
-      img.onerror = () => reject(new Error("image load failed: " + url));
+      img.onerror = () => reject(new Error("image load failed"));
       img.src = url;
     });
   }
@@ -321,9 +291,7 @@
     seedSteps = deriveSeed();
     curSteps  = seedSteps.slice();
 
-    const imgURL = resolveImageURL();
-    await sliceImageToTiles(imgURL);
-
+    await sliceImageToTiles("./image.png");
     setTileImages();
     applyAllRotations();
 
@@ -336,25 +304,21 @@
     }
   }
 
-  // iOS Safari bfcache：pageshow 一定触发
   window.addEventListener("pageshow", (e) => {
     const navType = getNavType();
 
-    // 返回：恢复正确样子
     if ((e.persisted || navType === "back_forward") && sessionStorage.getItem(SOLVED_KEY) === "1") {
       restoreSolvedUI();
       return;
     }
 
-    // 刷新/正常进入：回初始
     if (navType === "reload" || navType === "navigate") {
       sessionStorage.removeItem(SOLVED_KEY);
       resetAllToInitial();
     }
   });
 
-  init().catch((err) => {
-    console.error(err);
+  init().catch(() => {
     setBtnText("图片加载失败", 1500);
   });
 })();
