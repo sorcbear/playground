@@ -6,26 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    /* ===== Zpix 像素字体（全站）===== */
-    @font-face {
-      font-family: "Zpix";
-      src: url("./fonts/Zpix.woff2") format("woff2"),
-           url("./fonts/Zpix.woff") format("woff");
-      font-display: swap;
-    }
-
     html, body{
       margin:0;
       padding:0;
       width:100%;
       height:100%;
       background:#ffffff;
-      font-family:"Zpix", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    }
-
-    /* 确保表单控件也继承像素字体 */
-    button, input{
-      font-family: inherit;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     }
 
     .container{
@@ -120,7 +107,7 @@
       <input id="codeInput" placeholder="XXXX-XXXX" autocomplete="off" inputmode="latin" />
       <div class="row">
         <button id="verifyBtn" style="flex:1;">验证</button>
-        <button id="cancelBtn" style="flex:1;">取消</button>
+        <button id="cancelBtn" class="secondary" style="flex:1;">取消</button>
       </div>
       <div class="small" id="err" style="color:#b00020; min-height:18px;"></div>
     </div>
@@ -284,7 +271,7 @@
     return { httpOk: r.ok, data };
   }
 
-  // ===== 页面元素 =====
+  // ===== 页面流程 =====
   const mainBtn = document.getElementById("mainBtn");
   const hintEl = document.getElementById("hint");
   const statusEl = document.getElementById("status");
@@ -367,6 +354,7 @@
       mainBtn.disabled = true;
       mainBtn.textContent = "开始游戏";
       hintEl.textContent = "好像听到一段诡异的音乐......";
+      // status 由倒计时更新
       return;
     }
   }
@@ -390,7 +378,6 @@
     clearTimers();
     render();
 
-    // 解锁音频（必须在用户手势触发链路里）
     try{ await enableAudio(); }catch(e){}
 
     playCorrectMelodyFixedGap();
@@ -412,7 +399,6 @@
     try{
       const { httpOk, data } = await verifyCode(code);
 
-      // 后端不一定用 HTTP 状态表达业务结果，所以以 data 为准
       const ok = !!data.ok;
       const reason = String(data.reason || "");
 
@@ -432,7 +418,6 @@
         return;
       }
 
-      // 严格一次性：already_used 失败
       if(!ok && reason === "already_used"){
         statusEl.textContent = "";
         setError("该游戏码已被使用");
@@ -445,7 +430,6 @@
         return;
       }
 
-      // 兜底
       statusEl.textContent = "";
       const msg = data.message ? String(data.message) : (httpOk ? "验证失败" : "网络错误");
       setError(msg);
@@ -495,6 +479,7 @@
     phase = 0;
   }
   render();
+
 })();
 </script>
 </body>
