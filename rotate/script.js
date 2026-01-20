@@ -9,7 +9,7 @@
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "canon";
 
-  // 仅用于“返回时恢复正确样子”
+  // 仅用于“从下一页返回时恢复正确样子”
   const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
 
   const params = new URLSearchParams(location.search);
@@ -17,10 +17,10 @@
 
   const board = document.getElementById("board");
   const btnSubmit = document.getElementById("btnSubmit");
-
   const ansRoad = document.getElementById("ansRoad");
   const ansNo = document.getElementById("ansNo");
 
+  // 正确答案
   const ANSWER_ROAD = "天平";
   const ANSWER_NO = "41";
 
@@ -33,7 +33,7 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  // ====== 用按钮文字做状态提示（代替 message 框）======
+  // 用按钮文字做反馈
   const BTN_TEXT_DEFAULT = "提交答案";
   let btnTextTimer = null;
 
@@ -76,12 +76,10 @@
   }
 
   function getNavType() {
-    // 'navigate' | 'reload' | 'back_forward' | 'prerender'
     try {
       const nav = performance.getEntriesByType("navigation");
       if (nav && nav[0] && nav[0].type) return nav[0].type;
     } catch {}
-    // 兜底（老浏览器）
     if (performance && performance.navigation) {
       const t = performance.navigation.type;
       if (t === 1) return "reload";
@@ -118,12 +116,12 @@
 
   function resetAllToInitial() {
     unlockUI();
+    clearBtnHint();
     curSteps = seedSteps.slice();
     applyAllRotations();
     ansRoad.value = "";
     ansNo.value = "";
     btnSubmit.textContent = BTN_TEXT_DEFAULT;
-    clearBtnHint();
   }
 
   function buildBoard() {
@@ -151,12 +149,11 @@
   function setTileImages() {
     for (let i = 0; i < TILE_COUNT; i++) {
       const img = board.querySelector(`.tile[data-idx="${i}"] img`);
-      if (img) img.src = tileDataURLs[i];
+      if (img && tileDataURLs[i]) img.src = tileDataURLs[i];
     }
   }
 
   function restoreSolvedUI() {
-    // 恢复“正确提交后的样子”，不倒计时、不锁按钮
     unlockUI();
     clearBtnHint();
 
@@ -166,12 +163,10 @@
     ansRoad.value = ANSWER_ROAD;
     ansNo.value = ANSWER_NO;
 
-    // 提示一下即可（不需要常驻状态框）
     setBtnText("答案已确认", 900);
   }
 
   function startCountdownAndRedirect() {
-    // 记住已完成：只用于“从下一页返回时恢复”
     sessionStorage.setItem(SOLVED_KEY, "1");
 
     locked = true;
@@ -193,7 +188,7 @@
     }, 1000);
   }
 
-  // 稳定 hash + PRNG（跨设备一致）
+  // 稳定 hash + PRNG
   function xmur3(str) {
     let h = 1779033703 ^ str.length;
     for (let i = 0; i < str.length; i++) {
@@ -233,7 +228,6 @@
   }
 
   function wireButtons() {
-    // 回车提交
     [ansRoad, ansNo].forEach(el => {
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter") btnSubmit.click();
@@ -249,17 +243,29 @@
       if (okPuzzle && okAns) {
         startCountdownAndRedirect();
       } else {
-        // 失败提示：只在按钮上短暂显示
-        // 你也可以改成更短：setBtnText("错误", 700);
         setBtnText("不正确，再试一次", 900);
       }
     };
   }
 
+  // 更稳的图片加载：onload 为主，decode 仅作为“可用则用”
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          if (img.decode) await img.decode().catch(() => {});
+        } finally {
+          resolve(img);
+        }
+      };
+      img.onerror = () => reject(new Error("image load failed"));
+      img.src = url;
+    });
+  }
+
   async function sliceImageToTiles(url) {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
+    const img = await loadImage(url);
 
     const tileW = img.naturalWidth / COLS;
     const tileH = img.naturalHeight / ROWS;
@@ -274,7 +280,7 @@
         canvas.height = tileH;
         ctx.clearRect(0, 0, tileW, tileH);
         ctx.drawImage(img, c * tileW, r * tileH, tileW, tileH, 0, 0, tileW, tileH);
-        tileDataURLs[i] = canvas.toDataURL();
+        tileDataURLs[i] = canvas.toDataURL("image/png");
       }
     }
   }
@@ -286,12 +292,12 @@
     seedSteps = deriveSeed();
     curSteps  = seedSteps.slice();
 
+    // 关键：这里路径必须与你的文件同级
+    // 也就是 rotate/index.html 与 rotate/image.png 同目录时，才用 "./image.png"
     await sliceImageToTiles("./image.png");
     setTileImages();
     applyAllRotations();
 
-    // 刷新/正常进入：回初始，并清除“已完成标记”
-    // 返回：恢复“正确提交后的样子”
     const navType = getNavType();
     if (navType === "back_forward" && sessionStorage.getItem(SOLVED_KEY) === "1") {
       restoreSolvedUI();
@@ -301,17 +307,14 @@
     }
   }
 
-  // iOS Safari 返回时 init 可能不运行（bfcache），但 pageshow 一定会触发
   window.addEventListener("pageshow", (e) => {
     const navType = getNavType();
 
-    // 返回（含 bfcache）：恢复正确样子
     if ((e.persisted || navType === "back_forward") && sessionStorage.getItem(SOLVED_KEY) === "1") {
       restoreSolvedUI();
       return;
     }
 
-    // 刷新/正常进入：清标记并回初始
     if (navType === "reload" || navType === "navigate") {
       sessionStorage.removeItem(SOLVED_KEY);
       resetAllToInitial();
@@ -319,7 +322,7 @@
   });
 
   init().catch(() => {
-    // 图片失败：按钮提示即可
+    // 图片加载失败：仍然允许用户操作（只是没图），并提示你去检查路径
     setBtnText("图片加载失败", 1500);
   });
 })();
