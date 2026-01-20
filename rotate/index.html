@@ -5,6 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Rotate</title>
 
+  <!-- ===== PASSKEY GATE：未验证直接回到 playground/index.html ===== -->
+  <script>
+  (function(){
+    const KEY = "PASSKEY_OK_V1";
+    const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
+    try{
+      const ok = (sessionStorage.getItem(KEY) === "1") || (localStorage.getItem(KEY) === "1");
+      if(!ok){
+        // 带上 next，方便验证后跳回来
+        const next = encodeURIComponent(location.href);
+        location.replace(VERIFY_URL + "?next=" + next);
+      }
+    }catch(e){
+      // storage 被禁用/异常时，直接回验证页
+      location.replace(VERIFY_URL);
+    }
+  })();
+  </script>
+
   <style>
     :root{
       /* ===== 尺度标准（只改这里即可全站统一）===== */
@@ -58,7 +77,6 @@
       padding: 18px 14px 28px;
     }
 
-    /* 只保留这一句：当作“标题” */
     .titleLine{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
@@ -104,11 +122,10 @@
       display:block;
     }
 
-    /* 正确地址：输入框-路-输入框-号（正文尺寸） */
     .answerRow{
       margin-top: var(--gap);
       display:flex;
-      align-items:center;          /* 关键：与输入框垂直对齐 */
+      align-items:center;
       gap: 8px;
       flex-wrap:wrap;
       font-size: var(--fs-body);
@@ -123,7 +140,6 @@
       font-weight: 400;
     }
 
-    /* 直角输入框，行高=高度，避免上下空 */
     .ansInput{
       width: 4.2em;
       height: var(--h-input);
@@ -141,16 +157,13 @@
       box-shadow: 0 0 0 2px rgba(0,0,0,.10);
     }
 
-    /* 按钮居中，并与上面多空约两行正文 */
     .btnRow{
-      margin-top: 56px;           /* 多空2行左右 */
+      margin-top: 56px;
       display:flex;
       justify-content:center;
     }
 
-/* ===== 提交按钮（最终稳定版） ===== */
-/* 默认：白底黑字；PC hover 才反转；手机无 hover；无点击闪动 */
-
+    /* ===== 提交按钮（最终稳定版） ===== */
     .primaryBtn{
       height: var(--h-btn);
       min-width: 260px;
@@ -159,22 +172,19 @@
       border: 2px solid var(--c-border);
       border-radius: 0;
 
-      background: #fff;        /* 默认白底 */
-      color: #000;             /* 默认黑字 */
+      background: #fff;
+      color: #000;
 
       font-size: var(--fs-btn);
       font-weight: var(--fw-btn);
 
       cursor: pointer;
-
       transition: background-color 120ms ease, color 120ms ease;
 
-  /* 关键：彻底关闭 iOS 点击高亮与 callout */
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
     }
 
-/* 只在支持 hover 的设备（PC / 鼠标）上启用反转 */
     @media (hover: hover) and (pointer: fine){
       .primaryBtn:hover:not(:disabled){
         background: #000;
@@ -182,7 +192,6 @@
       }
     }
 
-/* 触屏设备明确禁止 hover 反转，防止 Safari 黏住 */
     @media (hover: none){
       .primaryBtn:hover:not(:disabled){
         background: #fff;
@@ -190,18 +199,12 @@
       }
     }
 
-/* 点击不下沉、不闪 */
-    .primaryBtn:active{
-      transform: none;
-    }
+    .primaryBtn:active{ transform: none; }
 
-/* 禁用态：不改配色，只降透明度 */
     .primaryBtn:disabled{
       opacity: .55;
       cursor: not-allowed;
     }
-
-
   </style>
 </head>
 
@@ -226,6 +229,6 @@
     </div>
   </div>
 
-  <script src="./script.js?v=20260120b"></script>
+  <script src="./script.js?v=20260120c"></script>
 </body>
 </html>
