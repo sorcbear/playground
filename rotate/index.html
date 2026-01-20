@@ -167,10 +167,45 @@
       transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
     }
 
-    .primaryBtn:hover:not(:disabled){
-      background: #000;   /* hover：黑底 */
-      color: #fff;        /* hover：白字 */
+/* 默认：白底黑字 */
+    .primaryBtn{
+      height: var(--h-btn);
+      min-width: 260px;
+      padding: 0 22px;
+      border: 2px solid var(--c-border);
+      border-radius: 0;
+      background: #fff;
+      color: #000;
+      font-size: var(--fs-btn);
+      font-weight: var(--fw-btn);
+      cursor: pointer;
+      transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
     }
+
+     /* 只在“真的有 hover”的设备上启用反转（PC/鼠标） */
+    @media (hover: hover) and (pointer: fine){
+      .primaryBtn:hover:not(:disabled){
+        background: #000;
+        color: #fff;
+      }
+    }
+
+/* 触屏设备（iPhone 等）明确禁止 hover 反转，避免黏住 */
+    @media (hover: none){
+      .primaryBtn:hover:not(:disabled){
+        background: #fff;
+        color: #000;
+      }
+    }
+
+    .primaryBtn:active{ transform: translateY(1px); }
+
+    .primaryBtn:disabled{
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
 
     .primaryBtn:active{ transform: translateY(1px); }
 
