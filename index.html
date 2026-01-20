@@ -8,11 +8,16 @@
   <style>
     :root{
       --maxw: 720px;
-      --w-mainbtn: 240px;
+
+      /* ✅ 中间区域宽度（文案左对齐在此区域内） */
+      --w-card: 340px;
+
+      /* ✅ 按钮更短 */
+      --w-btn: 200px;
 
       --fs-body: 16px;
       --fs-hint: 18px;
-      --lh-hint: 1.6;
+      --lh-hint: 1.7;
 
       --ctl-h: 48px;
       --gap: 18px;
@@ -38,31 +43,37 @@
       justify-content:center;
       padding:18px;
       box-sizing:border-box;
-      text-align:center;
     }
 
+    /* ✅ 中间区域：整体居中，但内部内容按你的需要排版 */
     .card{
-      width:min(var(--maxw), 92vw);
+      width: min(var(--w-card), 92vw);
       display:flex;
       flex-direction:column;
-      align-items:center;
+      align-items:flex-start;   /* ✅ 文案/内容从左起 */
       gap:var(--gap);
     }
 
-       .intro{
-      width: var(--w-mainbtn);   /* 和按钮同宽 */
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      white-space: pre-wrap;
-      text-align: center;
-      user-select: none;
-      margin: 0;
+    .intro{
+      width:100%;
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      white-space:pre-wrap;     /* ✅ 保留换行 */
+      text-align:left;          /* ✅ 两行都居左 */
+      user-select:none;
+      margin:0;
     }
 
+    /* ✅ 按钮不再拉满：更短；默认在区域内居中显示 */
+    .btnRow{
+      width:100%;
+      display:flex;
+      justify-content:center;   /* 如果你希望按钮也左对齐，改成 flex-start */
+    }
 
     button{
       height:var(--ctl-h);
-      width:var(--w-mainbtn);
+      width:var(--w-btn);
       padding:0 18px;
       box-sizing:border-box;
       font-size:var(--fs-body);
@@ -77,7 +88,8 @@
 
     @media (max-width:420px){
       :root{
-        --w-mainbtn: 220px;
+        --w-card: 320px;
+        --w-btn: 180px;
         --ctl-h: 46px;
         --fs-hint: 17px;
       }
@@ -88,9 +100,12 @@
 <body>
   <div class="page">
     <div class="card">
-      <div class="intro" id="intro">确定要玩这个游戏吗？
-        这可能影响你和其他人的命运...</div>
-      <button id="goBtn">确定</button>
+      <div class="intro">确定要玩这个游戏吗？
+这可能影响你和其他人的命运...</div>
+
+      <div class="btnRow">
+        <button id="goBtn">确定</button>
+      </div>
     </div>
   </div>
 
