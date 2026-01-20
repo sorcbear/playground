@@ -29,7 +29,7 @@
   const COUNTDOWN_SECONDS = 3;
 
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
-  const DEFAULT_K = "canon";
+  const DEFAULT_K = "alpha";
 
   // 返回时恢复正确样子
   const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
