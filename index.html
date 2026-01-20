@@ -7,7 +7,7 @@
 
   <style>
     :root{
-      /* 中间区域加宽，保证文字一行 */
+      /* 中间内容区域宽度 */
       --w-card: 520px;
 
       /* 按钮宽度 */
@@ -45,29 +45,34 @@
       box-sizing:border-box;
     }
 
+    /* 中间区域 */
     .card{
-      width:min(var(--w-card), 96vw); /* 手机仍然不溢出 */
+      width:min(var(--w-card), 96vw);
       display:flex;
       flex-direction:column;
-      align-items:flex-start;
+      align-items:center; /* ✅ 整体居中 */
     }
 
+    /* 文本块 */
     .intro{
       width:100%;
       font-size:var(--fs-text);
       line-height:var(--lh-text);
-      text-align:left;
+      text-align:center;   /* ✅ 两句话都居中 */
       user-select:none;
       margin:0;
-
-      white-space: nowrap; /* ✅ 强制一行 */
     }
 
+    .intro + .intro{
+      margin-top:12px;     /* 两句话之间的间距 */
+    }
+
+    /* 按钮区域 */
     .btnRow{
       width:100%;
       display:flex;
       justify-content:center;
-      margin-top:64px; /* 文字与按钮拉开距离 */
+      margin-top:64px;     /* 文案与按钮拉开距离 */
     }
 
     button{
@@ -89,7 +94,7 @@
 
     @media (max-width:420px){
       :root{
-        --w-card: 420px;  /* 手机上稍微收一点 */
+        --w-card: 420px;
         --w-btn: 180px;
         --btn-h: 46px;
         --fs-text: 17px;
@@ -101,10 +106,8 @@
 <body>
   <div class="page">
     <div class="card">
-      <div class="intro">
-        确定要玩这个游戏吗？
-        这可能影响你和其他人的命运...
-      </div>
+      <div class="intro">确定要玩这个游戏吗？</div>
+      <div class="intro">这可能会影响到你和其他人的命运...</div>
 
       <div class="btnRow">
         <button id="goBtn">确定</button>
