@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Rotate</title>
 
-  <!-- ===== PASSKEY GATE：未验证直接回到 playground/index.html ===== -->
+  <!-- ===== PASSKEY GATE（必须尽早执行）=====
+       未验证：跳回 https://sorcbear.github.io/playground/index.html
+       使用与你 start 页相同的 key：playground_pass_v1
+  -->
   <script>
   (function(){
-    const KEY = "PASSKEY_OK_V1";
+    const PASS_KEY = "playground_pass_v1";
     const VERIFY_URL = "https://sorcbear.github.io/playground/index.html";
     try{
-      const ok = (sessionStorage.getItem(KEY) === "1") || (localStorage.getItem(KEY) === "1");
-      if(!ok){
-        // 带上 next，方便验证后跳回来
+      if(!localStorage.getItem(PASS_KEY)){
         const next = encodeURIComponent(location.href);
         location.replace(VERIFY_URL + "?next=" + next);
       }
     }catch(e){
-      // storage 被禁用/异常时，直接回验证页
       location.replace(VERIFY_URL);
     }
   })();
@@ -229,6 +229,6 @@
     </div>
   </div>
 
-  <script src="./script.js?v=20260120c"></script>
+  <script src="./script.js?v=20260120d"></script>
 </body>
 </html>
