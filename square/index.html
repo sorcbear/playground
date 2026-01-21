@@ -8,55 +8,63 @@
     :root{
       --maxw: 900px;
 
-      /* ===== 来自 Rotate 页的关键字号/间距变量 ===== */
+      /* ===== 贴近 Rotate 的变量 ===== */
       --fs-body: 16px;
       --lh-body: 1.7;
 
-      --fs-hint: 18px;   /* 标题 18px */
-      --lh-hint: 1.6;    /* 标题行高 1.6 */
-      --gap: 18px;       /* 标题与下方标准间距 */
+      --fs-hint: 18px;
+      --lh-hint: 1.6;
+      --gap: 18px;
 
-      --ctl-h: 48px;     /* 输入框/按钮高度（Rotate 常用） */
+      --fs-btn: 16px;
+      --fw-btn: 600;
+      --h-btn: 52px;
+
+      --fs-input: 16px;
+      --h-input: 40px;
 
       --c-text:#111;
       --c-border:#000;
-
-      --ok:#0b6b2b;
       --danger:#b00020;
+
+      --line2: rgba(0,0,0,.18);
+      --bg:#fff;
     }
 
+    *{ box-sizing:border-box; }
     html, body{
       margin:0; padding:0;
       width:100%;
-      background:#fff;
-      color:var(--c-text);
+      background: var(--bg);
+      color: var(--c-text);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
                    "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
       font-size: var(--fs-body);
       line-height: var(--lh-body);
+      -webkit-text-size-adjust: 100%;
     }
+    input, button{ font-family: inherit; font-size: inherit; }
 
     .wrap{
       max-width: var(--maxw);
       margin: 0 auto;
       padding: 24px 16px 40px;
-      box-sizing: border-box;
     }
 
-    /* ===== 通用标题样式（来自 Rotate 页面，已验证） ===== */
+    /* ===== 标题（按你给的 Rotate 范本） ===== */
     .title{
-      font-size: var(--fs-hint);      /* 18px */
-      line-height: var(--lh-hint);    /* 1.6 */
-      font-weight: 700;               /* 关键：粗标题 */
-      margin: 4px 0 var(--gap);       /* 与正文/图片的标准间距 */
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
+      margin: 4px 0 var(--gap);
       text-align: left;
-      white-space: pre-wrap;          /* 中文排版关键 */
+      white-space: pre-wrap;
     }
 
     .imgbox{
-      display:flex;
-      justify-content:center;
-      align-items:center;
+      border: 1px solid var(--line2);
+      overflow:hidden;
+      background:#fff;
       margin-bottom: var(--gap);
     }
     img{
@@ -64,15 +72,17 @@
       max-width: var(--maxw);
       height:auto;
       display:block;
+      user-select:none;
+      -webkit-user-drag:none;
     }
 
     .row{
       display:flex;
       align-items:center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
-      font-size: var(--fs-hint);
-      line-height: 1.2;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
     }
     .label{ font-weight: 600; }
 
@@ -82,51 +92,76 @@
       font-weight: 800;
     }
 
-    /* ===== 输入框：Rotate 风格 ===== */
+    /* ===== 输入框：Rotate 的 ansInput 风格（直角、2px 边、高度 40）===== */
     input[type="text"]{
-      height: var(--ctl-h);
-      width: 220px;
-      max-width: 70vw;
-      padding: 0 12px;
-      font-size: 18px;
-      border: 1px solid var(--c-border);
-      border-radius: 10px;
+      width: 6.2em;
+      height: var(--h-input);
+      padding: 0 8px;
+      border: 2px solid var(--c-border);
+      border-radius: 0;
       outline: none;
-      box-sizing: border-box;
+      background:#fff;
+      color: var(--c-text);
+      font-size: var(--fs-input);
+      line-height: var(--h-input);
+      text-align: center;
     }
     input[type="text"]:focus{
-      box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.10);
     }
 
-    /* ===== 按钮：Rotate 风格 + 反馈 ===== */
-    button{
-      height: var(--ctl-h);
-      padding: 0 16px;
-      font-size: 16px;
-      border: 1px solid var(--c-border);
-      border-radius: 10px;
-      background: #000;
-      color: #fff;
-      cursor: pointer;
-      user-select:none;
+    /* ===== 两按钮区域：按 Rotate 的 btnRow 思路（居中、间距一致）===== */
+    .btnRow{
+      margin-top: 56px;
+      display:flex;
+      justify-content:center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* ===== 按钮：Rotate primaryBtn（白底黑字；PC hover 反转；触屏不反转；不下沉）===== */
+    .primaryBtn{
+      height: var(--h-btn);
+      min-width: 220px;
+      padding: 0 22px;
+
+      border: 2px solid var(--c-border);
+      border-radius: 0;
+
+      background:#fff;
+      color:#000;
+
+      font-size: var(--fs-btn);
+      font-weight: var(--fw-btn);
+
+      cursor:pointer;
+      transition: background-color 120ms ease, color 120ms ease;
+
       -webkit-tap-highlight-color: transparent;
-    }
-    button:active{ transform: translateY(1px); }
-    button:disabled{
-      opacity: 0.55;
-      cursor: not-allowed;
-      transform: none;
+      -webkit-touch-callout: none;
+      user-select:none;
     }
 
-    /* 反馈文案 */
-    .msg{
-      margin-top: 14px;
-      font-size: 14px;
-      min-height: 20px;
-      font-weight: 700;
+    @media (hover: hover) and (pointer: fine){
+      .primaryBtn:hover:not(:disabled){
+        background:#000;
+        color:#fff;
+      }
     }
-    .msg.ok{ color: var(--ok); }
-    .msg.bad{ color: var(--danger); }
+
+    @media (hover: none){
+      .primaryBtn:hover:not(:disabled){
+        background:#fff;
+        color:#000;
+      }
+    }
+
+    .primaryBtn:active{ transform:none; }
+
+    .primaryBtn:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
   </style>
 </head>
 
@@ -141,79 +176,176 @@
     <div class="row">
       <span class="label"><span class="qmark">?</span>对应的是什么数字：</span>
       <input id="answer" type="text" inputmode="numeric" autocomplete="off" />
-      <button id="submitBtn" type="button">提交答案</button>
     </div>
 
-    <div id="msg" class="msg"></div>
+    <div class="btnRow">
+      <button id="hintBtn" class="primaryBtn" type="button">获得提示</button>
+      <button id="submitBtn" class="primaryBtn" type="button">提交答案</button>
+    </div>
   </div>
 
   <script>
     (function () {
       const CORRECT = "7";
       const NEXT_URL = "https://sorcbear.github.io/playground/barrel/";
+      const HINT_URL = "https://sorcbear.github.io/playground/square/hint";
+
+      const COUNTDOWN_SECONDS = 3;
+
+      // 仅用于“从下一页返回时恢复正确样子”（沿用 Rotate 思路）
+      const SOLVED_KEY = "square_solved_back_only_v1";
 
       const input = document.getElementById("answer");
-      const btn = document.getElementById("submitBtn");
-      const msg = document.getElementById("msg");
+      const hintBtn = document.getElementById("hintBtn");
+      const submitBtn = document.getElementById("submitBtn");
 
       let locked = false;
-      let timerId = null;
+      let countdownTimer = null;
 
-      function setLocked(state) {
-        locked = state;
-        btn.disabled = state;
-        input.disabled = state;
-      }
+      // 仅改按钮文案，不改颜色（Rotate 风格）
+      const BTN_TEXT_DEFAULT = "提交答案";
+      let btnTextTimer = null;
 
-      function setMsgOk(text) {
-        msg.classList.remove("bad");
-        msg.classList.add("ok");
-        msg.textContent = text;
-      }
-
-      function setMsgBad(text) {
-        msg.classList.remove("ok");
-        msg.classList.add("bad");
-        msg.textContent = text;
-      }
-
-      function startCountdownAndRedirect() {
-        setLocked(true);
-        btn.textContent = "已提交";
-
-        let n = 3;
-        setMsgOk(`答案正确，即将进入下一题（${n}）`);
-
-        timerId = setInterval(() => {
-          n -= 1;
-          if (n >= 1) {
-            setMsgOk(`答案正确，即将进入下一题（${n}）`);
-          } else {
-            clearInterval(timerId);
-            timerId = null;
-            location.href = NEXT_URL;
-          }
-        }, 1000);
-      }
-
-      function check() {
-        if (locked) return;
-
-        const val = (input.value || "").trim();
-        if (val === CORRECT) {
-          startCountdownAndRedirect();
-        } else {
-          setMsgBad("try again");
+      function clearBtnHint(){
+        if (btnTextTimer){
+          clearTimeout(btnTextTimer);
+          btnTextTimer = null;
         }
       }
 
-      btn.addEventListener("click", check);
+      function setBtnText(text, ms = 900){
+        clearBtnHint();
+        submitBtn.textContent = text;
+        if (ms > 0){
+          btnTextTimer = setTimeout(() => {
+            submitBtn.textContent = BTN_TEXT_DEFAULT;
+            btnTextTimer = null;
+          }, ms);
+        }
+      }
+
+      function clearCountdown(){
+        if (countdownTimer){
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+      }
+
+      function setDisabledAll(on){
+        submitBtn.disabled = on;
+        hintBtn.disabled = on;
+        input.disabled = on;
+      }
+
+      function unlockUI(){
+        locked = false;
+        clearCountdown();
+        setDisabledAll(false);
+      }
+
+      function getNavType(){
+        try{
+          const nav = performance.getEntriesByType("navigation");
+          if (nav && nav[0] && nav[0].type) return nav[0].type;
+        }catch{}
+        if (performance && performance.navigation){
+          const t = performance.navigation.type;
+          if (t === 1) return "reload";
+          if (t === 2) return "back_forward";
+          return "navigate";
+        }
+        return "navigate";
+      }
+
+      function resetAllToInitial(){
+        unlockUI();
+        clearBtnHint();
+        input.value = "";
+        submitBtn.textContent = BTN_TEXT_DEFAULT;
+      }
+
+      function restoreSolvedUI(){
+        unlockUI();
+        clearBtnHint();
+        input.value = CORRECT;
+        setBtnText("答案已确认", 900);
+      }
+
+      function isAnswerSolved(){
+        return (input.value || "").trim() === CORRECT;
+      }
+
+      function startCountdownAndRedirect(){
+        sessionStorage.setItem(SOLVED_KEY, "1");
+
+        locked = true;
+        setDisabledAll(true);
+        clearBtnHint();
+
+        let left = COUNTDOWN_SECONDS;
+        submitBtn.textContent = `答案正确（${left}）`;
+
+        clearCountdown();
+        countdownTimer = setInterval(() => {
+          left -= 1;
+          if (left <= 0){
+            clearCountdown();
+            location.href = NEXT_URL;
+            return;
+          }
+          submitBtn.textContent = `答案正确（${left}）`;
+        }, 1000);
+      }
+
+      // ===== 事件绑定（Rotate 逻辑风格）=====
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") check();
+        if (e.key === "Enter") submitBtn.click();
       });
 
+      hintBtn.addEventListener("click", () => {
+        if (locked) return;
+        location.href = HINT_URL;
+      });
+
+      submitBtn.addEventListener("click", () => {
+        if (locked) return;
+
+        if (isAnswerSolved()){
+          startCountdownAndRedirect();
+        }else{
+          setBtnText("不正确，再试一次", 900);
+        }
+      });
+
+      // pageshow：完全照搬 Rotate 的恢复逻辑
+      window.addEventListener("pageshow", (e) => {
+        const navType = getNavType();
+
+        if ((e.persisted || navType === "back_forward") && sessionStorage.getItem(SOLVED_KEY) === "1"){
+          restoreSolvedUI();
+          return;
+        }
+
+        if (navType === "reload" || navType === "navigate"){
+          sessionStorage.removeItem(SOLVED_KEY);
+          resetAllToInitial();
+        }
+      });
+
+      // 初始进入：同样按 Rotate 的判断
+      (function init(){
+        const navType = getNavType();
+        if (navType === "back_forward" && sessionStorage.getItem(SOLVED_KEY) === "1"){
+          restoreSolvedUI();
+        }else{
+          sessionStorage.removeItem(SOLVED_KEY);
+          resetAllToInitial();
+        }
+      })();
+
+      // 防止计时器残留
       window.addEventListener("pagehide", () => {
-        if (timerId) clearInterval(timerId);
+        clearCountdown();
       });
     })();
   </script>
