@@ -7,41 +7,31 @@
 
   <style>
     :root{
-      /* ===== 尺度标准（只改这里即可全站统一）===== */
       --maxw: 720px;
-      --panelw: 420px;
 
-      --fs-body: 16px;     /* 正文 */
+      --fs-body: 16px;
       --lh-body: 1.7;
 
-      --fs-hint: 18px;     /* 提示/标题 */
+      --fs-hint: 18px;
       --lh-hint: 1.6;
 
-      --fs-status: 18px;   /* 状态 */
-      --fw-status: 700;
-
-      --fs-btn: 16px;      /* 按钮文字 */
+      --fs-btn: 16px;
       --fw-btn: 600;
-      --h-btn: 52px;       /* 按钮高度 */
-
-      --fs-input: 16px;    /* 输入框文字 */
-      --h-input: 52px;     /* 输入框高度 */
+      --h-btn: 52px;
 
       --gap: 18px;
       --gap-tight: 12px;
 
-      --c-text: #111;
-      --c-muted: #444;
-      --c-danger: #b00020;
-      --c-border: #000;
-      --c-ok: #0b6b2b;
+      --c-text:#111;
+      --c-border:#000;
+      --c-ok:#0b6b2b;
     }
 
-    html, body{
-      margin:0; padding:0;
-      width:100%; height:100%;
+    html,body{
+      margin:0;
       background:#fff;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+                   "PingFang SC","Microsoft YaHei",Arial,sans-serif;
       font-size:var(--fs-body);
       line-height:var(--lh-body);
       color:var(--c-text);
@@ -54,46 +44,39 @@
       box-sizing:border-box;
     }
 
-    /* 顶部文字：改为标题式样（不是正文） */
+    /* ===== 标题 ===== */
     .title{
-      margin:0 0 calc(var(--gap) * 1.2) 0; /* 第一行不空格：margin-top=0 */
+      margin:0 0 calc(var(--gap) * 1.2) 0;
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
       font-weight:700;
-      color:var(--c-text);
-      white-space:normal;
     }
 
     .stage{
       width:100%;
       aspect-ratio:918/1024;
-      border-radius:10px;
       overflow:hidden;
-      background:#fff;
-      touch-action:manipulation;
       user-select:none;
+      touch-action:manipulation;
     }
     svg{ width:100%; height:100%; display:block; }
 
-    /* 圆点显示 */
     .hit{ fill:transparent; pointer-events:none; }
     .dot{ fill:transparent; pointer-events:none; }
-    .hit.selected + .dot{ fill:rgba(220,0,0,0.92); }
+    .hit.selected + .dot{ fill:rgba(220,0,0,.92); }
 
     .panel{
+      margin-top:var(--gap);
       display:flex;
       gap:var(--gap-tight);
-      margin-top:var(--gap);
       justify-content:center;
-      flex-wrap:wrap;
     }
 
-    /* startgame 风格按钮：白底黑字 */
+    /* startgame 风格按钮 */
     button{
-      width:240px;               /* 如需完全变量化，可再加 --w-mainbtn */
+      width:240px;
       height:var(--h-btn);
       padding:0 18px;
-      box-sizing:border-box;
       font-size:var(--fs-btn);
       font-weight:var(--fw-btn);
       background:#fff;
@@ -107,13 +90,10 @@
 
     .msg{
       margin-top:var(--gap-tight);
-      padding:0;
-      background:transparent;
-      font-size:14px; /* 你原来倒计时文字：14px */
       min-height:1.4em;
+      font-size:14px;
     }
-    .msg.ok{ color: var(--c-ok); }
-    .msg.err{ color: var(--c-danger); }
+    .msg.ok{ color:var(--c-ok); }
   </style>
 </head>
 
@@ -125,35 +105,39 @@
   </div>
 
   <div class="stage">
-    <svg viewBox="0 0 918 1024" preserveAspectRatio="xMidYMid meet" id="svg"
-         xmlns="http://www.w3.org/2000/svg"
-         xmlns:xlink="http://www.w3.org/1999/xlink">
-      <image id="bg"
-             href="map.png" xlink:href="map.png"
-             x="0" y="0" width="918" height="1024"
-             preserveAspectRatio="xMidYMid meet"
+    <svg viewBox="0 0 918 1024" id="svg"
+         xmlns="http://www.w3.org/2000/svg">
+      <image href="map.png" x="0" y="0" width="918" height="1024"
              style="pointer-events:none;"></image>
-
-      <rect id="catcher"
-            x="0" y="0" width="918" height="1024"
-            fill="transparent"
-            style="pointer-events:all;"></rect>
+      <rect id="catcher" x="0" y="0" width="918" height="1024"
+            fill="transparent"></rect>
     </svg>
   </div>
 
-  <!-- 你要求：不要“请结合环境信息...”这一段，因此这里不再渲染 hint 文本 -->
-
   <div class="panel">
-    <button id="hintBtn" type="button">获得提示</button>
-    <button id="submitBtn" type="button">提交答案</button>
+    <button id="hintBtn">获得提示</button>
+    <button id="submitBtn">提交答案</button>
   </div>
 
   <div class="msg" id="msg"></div>
-
 </div>
 
 <script>
-const CIRCLES = [{"x":678,"y":84},{"x":752,"y":88},{"x":376,"y":166},{"x":473,"y":196},{"x":553,"y":171},{"x":657,"y":219},{"x":307,"y":263},{"x":886,"y":187},{"x":444,"y":247},{"x":115,"y":274},{"x":256,"y":209},{"x":806,"y":211},{"x":879,"y":318},{"x":217,"y":346},{"x":303,"y":346},{"x":547,"y":349},{"x":267,"y":638},{"x":105,"y":346},{"x":78,"y":434},{"x":56,"y":541},{"x":189,"y":548},{"x":164,"y":460},{"x":585,"y":491},{"x":438,"y":491},{"x":369,"y":579},{"x":813,"y":847},{"x":274,"y":550},{"x":485,"y":431},{"x":617,"y":305},{"x":608,"y":617},{"x":535,"y":573},{"x":839,"y":590},{"x":825,"y":659},{"x":897,"y":421},{"x":390,"y":673},{"x":303,"y":718},{"x":527,"y":663},{"x":486,"y":728},{"x":862,"y":744},{"x":730,"y":172},{"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},{"x":206,"y":774},{"x":186,"y":622}];
+/* ===== 数据 ===== */
+const CIRCLES = [
+{"x":678,"y":84},{"x":752,"y":88},{"x":376,"y":166},{"x":473,"y":196},
+{"x":553,"y":171},{"x":657,"y":219},{"x":307,"y":263},{"x":886,"y":187},
+{"x":444,"y":247},{"x":115,"y":274},{"x":256,"y":209},{"x":806,"y":211},
+{"x":879,"y":318},{"x":217,"y":346},{"x":303,"y":346},{"x":547,"y":349},
+{"x":267,"y":638},{"x":105,"y":346},{"x":78,"y":434},{"x":56,"y":541},
+{"x":189,"y":548},{"x":164,"y":460},{"x":585,"y":491},{"x":438,"y":491},
+{"x":369,"y":579},{"x":813,"y":847},{"x":274,"y":550},{"x":485,"y":431},
+{"x":617,"y":305},{"x":608,"y":617},{"x":535,"y":573},{"x":839,"y":590},
+{"x":825,"y":659},{"x":897,"y":421},{"x":390,"y":673},{"x":303,"y":718},
+{"x":527,"y":663},{"x":486,"y":728},{"x":862,"y":744},{"x":730,"y":172},
+{"x":644,"y":827},{"x":506,"y":865},{"x":433,"y":878},{"x":332,"y":893},
+{"x":206,"y":774},{"x":186,"y":622}
+];
 
 const ANSWER_POINTS = [
   {x:376,y:166},{x:217,y:346},{x:303,y:346},
@@ -163,29 +147,31 @@ const ANSWER_POINTS = [
 
 const HINT_URL = "https://sorcbear.github.io/playground/circle/hint";
 const NEXT_URL = "https://sorcbear.github.io/playground/track/";
-
-// 倒计时：3 → 2 → 1 → 跳转
 const COUNTDOWN_START = 3;
 
 const R_DOT=10, SNAP_DIST=36, EPS=10;
 
-const svg=document.getElementById("svg");
-const catcher=document.getElementById("catcher");
-const msg=document.getElementById("msg");
-const submitBtn=document.getElementById("submitBtn");
-const hintBtn=document.getElementById("hintBtn");
+/* ===== 状态 ===== */
+const svg = document.getElementById("svg");
+const catcher = document.getElementById("catcher");
+const submitBtn = document.getElementById("submitBtn");
+const hintBtn = document.getElementById("hintBtn");
+const msg = document.getElementById("msg");
 
-const selected=new Array(CIRCLES.length).fill(false);
+const selected = new Array(CIRCLES.length).fill(false);
+let locked=false;
+let countdownTimer=null;
 
-let locked = false;
-let countdownTimer = null;
-
+/* ===== 工具 ===== */
 function el(n,a={}){const e=document.createElementNS("http://www.w3.org/2000/svg",n);for(const k in a)e.setAttribute(k,a[k]);return e;}
 function svgPt(ev){const p=svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
 function d2(a,b){const dx=a.x-b.x,dy=a.y-b.y;return dx*dx+dy*dy;}
 function nearest(x,y){
   let bi=-1,bd=1e9;
-  CIRCLES.forEach((c,i)=>{const dx=x-c.x,dy=y-c.y,dd=dx*dx+dy*dy;if(dd<bd){bd=dd;bi=i;}});
+  CIRCLES.forEach((c,i)=>{
+    const dd=(x-c.x)**2+(y-c.y)**2;
+    if(dd<bd){bd=dd;bi=i;}
+  });
   return bd<=SNAP_DIST*SNAP_DIST?bi:-1;
 }
 function sameSet(u,a){
@@ -194,7 +180,9 @@ function sameSet(u,a){
   for(const p of a){
     let ok=false;
     for(let i=0;i<u.length;i++){
-      if(!used[i]&&d2(p,u[i])<=EPS*EPS){used[i]=true;ok=true;break;}
+      if(!used[i]&&d2(p,u[i])<=EPS*EPS){
+        used[i]=true; ok=true; break;
+      }
     }
     if(!ok)return false;
   }
@@ -216,57 +204,54 @@ function render(){
 }
 
 function setLocked(v){
-  locked = v;
-  submitBtn.disabled = v;
-  hintBtn.disabled = v;
+  locked=v;
+  submitBtn.disabled=v;
+  hintBtn.disabled=v;
 }
 
-function setMsg(text, kind=""){
-  msg.textContent = text || "";
-  msg.classList.toggle("ok", kind==="ok");
-  msg.classList.toggle("err", kind==="err");
+function setBtnText(text, ms=900){
+  const old = submitBtn.textContent;
+  submitBtn.textContent = text;
+  submitBtn.disabled = true;
+  setTimeout(()=>{
+    submitBtn.textContent = old;
+    submitBtn.disabled = false;
+  }, ms);
 }
 
+/* ===== 事件 ===== */
 catcher.addEventListener("pointerdown",e=>{
-  e.preventDefault();
   if(locked) return;
-
   const p=svgPt(e);
   const i=nearest(p.x,p.y);
-  if(i<0)return;
-
+  if(i<0) return;
   selected[i]=!selected[i];
-  setMsg("");
   render();
 },{passive:false});
 
-hintBtn.onclick=()=>{
-  if(locked) return;
-  location.href = HINT_URL;
-};
+hintBtn.onclick=()=> location.href = HINT_URL;
 
 submitBtn.onclick=()=>{
   if(locked) return;
 
   if(sameSet(userPts(),ANSWER_POINTS)){
     setLocked(true);
+    let t=COUNTDOWN_START;
+    msg.textContent=`答案正确，即将进入下一题（${t}）`;
+    msg.classList.add("ok");
 
-    let t = COUNTDOWN_START;
-    setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
-
-    clearInterval(countdownTimer);
-    countdownTimer = setInterval(()=>{
-      t -= 1;
-      if(t > 0){
-        setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
+    countdownTimer=setInterval(()=>{
+      t--;
+      if(t>0){
+        msg.textContent=`答案正确，即将进入下一题（${t}）`;
       }else{
         clearInterval(countdownTimer);
-        location.href = NEXT_URL;
+        location.href=NEXT_URL;
       }
-    }, 1000);
-
+    },1000);
   }else{
-    setMsg("Please try again", "err");
+    msg.textContent="";
+    setBtnText("不正确，再试一次",900);
   }
 };
 
