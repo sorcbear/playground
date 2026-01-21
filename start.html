@@ -24,11 +24,12 @@
       --c-text:#111;
       --c-border:#000;
       --c-danger:#b00020;
+      --c-muted:#888;
 
       /* 标题单行高度（用于固定相对位置） */
       --hint-line-h: calc(var(--fs-hint) * var(--lh-hint));
 
-      /* ✅ 你要“再多隔一行”：两行间距 = 2 行标题高度 */
+      /* 提示文字与倒计时间距（单位：标题行） */
       --hint-gap-lines: 3;
       --hint-gap: calc(var(--hint-line-h) * var(--hint-gap-lines));
     }
@@ -52,23 +53,23 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      justify-content:center;
+      justify-content:center;   /* ✅ 上下居中 */
       padding:18px;
       box-sizing:border-box;
       text-align:center;
       overflow:hidden;
     }
 
-    /* 倒计时阶段的文字层：铺满容器，用绝对定位固定倒计时在中心 */
+    /* 倒计时阶段的文字层 */
     .centerStack{
-      display:none;                 /* 初始不占位，保证按钮真居中 */
+      display:none;
       position:absolute;
       inset:0;
       width:100%;
       height:100%;
     }
 
-    /* ===== 通用标题样式（来自 Rotate 页面，已验证） ===== */
+    /* ===== 通用标题样式 ===== */
     .title{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
@@ -79,12 +80,11 @@
       width:min(var(--maxw),92vw);
     }
 
-    /* 倒计时标题（红色） */
     .title-danger{
       color: var(--c-danger);
     }
 
-    /* ✅ 倒计时始终固定在正中间 */
+    /* 倒计时固定在正中 */
     .statusFixed{
       position:absolute;
       left:50%;
@@ -93,21 +93,22 @@
       pointer-events:none;
     }
 
-    /* ✅ 提示文字固定在倒计时上方，并且“多隔一行”（两行距离） */
+    /* 提示文字固定在倒计时上方 */
     .hintFixed{
       position:absolute;
       left:50%;
       top:calc(50% - var(--hint-gap));
       transform:translateX(-50%);
-      display:none;                /* 初始不显示，到 8 秒出现 */
+      display:none;
       pointer-events:none;
     }
 
+    /* ===== 开始按钮区域 ===== */
     .btnRow{
-      margin-top: var(--space-action);
       width:100%;
       display:flex;
-      justify-content:center;
+      flex-direction:column;
+      align-items:center;       /* ✅ 左右居中 */
     }
 
     button{
@@ -126,6 +127,15 @@
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
 
+    /* ===== 按钮下方提示文字 ===== */
+    .btnHint{
+      margin-top: calc(var(--lh-body) * 3em); /* ✅ 空 3 行 */
+      font-size: 13px;
+      color: var(--c-muted);
+      text-align: center;
+      user-select:none;
+    }
+
     @media (max-width: 420px){
       :root{
         --w-mainbtn: 220px;
@@ -140,15 +150,17 @@
   <div class="container">
 
     <div class="centerStack" id="centerStack">
-      <!-- ✅ 到 8 秒才出现（固定在倒计时上方，不影响倒计时位置） -->
       <div class="title hintFixed" id="hint">好像听到一段诡异的音乐...</div>
-
-      <!-- ✅ 始终固定在页面正中 -->
       <div class="title title-danger statusFixed" id="status"></div>
     </div>
 
     <div class="btnRow" id="btnRow">
       <button id="startBtn">开始游戏</button>
+
+      <!-- ✅ 新增：按钮下方提示 -->
+      <div class="btnHint">
+        请打开手机声音后再点击开始
+      </div>
     </div>
 
   </div>
@@ -209,20 +221,15 @@
   function playTone(freq, d){
     if(!audioEnabled || !audioCtx) return;
     const t = audioCtx.currentTime;
-
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
-
     o.type = "sine";
     o.frequency.setValueAtTime(freq, t);
-
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(0.3, t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-
     o.connect(g);
     g.connect(audioCtx.destination);
-
     o.start(t);
     o.stop(t + d + 0.05);
   }
@@ -242,41 +249,31 @@
 
   function startCountdown(){
     let left = COUNTDOWN_SEC;
-
     const tick = () => {
       statusEl.textContent = `倒计时：${left}`;
-
       if(left === 8 && !musicPlayed){
         musicPlayed = true;
         hintEl.style.display = "block";
         playMelody();
       }
-
       if(left <= 0){
         location.href = NEXT_URL;
         return;
       }
-
       left--;
       timers.push(setTimeout(tick, 1000));
     };
-
     tick();
   }
 
   async function startFlow(){
     startBtn.disabled = true;
-
     btnRow.style.display = "none";
     centerStack.style.display = "block";
-
     hintEl.style.display = "none";
     musicPlayed = false;
-
     clearTimers();
-
     try{ await enableAudio(); }catch(e){}
-
     startCountdown();
   }
 
