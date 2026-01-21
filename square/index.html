@@ -46,29 +46,22 @@ html,body{
   box-sizing:border-box;
 }
 
-/* 标题：无前导空格、无下间距 */
+/* 标题 */
 .title{
   margin:0;
   padding:0;
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
-  white-space:normal;
 }
 
-/* 图片：与标题零间距 */
-.imgbox{
-  margin:0;
-  padding:0;
-}
+/* 图片 */
+.imgbox{ margin:0; }
 .imgbox img{
   display:block;
   width:100%;
   max-width:800px;
   margin:0 auto;
-  padding:0;
-  user-select:none;
-  -webkit-user-drag:none;
 }
 
 /* 题目行 */
@@ -81,13 +74,9 @@ html,body{
   align-items:center;
   gap:10px;
 }
+.qmark{ color:var(--c-danger); font-weight:800; }
 
-.qmark{
-  color:var(--c-danger);
-  font-weight:800;
-}
-
-/* 输入框：无系统蓝圈 */
+/* 输入框 */
 .ansInput{
   width:6.2em;
   height:40px;
@@ -96,17 +85,11 @@ html,body{
   border-radius:0;
   font-size:16px;
   text-align:center;
-  box-sizing:border-box;
-
   outline:none;
   box-shadow:none;
   -webkit-appearance:none;
-  appearance:none;
 }
-.ansInput:focus{
-  outline:none;
-  box-shadow:none;
-}
+.ansInput:focus{ outline:none; box-shadow:none; }
 
 /* 按钮区 */
 .panel{
@@ -117,7 +100,7 @@ html,body{
   flex-wrap:nowrap;
 }
 
-/* 按钮默认：白底黑字 */
+/* 默认按钮 */
 button{
   width:240px;
   height:var(--h-btn);
@@ -133,18 +116,17 @@ button{
   -webkit-tap-highlight-color:transparent;
 }
 
-/* 只在支持 hover 的设备上启用 hover 反转（PC） */
+/* PC hover */
 @media (hover:hover) and (pointer:fine){
   button:hover{ background:#000; color:#fff; }
 }
 
-/* 临时黑底白字：只由 JS 控制（用于“不正确，再试一次”） */
+/* JS 控制的点击反馈 */
 button.invert{
   background:#000;
   color:#fff;
 }
 
-/* 禁用态：不改配色，只降透明度 */
 button:disabled{
   opacity:.45;
   cursor:default;
@@ -169,7 +151,7 @@ button:disabled{
 <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div><div class="imgbox"><img src="puzzle.jpg" alt="square puzzle"></div>
 
 <div class="qline">
-  <span><span class="qmark">? </span>对应的是什么数字：</span>
+  <span><span class="qmark">?</span>对应的是什么数字：</span>
   <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
 </div>
 
@@ -193,39 +175,47 @@ const submitBtn = document.getElementById("submitBtn");
 const hintBtn = document.getElementById("hintBtn");
 const msg = document.getElementById("msg");
 
-let locked = false;
-let timer = null;
-let btnTimer = null;
+let locked=false;
+let timer=null;
+let btnTimer=null;
 
-function setLocked(v){
-  locked = v;
-  submitBtn.disabled = v;
-  hintBtn.disabled = v;
-  input.disabled = v;
+/* 公共：短暂黑底白字反馈 */
+function flashInvert(btn, ms=120){
+  btn.classList.add("invert");
+  setTimeout(()=>btn.classList.remove("invert"), ms);
 }
 
-// 错误提示：期间黑底白字；结束后回到白底黑字
-function setBtnText(text, ms=900){
-  if (btnTimer) { clearTimeout(btnTimer); btnTimer = null; }
+function setLocked(v){
+  locked=v;
+  submitBtn.disabled=v;
+  hintBtn.disabled=v;
+  input.disabled=v;
+}
 
-  const old = "提交答案";
+/* 错误提示用 */
+function setBtnText(text, ms=900){
+  if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+
   submitBtn.textContent = text;
-  submitBtn.classList.add("invert");   // 关键：仅此期间黑底白字
+  submitBtn.classList.add("invert");
   submitBtn.disabled = true;
 
   btnTimer = setTimeout(()=>{
-    submitBtn.textContent = old;
+    submitBtn.textContent = "提交答案";
     submitBtn.classList.remove("invert");
     submitBtn.disabled = false;
     btnTimer = null;
   }, ms);
 }
 
-hintBtn.onclick = () => {
-  if (!locked) location.href = HINT_URL;
+/* 获得提示：先反馈，再跳转 */
+hintBtn.onclick = ()=>{
+  if (locked) return;
+  flashInvert(hintBtn, 120);
+  setTimeout(()=>location.href = HINT_URL, 120);
 };
 
-submitBtn.onclick = () => {
+submitBtn.onclick = ()=>{
   if (locked) return;
 
   if (input.value.trim() === CORRECT){
@@ -238,13 +228,13 @@ submitBtn.onclick = () => {
       t--;
       if (t > 0){
         msg.textContent = `答案正确，即将进入下一题（${t}）`;
-      } else {
+      }else{
         clearInterval(timer);
         location.href = NEXT_URL;
       }
-    }, 1000);
-  } else {
-    msg.textContent = "";
+    },1000);
+  }else{
+    msg.textContent="";
     msg.classList.remove("ok");
     setBtnText("不正确，再试一次", 900);
   }
