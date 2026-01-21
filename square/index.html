@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<!-- 关键：禁止 iOS Safari 自动识别地址/电话/邮箱 -->
+<!-- 禁止 iOS Safari 自动识别地址/电话/邮箱 -->
 <meta name="format-detection" content="telephone=no,address=no,email=no">
 
 <title>Square Puzzle</title>
@@ -46,7 +46,7 @@ html,body{
   box-sizing:border-box;
 }
 
-/* ===== 标题：无前导空格、无下间距 ===== */
+/* 标题：无前导空格、无下间距 */
 .title{
   margin:0;
   padding:0;
@@ -56,7 +56,7 @@ html,body{
   white-space:normal;
 }
 
-/* ===== 图片：与标题零间距 ===== */
+/* 图片：与标题零间距 */
 .imgbox{
   margin:0;
   padding:0;
@@ -71,7 +71,7 @@ html,body{
   -webkit-user-drag:none;
 }
 
-/* ===== 问题行 ===== */
+/* 题目行 */
 .qline{
   margin:18px 0;
   font-size:var(--fs-hint);
@@ -87,6 +87,7 @@ html,body{
   font-weight:800;
 }
 
+/* ===== 输入框：彻底关闭系统 focus 蓝圈 ===== */
 .ansInput{
   width:6.2em;
   height:40px;
@@ -96,9 +97,19 @@ html,body{
   font-size:16px;
   text-align:center;
   box-sizing:border-box;
+
+  outline:none;                  /* 去掉浏览器 outline */
+  box-shadow:none;               /* 防止系统阴影 */
+  -webkit-appearance:none;       /* iOS 原生样式 */
+  appearance:none;
 }
 
-/* ===== 按钮（Circle 同款） ===== */
+.ansInput:focus{
+  outline:none;                  /* 双保险 */
+  box-shadow:none;
+}
+
+/* 按钮（Circle 同款） */
 .panel{
   margin-top:18px;
   display:flex;
@@ -143,7 +154,7 @@ button:disabled{ opacity:.45; cursor:default; }
 <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div><div class="imgbox"><img src="puzzle.jpg" alt="square puzzle"></div>
 
 <div class="qline">
-  <span><span class="qmark">?</span>对应的是什么数字：</span>
+  <span><span class="qmark">? </span>对应的是什么数字：</span>
   <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
 </div>
 
