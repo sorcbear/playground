@@ -3,98 +3,170 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>addresss</title>
+  <title>address</title>
+
   <style>
     :root{
-      --ok:#0b6b2b; /* 绿色系 */
+      /* ===== 尺度标准（与 track/rotate 统一）===== */
+      --maxw: 720px;
+
+      --fs-body: 16px;
+      --lh-body: 1.7;
+
+      --fs-hint: 18px;
+      --lh-hint: 1.6;
+
+      --fs-btn: 16px;
+      --fw-btn: 600;
+      --h-btn: 52px;
+
+      --gap: 18px;
+      --gap-tight: 12px;
+
+      --c-text: #111;
+      --c-danger: #b00020;
+      --c-border: #000;
+
+      --ok:#0b6b2b;
+      --bg:#fff;
     }
-    html, body{
-      margin:0; padding:0;
-      background:#fff; color:#111;
-      font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--c-text);
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      -webkit-text-size-adjust: 100%;
     }
+
     .wrap{
-      max-width: 980px;
+      max-width: var(--maxw);
       margin: 0 auto;
       padding: 18px 14px 28px;
-      box-sizing: border-box;
     }
+
+    /* 标题 UI（与 track 的标题一致：无首行空隙） */
     .title{
-      font-size: 16px;
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
       font-weight: 700;
-      margin: 0 0 10px 0;
-      line-height: 1.5;
+      margin: 0;
+      text-align: left;
+      white-space: pre-wrap;
     }
+
+    /* 红字提示（与 track 红字一致：同字号同样加粗同色） */
     .hint{
-      font-size: 13px;
-      color: #555;
-      margin: 0 0 14px 0;
+      margin: 0;
+      margin-top: var(--gap-tight);
+      font-size: 12px;      /* 与 track 一致 */
+      line-height: 1.4;
+      color: var(--c-danger);
+      font-weight: 700;
+      white-space: pre-wrap;
     }
+
+    /* 正文 UI（按统一正文规范） */
+    .text{
+      margin-top: var(--gap);
+      white-space: pre-wrap;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      color: var(--c-text);
+    }
+
+    /* 10 个地址按钮网格（布局保留，但风格改为“白底黑字无特效”） */
     .grid{
+      margin-top: var(--gap);
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      margin-bottom: 16px;
     }
     @media (min-width: 820px){
       .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
-    button.addr{
+
+    /* 统一按钮样式：白底黑字、无 hover 特效 */
+    button.addr, button.hintBtn{
       appearance:none;
-      border: 1px solid #111;
-      background:#111;
-      color:#fff;
-      border-radius: 10px;
-      padding: 12px 10px;
-      font-size: 15px;
-      cursor: pointer;
-      text-align: center;
+      height: var(--h-btn);
+      padding: 0 18px;
+      font-size: var(--fs-btn);
+      font-weight: var(--fw-btn);
+
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      border-radius:0;
+
+      cursor:pointer;
       user-select:none;
+      white-space: nowrap;
+
       -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
     }
-    button.addr:disabled{
-      opacity: .45;
-      cursor: not-allowed;
-    }
-    .text{
-      white-space: pre-wrap;
-      font-size: 16px;
-      line-height: 1.75;
-      margin-top: 6px;
+    button.addr:disabled, button.hintBtn:disabled{
+      opacity:.45;
+      cursor:default;
     }
 
-    /* 倒计时文字显示区：.msg（字号 14px，继承 body 字体） */
+    /* 倒计时/状态显示：与 track 冻结样式一致（红色加粗） */
     .msg{
-      margin-top: 14px;
+      margin-top: var(--gap-tight);
       min-height: 20px;
       font-size: 14px;
       line-height: 1.4;
+      white-space: pre-wrap;
+      color: var(--c-text);
     }
     .msg.ok{ color: var(--ok); font-weight: 700; }
-    .msg.bad{ color:#b00020; font-weight: 700; }
+    .msg.locked{ color: var(--c-danger); font-weight: 700; }
+
+    /* 获得提示按钮：放在最下面，与上方留间距 */
+    .hintBtnRow{
+      margin-top: var(--gap);
+      display:flex;
+      justify-content:center;
+    }
+    button.hintBtn{
+      min-width: 260px;
+    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="title">你成功找到了玩家A，她正和玩家B讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：</div>
+
     <div class="hint">提示：点击错误会导致本页面冻结3分钟。</div>
 
-    <div class="grid" id="btnGrid"></div>
+    <div class="grid" id="btnGrid" aria-label="地址选项"></div>
 
-    <div class="text" id="dialogText">现在有2个玩家，A知道街道，B知道多少弄。
-A说：“我不知道是多少弄，但我知道B也不知道。”
+    <div class="text" id="dialogText">现在有2个玩家，A知道街道名，B知道弄堂号码。
+A说：“我不知道具体地点，但我知道B也不知道。”
 B说：“起初我不知道，但现在我知道了。”
 A说：“那我现在知道下个谜题在哪了。”
 
-那么下个谜题在哪里？请点击正确地址。</div>
+那么下个谜题在哪里？请点击上面的正确地址。</div>
 
     <div class="msg" id="msg"></div>
+
+    <div class="hintBtnRow">
+      <button class="hintBtn" id="btnHint" type="button">获得提示</button>
+    </div>
   </div>
 
 <script>
 (() => {
   const NEXT_URL = "https://sorcbear.github.io/playground/square/";
+  const HINT_URL = "https://sorcbear.github.io/playground/address/hint";
+
   const LOCK_MS = 3 * 60 * 1000; // 3 minutes
   const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
 
@@ -116,6 +188,7 @@ A说：“那我现在知道下个谜题在哪了。”
 
   const grid = document.getElementById("btnGrid");
   const msgEl = document.getElementById("msg");
+  const btnHint = document.getElementById("btnHint");
 
   let lockTimer = null;      // 错误冻结倒计时
   let successTimer = null;   // 成功跳转倒计时
@@ -147,6 +220,7 @@ A说：“那我现在知道下个谜题在哪了。”
 
   function setButtonsEnabled(enabled){
     grid.querySelectorAll("button.addr").forEach(b => b.disabled = !enabled);
+    btnHint.disabled = !enabled; // 与“所有效果都一样”：冻结时也不可点
   }
 
   function showMsg(text, kind){
@@ -170,7 +244,8 @@ A说：“那我现在知道下个谜题在哪了。”
       const left = lockUntil - now();
       if (left > 0){
         setButtonsEnabled(false);
-        showMsg(`try again（已冻结，剩余 ${fmtMMSS(left)}）`, "bad");
+        // 与 track 一致：红色加粗冻结文案
+        showMsg(`页面已冻结：${fmtMMSS(left)}`, "locked");
       } else {
         clearLock();
         setButtonsEnabled(true);
@@ -183,15 +258,13 @@ A说：“那我现在知道下个谜题在哪了。”
     lockTimer = setInterval(tick, 250);
   }
 
-  // 成功后：不显示 success，改为 3→2→1 倒计时，期间锁定交互，最后跳转
+  // 成功后：3→2→1 倒计时，最后跳转
   function startSuccessCountdown(){
     stopSuccessCountdown();
     inSuccessCountdown = true;
 
-    // 成功倒计时期间锁定按钮，避免重复触发
     setButtonsEnabled(false);
 
-    // 立即显示（3）
     let n = 3;
     showMsg(`答案正确，即将进入下一题（${n}）`, "ok");
 
@@ -208,7 +281,6 @@ A说：“那我现在知道下个谜题在哪了。”
   }
 
   function handleClick(addr){
-    // 成功倒计时期间，完全忽略点击
     if (inSuccessCountdown) return;
 
     const lockUntil = getLockUntil();
@@ -222,7 +294,7 @@ A说：“那我现在知道下个谜题在哪了。”
       return;
     }
 
-    // wrong
+    // wrong -> freeze
     setLockUntil(now() + LOCK_MS);
     startLockCountdown();
   }
@@ -239,8 +311,15 @@ A说：“那我现在知道下个谜题在哪了。”
     });
   }
 
+  // 获得提示：与冻结/成功逻辑一致（成功倒计时/冻结期间不可点）
+  btnHint.addEventListener("click", () => {
+    if (inSuccessCountdown) return;
+    if (getLockUntil() > now()) return;
+    location.href = HINT_URL;
+  });
+
   buildButtons();
-  startLockCountdown();
+  startLockCountdown(); // 进入页面时检查是否冻结
 })();
 </script>
 </body>
