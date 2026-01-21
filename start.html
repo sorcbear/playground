@@ -24,6 +24,9 @@
       --c-text:#111;
       --c-border:#000;
       --c-danger:#b00020;
+
+      /* 用于“倒计时位置不动”的固定偏移：按 1 行标题高度估算 */
+      --hint-line-h: calc(var(--fs-hint) * var(--lh-hint));
     }
 
     html,body{
@@ -41,35 +44,59 @@
     .container{
       width:100%;
       height:100%;
+      position:relative;
       display:flex;
       flex-direction:column;
-      justify-content:center;
       align-items:center;
-      text-align:center;
+      justify-content:center;
       padding:18px;
       box-sizing:border-box;
+      text-align:center;
+      overflow:hidden;
     }
 
+    /* 倒计时阶段的文字层：铺满容器，用绝对定位固定“倒计时”在中心 */
     .centerStack{
-      display:none;                  /* 初始不占位，保证按钮真居中 */
-      width:min(var(--maxw),92vw);
+      display:none;                 /* 初始不占位，保证按钮真居中 */
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
     }
 
     /* ===== 通用标题样式（来自 Rotate 页面，已验证） ===== */
     .title{
-      font-size: var(--fs-hint);      /* 18px */
-      line-height: var(--lh-hint);    /* 1.6 */
-      font-weight: 700;               /* 粗标题 */
-      margin: 4px 0 var(--gap);       /* 与下一个元素隔 1 行 */
-      text-align: center;             /* ✅ 全部居中 */
-      white-space: pre-wrap;          /* 中文排版关键 */
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
+      text-align: center;
+      white-space: pre-wrap;
+      margin:0;
+      width:min(var(--maxw),92vw);
     }
 
     /* 倒计时标题（红色） */
     .title-danger{
       color: var(--c-danger);
-      margin: 0;                      /* 不额外制造空行 */
-      text-align: center;             /* ✅ 明确居中 */
+    }
+
+    /* ✅ 关键：倒计时始终固定在正中间（不随其它元素出现/消失移动） */
+    .statusFixed{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      pointer-events:none;
+    }
+
+    /* ✅ 关键：提示文字固定出现在倒计时上方“同等距离”（gap），不会推挤倒计时 */
+    .hintFixed{
+      position:absolute;
+      left:50%;
+      top:calc(50% - var(--gap) - var(--hint-line-h));
+      transform:translateX(-50%);
+      display:none;                /* 初始不显示，到 8 秒出现 */
+      pointer-events:none;
     }
 
     .btnRow{
@@ -109,11 +136,11 @@
   <div class="container">
 
     <div class="centerStack" id="centerStack">
-      <!-- ✅ 初始隐藏：倒计时到 8 时才显示 -->
-      <div class="title" id="hint" style="display:none;">好像听到一段诡异的音乐...</div>
+      <!-- ✅ 到 8 秒才出现（固定在倒计时上方，不影响倒计时位置） -->
+      <div class="title hintFixed" id="hint">好像听到一段诡异的音乐...</div>
 
-      <!-- ✅ 倒计时：标题格式 + 红色 -->
-      <div class="title title-danger" id="status"></div>
+      <!-- ✅ 始终固定在页面正中 -->
+      <div class="title title-danger statusFixed" id="status"></div>
     </div>
 
     <div class="btnRow" id="btnRow">
@@ -173,6 +200,8 @@
     audioEnabled = true;
   }
 
+  function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+
   function playTone(freq, d){
     if(!audioEnabled || !audioCtx) return;
     const t = audioCtx.currentTime;
@@ -194,8 +223,6 @@
     o.stop(t + d + 0.05);
   }
 
-  function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
-
   function playMelody(){
     melody.forEach((m, i) => {
       setTimeout(() => {
@@ -213,9 +240,10 @@
     let left = COUNTDOWN_SEC;
 
     const tick = () => {
+      // ✅ 倒计时永远渲染在同一个 DOM（且同一位置）
       statusEl.textContent = `倒计时：${left}`;
 
-      // ✅ 到 8 秒：文字出现 + 音乐播放（只一次）
+      // ✅ 到 8 秒：提示文字出现 + 音乐播放（不影响倒计时位置）
       if(left === 8 && !musicPlayed){
         musicPlayed = true;
         hintEl.style.display = "block";
@@ -237,9 +265,13 @@
   async function startFlow(){
     startBtn.disabled = true;
 
-    // ✅ 倒计时阶段：隐藏按钮，只显示文字区（此时文字仍隐藏，等到 8 才出现）
+    // 倒计时阶段：隐藏按钮，显示文字层（倒计时立即可见且居中）
     btnRow.style.display = "none";
     centerStack.style.display = "block";
+
+    // 确保提示文字初始隐藏（从返回或重复点击场景也稳）
+    hintEl.style.display = "none";
+    musicPlayed = false;
 
     clearTimers();
 
