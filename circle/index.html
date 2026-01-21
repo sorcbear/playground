@@ -18,11 +18,13 @@
     }
     .wrap{ max-width:var(--maxw); margin:0 auto; padding:12px; }
 
+    /* 顶部正文 */
     .subtitle{
       font-size:16px;
       line-height:1.6;
       color:#444;
       margin-bottom:2.2em;
+      white-space:pre-wrap;
     }
 
     .stage{
@@ -83,7 +85,7 @@
 <div class="wrap">
 
   <div class="subtitle">
-    请走到老吉士马路对面，然后往左边方向前进，留意100米范围内的墙面信息，找到线索解题。
+    请走到天平路41号马路对面的行人道上，然后往天平路康平路路口方向前进，留意50米范围内的墙面信息，进行答题。点击正确位置的圆圈后提交答案。
   </div>
 
   <div class="stage">
@@ -108,8 +110,8 @@
   </div>
 
   <div class="panel">
-    <button id="undoBtn">Undo</button>
-    <button id="submitBtn">Submit</button>
+    <button id="hintBtn" type="button">获得提示</button>
+    <button id="submitBtn" type="button">提交答案</button>
   </div>
 
   <div class="msg" id="msg"></div>
@@ -125,6 +127,8 @@ const ANSWER_POINTS = [
   {x:303,y:718},{x:644,y:827},{x:433,y:878}
 ];
 
+// 提示页与下一题链接
+const HINT_URL = "https://sorcbear.github.io/playground/circle/hint";
 const NEXT_URL = "https://sorcbear.github.io/playground/track/";
 
 // 倒计时：3 → 2 → 1 → 跳转
@@ -136,7 +140,7 @@ const svg=document.getElementById("svg");
 const catcher=document.getElementById("catcher");
 const msg=document.getElementById("msg");
 const submitBtn=document.getElementById("submitBtn");
-const undoBtn=document.getElementById("undoBtn");
+const hintBtn=document.getElementById("hintBtn");
 
 const selected=new Array(CIRCLES.length).fill(false);
 
@@ -181,7 +185,7 @@ function render(){
 function setLocked(v){
   locked = v;
   submitBtn.disabled = v;
-  undoBtn.disabled = v;
+  hintBtn.disabled = v;
 }
 
 function setMsg(text, isOk=false){
@@ -202,18 +206,16 @@ catcher.addEventListener("pointerdown",e=>{
   render();
 },{passive:false});
 
-undoBtn.onclick=()=>{
+// 左按钮：获得提示（直接跳转，不改动选择状态）
+hintBtn.onclick=()=>{
   if(locked) return;
-  selected.fill(false);
-  setMsg("", false);
-  render();
+  location.href = HINT_URL;
 };
 
 submitBtn.onclick=()=>{
   if(locked) return;
 
   if(sameSet(userPts(),ANSWER_POINTS)){
-    // 进入倒计时流程（锁定交互）
     setLocked(true);
 
     let t = COUNTDOWN_START;
@@ -239,4 +241,3 @@ render();
 </script>
 </body>
 </html>
-
