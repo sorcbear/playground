@@ -164,13 +164,13 @@
     }
   }
 
-  // 成功：完全按你给的 Square 模式 —— 绿色 msg 倒计时，不改按钮
+  // 成功：绿色 msg 倒计时，不改按钮
   function startCountdownAndRedirect() {
     sessionStorage.setItem(SOLVED_KEY, "1");
 
     setLocked(true);
     clearBtnHint();
-    btnSubmit.classList.remove("invert"); // 稳妥：成功态不允许黑底白字
+    btnSubmit.classList.remove("invert");
 
     let left = COUNTDOWN_SECONDS;
     msg.textContent = `答案正确，即将进入下一题（${left}）`;
@@ -188,7 +188,7 @@
     }, 1000);
   }
 
-  // 返回恢复：仅显示“已确认”样式（不倒计时）
+  // 返回恢复：只显示绿色“答案已确认”
   function restoreSolvedUI() {
     setLocked(false);
     clearCountdown();
@@ -341,7 +341,6 @@
   });
 
   init().catch(() => {
-    // 失败提示仍按 Square 的按钮提示逻辑（黑底白字短提示）
     setBtnText("图片加载失败", 1500);
   });
 })();
