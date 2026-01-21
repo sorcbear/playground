@@ -43,35 +43,36 @@
     }
   }
 
-  /* ===== 改动点：Square 同款错误按钮反馈（黑底白字 + 自动恢复）===== */
+  /**
+   * 错误提示：按钮黑底白字（.invert）+ 禁用，ms 后恢复
+   * 关键保证：当文案回到“提交答案”时，必须已经是白底黑字
+   */
   function setBtnText(text, ms = 900) {
     if (!btnSubmit) return;
     clearBtnHint();
 
-    btnSubmit.textContent = text;
-
-    // 当出现“不正确…”时，强制黑底白字，并在这段时间禁用按钮
     const isErrorHint = (text || "").includes("不正确");
+
     if (isErrorHint) {
+      // 错误提示：立刻黑底白字 + 禁用
       btnSubmit.classList.add("invert");
       btnSubmit.disabled = true;
     }
 
+    btnSubmit.textContent = text;
+
     if (ms > 0) {
       btnTextTimer = setTimeout(() => {
+        // 关键：先恢复样式，再设置默认文案
+        // 这样“提交答案”出现时，任何时刻都不会是黑底白字
+        btnSubmit.classList.remove("invert");
+        btnSubmit.disabled = false;
+
         btnSubmit.textContent = BTN_TEXT_DEFAULT;
-
-        // 恢复默认状态：白底黑字 + 可点击
-        if (isErrorHint) {
-          btnSubmit.classList.remove("invert");
-          btnSubmit.disabled = false;
-        }
-
         btnTextTimer = null;
       }, ms);
     }
   }
-  /* ===== 改动结束 ===== */
 
   function clearCountdown() {
     if (countdownTimer) {
@@ -139,7 +140,7 @@
     ansRoad.value = "";
     ansNo.value = "";
     btnSubmit.textContent = BTN_TEXT_DEFAULT;
-    btnSubmit.classList.remove("invert");   // 稳妥：确保初始白底黑字
+    btnSubmit.classList.remove("invert"); // 保险：初始一定白底黑字
   }
 
   function buildBoard() {
@@ -181,11 +182,16 @@
     ansRoad.value = ANSWER_ROAD;
     ansNo.value = ANSWER_NO;
 
+    // “答案已确认”不需要 invert；保持按钮默认白底黑字
+    btnSubmit.classList.remove("invert");
     setBtnText("答案已确认", 900);
   }
 
   function startCountdownAndRedirect() {
     sessionStorage.setItem(SOLVED_KEY, "1");
+
+    // 保险：开始倒计时前必须是默认样式
+    btnSubmit.classList.remove("invert");
 
     locked = true;
     setDisabledAll(true);
