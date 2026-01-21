@@ -87,7 +87,7 @@ html,body{
   font-weight:800;
 }
 
-/* ===== 输入框：彻底关闭系统 focus 蓝圈 ===== */
+/* 输入框：无系统蓝圈 */
 .ansInput{
   width:6.2em;
   height:40px;
@@ -98,18 +98,17 @@ html,body{
   text-align:center;
   box-sizing:border-box;
 
-  outline:none;                  /* 去掉浏览器 outline */
-  box-shadow:none;               /* 防止系统阴影 */
-  -webkit-appearance:none;       /* iOS 原生样式 */
+  outline:none;
+  box-shadow:none;
+  -webkit-appearance:none;
   appearance:none;
 }
-
 .ansInput:focus{
-  outline:none;                  /* 双保险 */
+  outline:none;
   box-shadow:none;
 }
 
-/* 按钮（Circle 同款） */
+/* 按钮区 */
 .panel{
   margin-top:18px;
   display:flex;
@@ -118,6 +117,7 @@ html,body{
   flex-wrap:nowrap;
 }
 
+/* 按钮默认：白底黑字 */
 button{
   width:240px;
   height:var(--h-btn);
@@ -132,8 +132,23 @@ button{
   border-radius:0;
   -webkit-tap-highlight-color:transparent;
 }
-button:hover{ background:#000; color:#fff; }
-button:disabled{ opacity:.45; cursor:default; }
+
+/* 只在支持 hover 的设备上启用 hover 反转（PC） */
+@media (hover:hover) and (pointer:fine){
+  button:hover{ background:#000; color:#fff; }
+}
+
+/* 临时黑底白字：只由 JS 控制（用于“不正确，再试一次”） */
+button.invert{
+  background:#000;
+  color:#fff;
+}
+
+/* 禁用态：不改配色，只降透明度 */
+button:disabled{
+  opacity:.45;
+  cursor:default;
+}
 
 .msg{
   margin-top:12px;
@@ -180,6 +195,7 @@ const msg = document.getElementById("msg");
 
 let locked = false;
 let timer = null;
+let btnTimer = null;
 
 function setLocked(v){
   locked = v;
@@ -188,13 +204,20 @@ function setLocked(v){
   input.disabled = v;
 }
 
+// 错误提示：期间黑底白字；结束后回到白底黑字
 function setBtnText(text, ms=900){
-  const old = submitBtn.textContent;
+  if (btnTimer) { clearTimeout(btnTimer); btnTimer = null; }
+
+  const old = "提交答案";
   submitBtn.textContent = text;
+  submitBtn.classList.add("invert");   // 关键：仅此期间黑底白字
   submitBtn.disabled = true;
-  setTimeout(()=>{
+
+  btnTimer = setTimeout(()=>{
     submitBtn.textContent = old;
+    submitBtn.classList.remove("invert");
     submitBtn.disabled = false;
+    btnTimer = null;
   }, ms);
 }
 
