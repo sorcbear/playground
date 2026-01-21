@@ -148,26 +148,34 @@
     }
 
     .primaryBtn{
+      width:240px;              /* Square 一致：固定 240 */
       height: var(--h-btn);
-      min-width: 260px;
-      padding: 0 22px;
+      padding:0 18px;           /* Square 一致 */
+      box-sizing:border-box;
 
-      border: 2px solid var(--c-border);
-      border-radius: 0;
+      border:2px solid var(--c-border);
+      border-radius:0;
 
-      background: #fff;
-      color: #000;
+      background:#fff;
+      color:#000;
 
       font-size: var(--fs-btn);
-      font-weight: var(--fw-btn);
+      font-weight: 600;
 
-      cursor: pointer;
-      transition: background-color 120ms ease, color 120ms ease;
+      cursor:pointer;
+
+      transition: none;         /* 关键：去掉渐变，恢复时不“滑一下” */
 
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
-      user-select: none; /* 安全补丁：防长按选中 */
+      user-select:none;
     }
+
+    .primaryBtn:disabled{
+      opacity:.45;              /* Square 一致 */
+      cursor:default;
+    }
+
 
     @media (hover: hover) and (pointer: fine){
       .primaryBtn:hover:not(:disabled){
