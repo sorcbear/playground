@@ -5,8 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Direction Choice</title>
   <style>
-    :root {
+    :root{
       --btn-h: 52px;
+
+      --fs-hint: 18px;     /* 提示/标题 */
+      --lh-hint: 1.6;
+
       --ok: #0b6b2b;
     }
 
@@ -24,6 +28,13 @@
       box-sizing: border-box;
     }
 
+    /* 顶部标题（原文字） */
+    .title{
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      margin: 0 0 14px 0; /* 标题与图片的间距 */
+    }
+
     .image-box{
       width: 100%;
       border-radius: 10px;
@@ -38,14 +49,8 @@
       -webkit-user-drag: none;
     }
 
-    .text{
-      margin-top: 14px;
-      font-size: 16px;
-      line-height: 1.55;
-    }
-
     .hint{
-      margin-top: 8px;
+      margin-top: 10px;
       font-size: 12px;
       line-height: 1.4;
       color: #444;
@@ -57,9 +62,7 @@
       line-height: 1.4;
       min-height: 20px;
     }
-    .msg.ok{
-      color: var(--ok);
-    }
+    .msg.ok{ color: var(--ok); }
 
     .actions{
       margin-top: 14px;
@@ -90,12 +93,15 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="image-box">
-      <img src="track.png" alt="bike trace" />
+
+    <!-- 文字放最上面：标题样式 -->
+    <div class="title" id="questionText">
+      上一名玩家已经顺利找到了下一个解谜地点。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？
     </div>
 
-    <div class="text" id="questionText">
-      上一名玩家已经顺利找到了下一个线索。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？
+    <!-- 文字下面才是图 -->
+    <div class="image-box">
+      <img src="track.png" alt="bike trace" />
     </div>
 
     <div class="hint">
@@ -112,12 +118,12 @@
 
   <script>
     // ====== 配置 ======
-    const CORRECT = "right";
-    const LOCK_MS = 5 * 60 * 1000;
+    const CORRECT = "right";                 // 向右走为正确答案
+    const LOCK_MS = 5 * 60 * 1000;           // 错误冻结 5 分钟
     const STORAGE_KEY = "bike_trace_lock_until_v1";
 
-    // 成功后跳转目标
-    const NEXT_URL = "https://sorcbear.github.io/playground/address/";
+    const COUNTDOWN_START = 3;
+    const NEXT_URL = "https://sorcbear.github.io/playground/address/"; // 下一题
 
     // ====== DOM ======
     const msgEl = document.getElementById("msg");
@@ -126,59 +132,82 @@
     const btnRight = document.getElementById("btnRight");
 
     let lockTimer = null;
-    let successTimer = null;
-    let isSuccessFlow = false;
+    let countdownTimer = null;
+    let locked = false;         // 成功倒计时锁
+    let isSuccessFlow = false;  // 成功流程中
 
-    function now() { return Date.now(); }
+    function now(){ return Date.now(); }
 
-    function getLockUntil() {
-      const raw = localStorage.getItem(STORAGE_KEY);
+    function safeGet(storage, key){
+      try { return storage.getItem(key); } catch(e) { return null; }
+    }
+
+    function getLockUntil(){
+      const raw = safeGet(localStorage, STORAGE_KEY);
       const t = raw ? Number(raw) : 0;
       return Number.isFinite(t) ? t : 0;
     }
 
-    function setLockUntil(ts) {
-      localStorage.setItem(STORAGE_KEY, String(ts));
+    function setLockUntil(ts){
+      try { localStorage.setItem(STORAGE_KEY, String(ts)); } catch(e) {}
     }
 
-    function fmtRemaining(ms) {
+    function fmtRemaining(ms){
       const totalSec = Math.max(0, Math.ceil(ms / 1000));
       const m = Math.floor(totalSec / 60);
       const s = totalSec % 60;
       return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
     }
 
-    function setDisabled(disabled) {
+    function setDisabled(disabled){
       btnLeft.disabled = disabled;
       btnRight.disabled = disabled;
     }
 
-    function setMsg(text, ok=false) {
+    function setMsg(text, ok=false){
       msgEl.textContent = text || "";
       msgEl.classList.toggle("ok", !!ok);
     }
 
+    // ====== 按钮“短暂变字”效果（与你之前 submit 一样的逻辑）======
+    function setBtnText(btn, text, ms = 900){
+      const old = btn.textContent;
+      btn.textContent = text;
+      btn.disabled = true;
+
+      setTimeout(() => {
+        btn.textContent = old;
+
+        // 只有在没有冻结、也不是成功流程时，才恢复可点击
+        const lockRem = getLockUntil() - now();
+        if (!isSuccessFlow && lockRem <= 0){
+          btn.disabled = false;
+        }
+      }, ms);
+    }
+
     // ====== 错误冻结流程 ======
-    function showLockedUI(remainingMs) {
+    function showLockedUI(remainingMs){
       setDisabled(true);
       setMsg(`页面已冻结：${fmtRemaining(remainingMs)}`, false);
     }
 
-    function showUnlockedUI() {
-      if (!isSuccessFlow) setDisabled(false);
-      if (!isSuccessFlow) setMsg("");
+    function showUnlockedUI(){
+      if (isSuccessFlow) return;
+      setDisabled(false);
+      setMsg("");
     }
 
-    function lockForFiveMinutes() {
+    function lockForFiveMinutes(){
       const until = now() + LOCK_MS;
       setLockUntil(until);
       applyLockState();
     }
 
-    function applyLockState() {
+    function applyLockState(){
       if (isSuccessFlow) return;
 
-      if (lockTimer) {
+      if (lockTimer){
         clearInterval(lockTimer);
         lockTimer = null;
       }
@@ -186,19 +215,18 @@
       const until = getLockUntil();
       const rem = until - now();
 
-      if (rem > 0) {
+      if (rem > 0){
         showLockedUI(rem);
 
         lockTimer = setInterval(() => {
-          if (isSuccessFlow) {
+          if (isSuccessFlow){
             clearInterval(lockTimer);
             lockTimer = null;
             return;
           }
-
           const until2 = getLockUntil();
           const rem2 = until2 - now();
-          if (rem2 <= 0) {
+          if (rem2 <= 0){
             showUnlockedUI();
             clearInterval(lockTimer);
             lockTimer = null;
@@ -211,50 +239,49 @@
       }
     }
 
-    // ====== 成功跳转倒计时流程（不显示 success，只显示 msg） ======
-    function startSuccessCountdownAndRedirect() {
+    // ====== 成功倒计时并跳转（按你给的那段结构整理）======
+    function startCountdownAndRedirect(){
+      locked = true;
       isSuccessFlow = true;
 
-      // 锁定交互，避免重复触发
       setDisabled(true);
-
-      // 可选：隐藏按钮区域（避免视觉上还能点）
       actionsEl.style.display = "none";
 
-      // 倒计时文字显示在 .msg，成功态绿色
-      setMsg("答案正确，即将进入下一题（3）", true);
+      let t = COUNTDOWN_START;
+      setMsg(`答案正确，即将进入下一题（${t}）`, true);
 
-      let n = 3;
-
-      const tick = () => {
-        n -= 1;
-
-        if (n >= 1) {
-          setMsg(`答案正确，即将进入下一题（${n}）`, true);
-          successTimer = setTimeout(tick, 1000);
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        t--;
+        if (t > 0){
+          setMsg(`答案正确，即将进入下一题（${t}）`, true);
         } else {
-          window.location.href = NEXT_URL;
+          clearInterval(countdownTimer);
+          location.href = NEXT_URL;
         }
-      };
-
-      successTimer = setTimeout(tick, 1000);
+      }, 1000);
     }
 
-    function onAnswer(choice) {
-      if (isSuccessFlow) return;
+    // ====== 点击处理（两按钮版本）======
+    function onAnswer(choice, btn){
+      if (locked || isSuccessFlow) return;
 
       const until = getLockUntil();
       if (until - now() > 0) return;
 
-      if (choice === CORRECT) {
-        startSuccessCountdownAndRedirect();
+      const okAns = (choice === CORRECT);
+
+      if (okAns){
+        startCountdownAndRedirect();
       } else {
+        setMsg(""); // 不显示“错误提示句”，只用按钮短暂变字 + 冻结倒计时
+        setBtnText(btn, "不正确，再试一次", 900);
         lockForFiveMinutes();
       }
     }
 
-    btnLeft.addEventListener("click", () => onAnswer("left"));
-    btnRight.addEventListener("click", () => onAnswer("right"));
+    btnLeft.addEventListener("click", () => onAnswer("left", btnLeft));
+    btnRight.addEventListener("click", () => onAnswer("right", btnRight));
 
     // 页面加载时检查是否冻结
     applyLockState();
