@@ -15,9 +15,6 @@
       --fs-hint: 18px;
       --lh-hint: 1.6;
 
-      --fs-status: 18px;
-      --fw-status: 700;
-
       --ctl-h: 48px;
       --w-mainbtn: 240px;
 
@@ -39,6 +36,7 @@
       line-height:var(--lh-body);
       color:var(--c-text);
     }
+    button{ font-family:inherit; }
 
     .container{
       width:100%;
@@ -53,7 +51,7 @@
     }
 
     .centerStack{
-      display:none;
+      display:none;                  /* 初始不占位，保证按钮真居中 */
       width:min(var(--maxw),92vw);
     }
 
@@ -63,51 +61,66 @@
       line-height: var(--lh-hint);    /* 1.6 */
       font-weight: 700;               /* 粗标题 */
       margin: 4px 0 var(--gap);       /* 与下一个元素隔 1 行 */
-      text-align: center;
-      white-space: pre-wrap;
+      text-align: center;             /* ✅ 全部居中 */
+      white-space: pre-wrap;          /* 中文排版关键 */
     }
 
     /* 倒计时标题（红色） */
     .title-danger{
       color: var(--c-danger);
-      margin: 0;                      /* 不再额外制造空行 */
-      text-align: center;
+      margin: 0;                      /* 不额外制造空行 */
+      text-align: center;             /* ✅ 明确居中 */
     }
 
     .btnRow{
-      margin-top:var(--space-action);
+      margin-top: var(--space-action);
+      width:100%;
+      display:flex;
+      justify-content:center;
     }
 
     button{
       width:var(--w-mainbtn);
       height:var(--ctl-h);
-      font-size:16px;
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-body);
       font-weight:600;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
+      border-radius:0;
     }
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
+
+    @media (max-width: 420px){
+      :root{
+        --w-mainbtn: 220px;
+        --ctl-h: 46px;
+        --fs-hint: 17px;
+      }
+    }
   </style>
 </head>
 
 <body>
-<div class="container">
+  <div class="container">
 
-  <div class="centerStack" id="centerStack">
-    <div class="title" id="hint">
-      好像听到一段诡异的音乐...
+    <div class="centerStack" id="centerStack">
+      <!-- ✅ 初始隐藏：倒计时到 8 时才显示 -->
+      <div class="title" id="hint" style="display:none;">好像听到一段诡异的音乐...</div>
+
+      <!-- ✅ 倒计时：标题格式 + 红色 -->
+      <div class="title title-danger" id="status"></div>
     </div>
-    <div class="title title-danger" id="status"></div>
-  </div>
 
-  <div class="btnRow" id="btnRow">
-    <button id="startBtn">开始游戏</button>
-  </div>
+    <div class="btnRow" id="btnRow">
+      <button id="startBtn">开始游戏</button>
+    </div>
 
-</div>
+  </div>
 
 <script>
 (() => {
@@ -137,60 +150,75 @@
     .filter(Boolean);
 
   const centerStack = document.getElementById("centerStack");
+  const hintEl = document.getElementById("hint");
   const statusEl = document.getElementById("status");
   const btnRow = document.getElementById("btnRow");
   const startBtn = document.getElementById("startBtn");
 
-  let audioCtx, audioEnabled=false, musicPlayed=false;
-  let timers=[];
+  let audioCtx = null;
+  let audioEnabled = false;
+  let musicPlayed = false;
+  let timers = [];
 
   function ensureAudio(){
     if(!audioCtx){
-      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
     return audioCtx;
   }
 
   async function enableAudio(){
     const ctx = ensureAudio();
-    if(ctx.state==="suspended") await ctx.resume();
-    audioEnabled=true;
+    if(ctx.state === "suspended") await ctx.resume();
+    audioEnabled = true;
   }
 
-  function playTone(freq,d){
-    if(!audioEnabled) return;
-    const t=audioCtx.currentTime;
-    const o=audioCtx.createOscillator();
-    const g=audioCtx.createGain();
-    o.frequency.value=freq;
-    g.gain.setValueAtTime(0.001,t);
-    g.gain.linearRampToValueAtTime(0.3,t+0.02);
-    g.gain.exponentialRampToValueAtTime(0.001,t+d);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(t); o.stop(t+d+0.05);
+  function playTone(freq, d){
+    if(!audioEnabled || !audioCtx) return;
+    const t = audioCtx.currentTime;
+
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+
+    o.type = "sine";
+    o.frequency.setValueAtTime(freq, t);
+
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.3, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+
+    o.connect(g);
+    g.connect(audioCtx.destination);
+
+    o.start(t);
+    o.stop(t + d + 0.05);
   }
+
+  function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
 
   function playMelody(){
-    melody.forEach((m,i)=>{
-      setTimeout(
-        ()=>playTone(440*Math.pow(2,(m-69)/12),NOTE_DUR_SEC),
-        i*NOTE_GAP_SEC*1000
-      );
+    melody.forEach((m, i) => {
+      setTimeout(() => {
+        playTone(midiToFreq(m), NOTE_DUR_SEC);
+      }, i * NOTE_GAP_SEC * 1000);
     });
   }
 
   function clearTimers(){
     timers.forEach(clearTimeout);
-    timers=[];
+    timers = [];
   }
 
   function startCountdown(){
     let left = COUNTDOWN_SEC;
-    const tick = ()=>{
+
+    const tick = () => {
       statusEl.textContent = `倒计时：${left}`;
 
+      // ✅ 到 8 秒：文字出现 + 音乐播放（只一次）
       if(left === 8 && !musicPlayed){
         musicPlayed = true;
+        hintEl.style.display = "block";
         playMelody();
       }
 
@@ -198,23 +226,30 @@
         location.href = NEXT_URL;
         return;
       }
+
       left--;
-      timers.push(setTimeout(tick,1000));
+      timers.push(setTimeout(tick, 1000));
     };
+
     tick();
   }
 
   async function startFlow(){
-    startBtn.disabled=true;
-    btnRow.style.display="none";
-    centerStack.style.display="block";
+    startBtn.disabled = true;
+
+    // ✅ 倒计时阶段：隐藏按钮，只显示文字区（此时文字仍隐藏，等到 8 才出现）
+    btnRow.style.display = "none";
+    centerStack.style.display = "block";
 
     clearTimers();
+
+    // ✅ 先解锁音频权限（不播放），等到 8 再播放
     try{ await enableAudio(); }catch(e){}
+
     startCountdown();
   }
 
-  startBtn.addEventListener("click",startFlow);
+  startBtn.addEventListener("click", startFlow);
 })();
 </script>
 </body>
