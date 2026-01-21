@@ -84,12 +84,17 @@
       cursor:default;
     }
 
-    /* ===== 下方 p2：从一开始就显示 ===== */
+    /* ===== 下方 p2：初始不显示，revealed 后才显示 ===== */
     .pickup{
       max-width:1024px;
       margin:18px auto 0;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
+      display:none;                 /* 关键：初始隐藏 */
+    }
+    .revealed + .pickup,
+    .stage.revealed ~ .pickup{      /* 兼容不同 DOM 结构，这里用 ~ */
+      display:block;                /* 点击后立刻显示 */
     }
 
     .p2box{
@@ -104,7 +109,7 @@
       display:block;
     }
 
-    /* 默认：整张 p2 都可点，但初始禁用 */
+    /* p2 点击区：默认整张可点（更稳），你也可改热点 */
     .p2btn{
       position:absolute;
       inset:0;
@@ -120,7 +125,7 @@
       pointer-events:none;
     }
 
-    /* 可选：如果你只想点画卷本体才跳转，改成热点并调整百分比 */
+    /* 若只想点画卷本体才跳转，启用下面并调百分比 */
     /*
     .p2btn{
       inset:auto;
@@ -145,8 +150,8 @@
       <button class="hotspot" id="hotspot" aria-label="点击纸卷" title="点击纸卷" disabled></button>
     </div>
 
-    <!-- p2：从页面加载就显示在下方 -->
-    <div class="pickup">
+    <!-- p2：初始隐藏，点击 p0 后与 p1 同时出现 -->
+    <div class="pickup" id="pickup">
       <div class="p2box">
         <img src="p2.png" alt="scroll" />
         <button class="p2btn" id="p2btn" aria-label="打开画卷" title="打开画卷" disabled></button>
@@ -167,10 +172,10 @@
       let revealed = false;
 
       function sync(){
-        // p0 点击：要求 p1/p2 都 ready 才允许
+        // 只有当 p1/p2 都已加载完，才允许点 p0 纸卷
         btnRoll.disabled = !(p1Ready && p2Ready) || revealed;
 
-        // p2 点击：必须先 revealed，并且 p2 已 ready
+        // p2：必须先 revealed，且 p2Ready
         btnP2.disabled = !(revealed && p2Ready);
       }
 
@@ -181,18 +186,12 @@
         im.src = src;
       }
 
-      preload("p1.png",
-        () => { p1Ready = true; sync(); },
-        () => { p1Ready = false; sync(); }
-      );
-
-      preload("p2.png",
-        () => { p2Ready = true; sync(); },
-        () => { p2Ready = false; sync(); }
-      );
+      preload("p1.png", () => { p1Ready = true; sync(); }, () => { p1Ready = false; sync(); });
+      preload("p2.png", () => { p2Ready = true; sync(); }, () => { p2Ready = false; sync(); });
 
       sync();
 
+      // 点击 p0 纸卷：同一瞬间切 p1 + 显示 p2
       btnRoll.addEventListener("click", () => {
         if (btnRoll.disabled) return;
         revealed = true;
@@ -200,6 +199,7 @@
         sync();
       }, { passive:true });
 
+      // 点击 p2：跳转下一页
       btnP2.addEventListener("click", () => {
         if (btnP2.disabled) return;
         location.href = NEXT_URL;
