@@ -11,12 +11,12 @@
       --fs-text: 18px;
       --lh-text: 1.7;
 
-      --btn-h: 48px;
-      --btn-w: 200px;
+      --ctl-h: 48px;
+      --w-mainbtn: 200px;
 
-      --c-text: #111;
-      --c-border: #000;
-      --bg: #fff;
+      --c-border:#000;
+      --c-text:#111;
+      --bg:#fff;
     }
 
     html, body{
@@ -26,8 +26,8 @@
       height:100%;
       background:var(--bg);
       color:var(--c-text);
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
-                   "PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      font-family:-apple-system,BlinkMacSystemFont,
+        "Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;
       font-size:var(--fs-body);
     }
 
@@ -43,33 +43,49 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:24px;
+      gap:28px;
       text-align:center;
     }
 
     .btn-row{
       display:flex;
-      gap:20px;
+      gap:22px;
     }
 
+    /* ===== 按钮：与 start game 完全一致 ===== */
     button{
-      width:var(--btn-w);
-      height:var(--btn-h);
+      width:var(--w-mainbtn);
+      height:var(--ctl-h);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-body);
+      font-weight:600;
       background:#fff;
       color:#000;
-      border:1.5px solid var(--c-border);
-      font-size:16px;
+      border:2px solid var(--c-border);
       cursor:pointer;
+      border-radius:0;
     }
 
+    button:hover{
+      background:#000;
+      color:#fff;
+    }
+
+    button:disabled{
+      opacity:.45;
+      cursor:default;
+    }
+
+    /* 明确禁止任何点击态 */
     button:active{
-      transform: translateY(1px);
+      transform:none;
     }
 
     .hint-text{
+      display:none;
       font-size:var(--fs-text);
       line-height:var(--lh-text);
-      display:none;
       white-space:pre-wrap;
     }
   </style>
@@ -78,6 +94,7 @@
 <body>
   <div class="container">
     <div class="panel">
+
       <div class="btn-row" id="buttons">
         <button id="cancelBtn">暂时不看了</button>
         <button id="hintBtn">确定要提示</button>
@@ -86,14 +103,15 @@
       <div class="hint-text" id="hintText">
 墙上的公共厕所地图指南
       </div>
+
     </div>
   </div>
 
   <script>
     const cancelBtn = document.getElementById('cancelBtn');
     const hintBtn   = document.getElementById('hintBtn');
-    const buttons   = document.getElementById('buttons');
-    const hintText  = document.getElementById('hintText');
+    const buttons  = document.getElementById('buttons');
+    const hintText = document.getElementById('hintText');
 
     cancelBtn.addEventListener('click', () => {
       location.href = 'https://sorcbear.github.io/playground/circle/';
