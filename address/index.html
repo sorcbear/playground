@@ -60,6 +60,17 @@
       white-space: pre-wrap;
     }
 
+    /* 你要求：这段对话也用“标题 UI” */
+    .story{
+      margin: 0;
+      margin-top: var(--gap);     /* 与标题拉开距离 */
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
+      text-align: left;
+      white-space: pre-wrap;
+    }
+
     /* 红字提示（与 track 红字一致：同字号同样加粗同色） */
     .hint{
       margin: 0;
@@ -71,16 +82,7 @@
       white-space: pre-wrap;
     }
 
-    /* 正文 UI（按统一正文规范） */
-    .text{
-      margin-top: var(--gap);
-      white-space: pre-wrap;
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
-      color: var(--c-text);
-    }
-
-    /* 10 个地址按钮网格（布局保留，但风格改为“白底黑字无特效”） */
+    /* 10 个地址按钮网格（布局保留） */
     .grid{
       margin-top: var(--gap);
       display: grid;
@@ -91,7 +93,7 @@
       .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
-    /* 统一按钮样式：白底黑字、无 hover 特效 */
+    /* 统一按钮样式：白底黑字、无特效 */
     button.addr, button.hintBtn{
       appearance:none;
       height: var(--h-btn);
@@ -128,7 +130,7 @@
     .msg.ok{ color: var(--ok); font-weight: 700; }
     .msg.locked{ color: var(--c-danger); font-weight: 700; }
 
-    /* 获得提示按钮：放在最下面，与上方留间距 */
+    /* 获得提示按钮 */
     .hintBtnRow{
       margin-top: var(--gap);
       display:flex;
@@ -144,16 +146,17 @@
   <div class="wrap">
     <div class="title">你成功找到了玩家A，她正和玩家B讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：</div>
 
-    <div class="hint">提示：点击错误会导致本页面冻结3分钟。</div>
-
-    <div class="grid" id="btnGrid" aria-label="地址选项"></div>
-
-    <div class="text" id="dialogText">现在有2个玩家，A知道街道名，B知道弄堂号码。
+    <!-- 对话段：移动到标题下面、按钮上面，并用标题 UI -->
+    <div class="story">现在有2个玩家，A知道街道名，B知道弄堂号码。
 A说：“我不知道具体地点，但我知道B也不知道。”
 B说：“起初我不知道，但现在我知道了。”
 A说：“那我现在知道下个谜题在哪了。”
 
 那么下个谜题在哪里？请点击上面的正确地址。</div>
+
+    <div class="hint">提示：点击错误会导致本页面冻结3分钟。</div>
+
+    <div class="grid" id="btnGrid" aria-label="地址选项"></div>
 
     <div class="msg" id="msg"></div>
 
@@ -183,15 +186,14 @@ A说：“那我现在知道下个谜题在哪了。”
     "宛平路101弄",
   ];
 
-  // 正确答案：康平路152弄
   const CORRECT = "康平路152弄";
 
   const grid = document.getElementById("btnGrid");
   const msgEl = document.getElementById("msg");
   const btnHint = document.getElementById("btnHint");
 
-  let lockTimer = null;      // 错误冻结倒计时
-  let successTimer = null;   // 成功跳转倒计时
+  let lockTimer = null;
+  let successTimer = null;
   let inSuccessCountdown = false;
 
   function now(){ return Date.now(); }
@@ -220,7 +222,7 @@ A说：“那我现在知道下个谜题在哪了。”
 
   function setButtonsEnabled(enabled){
     grid.querySelectorAll("button.addr").forEach(b => b.disabled = !enabled);
-    btnHint.disabled = !enabled; // 与“所有效果都一样”：冻结时也不可点
+    btnHint.disabled = !enabled;
   }
 
   function showMsg(text, kind){
@@ -237,14 +239,12 @@ A说：“那我现在知道下个谜题在哪了。”
     if (lockTimer) clearInterval(lockTimer);
 
     const tick = () => {
-      // 成功倒计时期间，不覆盖提示文案
       if (inSuccessCountdown) return;
 
       const lockUntil = getLockUntil();
       const left = lockUntil - now();
       if (left > 0){
         setButtonsEnabled(false);
-        // 与 track 一致：红色加粗冻结文案
         showMsg(`页面已冻结：${fmtMMSS(left)}`, "locked");
       } else {
         clearLock();
@@ -258,7 +258,6 @@ A说：“那我现在知道下个谜题在哪了。”
     lockTimer = setInterval(tick, 250);
   }
 
-  // 成功后：3→2→1 倒计时，最后跳转
   function startSuccessCountdown(){
     stopSuccessCountdown();
     inSuccessCountdown = true;
@@ -294,7 +293,6 @@ A说：“那我现在知道下个谜题在哪了。”
       return;
     }
 
-    // wrong -> freeze
     setLockUntil(now() + LOCK_MS);
     startLockCountdown();
   }
@@ -311,7 +309,6 @@ A说：“那我现在知道下个谜题在哪了。”
     });
   }
 
-  // 获得提示：与冻结/成功逻辑一致（成功倒计时/冻结期间不可点）
   btnHint.addEventListener("click", () => {
     if (inSuccessCountdown) return;
     if (getLockUntil() > now()) return;
@@ -319,7 +316,7 @@ A说：“那我现在知道下个谜题在哪了。”
   });
 
   buildButtons();
-  startLockCountdown(); // 进入页面时检查是否冻结
+  startLockCountdown();
 })();
 </script>
 </body>
