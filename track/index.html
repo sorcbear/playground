@@ -7,8 +7,9 @@
 
   <style>
     :root{
-      /* ===== 尺度标准（只改这里即可全站统一）===== */
+      /* ===== 尺度标准（与 Rotate 页一致，只改这里即可全站统一）===== */
       --maxw: 720px;
+      --panelw: 420px;
 
       --fs-body: 16px;     /* 正文 */
       --lh-body: 1.7;
@@ -16,9 +17,15 @@
       --fs-hint: 18px;     /* 提示/标题 */
       --lh-hint: 1.6;
 
-      --fs-btn: 16px;      /* 按钮文字 */
+      --fs-status: 18px;
+      --fw-status: 700;
+
+      --fs-btn: 16px;
       --fw-btn: 600;
-      --h-btn: 52px;       /* 按钮高度 */
+      --h-btn: 52px;
+
+      --fs-input: 16px;
+      --h-input: 52px;
 
       --gap: 18px;
       --gap-tight: 12px;
@@ -28,32 +35,39 @@
       --c-danger: #b00020;
       --c-border: #000;
 
-      --ok:#0b6b2b;
+      /* 本页补充 */
+      --bg: #fff;
+      --ok: #0b6b2b;
     }
 
-    html,body{
-      margin:0; padding:0;
-      width:100%; height:100%;
-      background:#fff;
-      color:var(--c-text);
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
-                   "PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
-      font-size:var(--fs-body);
-      line-height:var(--lh-body);
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--c-text);
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
     }
+    button{ font-family: inherit; font-size: inherit; }
 
     .wrap{
-      max-width:var(--maxw);
-      margin:0 auto;
-      padding:18px 14px 28px;
-      box-sizing:border-box;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 18px 14px 28px;
     }
 
-    /* 顶部文字：标题样式（你之前的 UI） */
+    /* ===== 标题（完全沿用 Rotate 页 titleLine 规范）===== */
     .title{
-      font-size:var(--fs-hint);
-      line-height:var(--lh-hint);
-      margin:0 0 var(--gap) 0;
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
+      margin: 4px 0 var(--gap);
+      text-align: left;
+      white-space: pre-wrap;
+      text-decoration: none;
     }
 
     .image-box{
@@ -70,58 +84,70 @@
       -webkit-user-drag:none;
     }
 
-    /* 这句提示：红色 + 加粗（字体大小不变） */
+    /* 这句提示：红色 + 加粗（你要求的那句） */
     .hint{
-      margin-top:var(--gap-tight);
-      font-size:12px;      /* 字体大小保持 */
-      line-height:1.4;
-      color:var(--c-danger);
-      font-weight:700;
+      margin-top: var(--gap-tight);
+      font-size: 12px; /* 字号不变 */
+      line-height: 1.4;
+      color: var(--c-danger);
+      font-weight: 700;
+      text-align:left;
+      white-space: pre-wrap;
     }
 
     .msg{
-      margin-top:var(--gap-tight);
-      min-height:20px;
-      font-size:14px;      /* 保持不变 */
-      line-height:1.4;
+      margin-top: var(--gap-tight);
+      min-height: 20px;
+      font-size: 14px;
+      line-height: 1.4;
+      color: var(--c-text);
+      white-space: pre-wrap;
     }
-    .msg.ok{ color:var(--ok); font-weight:700; }
+    .msg.ok{
+      color: var(--ok);
+      font-weight: 700;
+    }
+    .msg.locked{
+      color: var(--c-danger);
+      font-weight: 700;
+    }
 
-    /* 两个按钮同一行 */
+    /* ===== 两个按钮一行（与你现在想要的 track 页形态）===== */
     .actions{
-      margin-top:var(--gap);
+      margin-top: var(--gap);
       display:flex;
-      flex-direction:row;
       justify-content:center;
       align-items:center;
-      gap:12px;
+      gap: 12px;
+      flex-wrap: nowrap; /* 强制同一行 */
     }
 
-    /* 你指定的按钮风格/反馈 + 强制单行显示 */
+    /* ===== 按钮风格：按你给的那段（白底黑字，hover 反转）===== */
     button{
-      flex: 1 1 0;                     /* 两个按钮平均分配一行空间 */
-      max-width: 260px;                /* 防止太宽（桌面端也不会无限宽） */
-      min-width: 140px;                /* 防止过窄导致换行 */
-      height:var(--h-btn);
-      padding:0 18px;
+      width: var(--panelw);         /* 使用 panelw，但下面会用 max-width 限制 */
+      max-width: 260px;             /* 避免太宽 */
+      flex: 1 1 0;                  /* 两按钮平均分配 */
+      height: var(--h-btn);
+      padding: 0 18px;
       box-sizing:border-box;
-      font-size:var(--fs-btn);
-      font-weight:var(--fw-btn);
+      font-size: var(--fs-btn);
+      font-weight: var(--fw-btn);
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
-      white-space:nowrap;              /* 按钮文字永不换行 */
-      appearance:none;
+      white-space: nowrap;          /* 按钮文字永不换行 */
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
     }
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
 
-    /* 极小屏兜底：仍保持一行，但允许按钮略缩（避免溢出） */
+    /* 极小屏兜底：仍保持一行 */
     @media (max-width: 360px){
-      button{ min-width: 120px; padding:0 12px; }
       .actions{ gap:10px; }
+      button{ max-width: 220px; padding:0 12px; }
     }
   </style>
 </head>
@@ -134,10 +160,9 @@
     </div>
 
     <div class="image-box">
-      <img src="track.png" alt="bike trace">
+      <img src="track.png" alt="bike trace" />
     </div>
 
-    <!-- 这句变红加粗（不是冻结倒计时） -->
     <div class="hint">
       如果选错，本页面将冻结 5 分钟无法再次提交获取线索。
     </div>
@@ -172,8 +197,8 @@
     function now(){ return Date.now(); }
 
     function getLockUntil(){
-      const v = localStorage.getItem(STORAGE_KEY);
-      const t = v ? Number(v) : 0;
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const t = raw ? Number(raw) : 0;
       return Number.isFinite(t) ? t : 0;
     }
 
@@ -182,8 +207,8 @@
     }
 
     function fmtRemaining(ms){
-      const totalSec = Math.max(0, Math.ceil(ms/1000));
-      const m = Math.floor(totalSec/60);
+      const totalSec = Math.max(0, Math.ceil(ms / 1000));
+      const m = Math.floor(totalSec / 60);
       const s = totalSec % 60;
       return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
     }
@@ -193,12 +218,12 @@
       btnRight.disabled = disabled;
     }
 
-    function setMsg(text, ok=false){
+    function setMsg(text, cls){
       msgEl.textContent = text || "";
-      msgEl.className = "msg" + (ok ? " ok" : "");
+      msgEl.className = "msg" + (cls ? " " + cls : "");
     }
 
-    // ====== 冻结流程（冻结倒计时显示在 msg，不影响上面那句红色提示）=====
+    // ====== 冻结流程 ======
     function applyLockState(){
       if (isSuccessFlow) return;
 
@@ -212,7 +237,7 @@
 
       if (rem > 0){
         setDisabled(true);
-        setMsg(`页面已冻结：${fmtRemaining(rem)}`, false);
+        setMsg(`页面已冻结：${fmtRemaining(rem)}`, "locked");
 
         lockTimer = setInterval(() => {
           if (isSuccessFlow){
@@ -220,19 +245,20 @@
             lockTimer = null;
             return;
           }
+
           const rem2 = getLockUntil() - now();
           if (rem2 <= 0){
             clearInterval(lockTimer);
             lockTimer = null;
             setDisabled(false);
-            setMsg("", false);
+            setMsg("", "");
           } else {
-            setMsg(`页面已冻结：${fmtRemaining(rem2)}`, false);
+            setMsg(`页面已冻结：${fmtRemaining(rem2)}`, "locked");
           }
         }, 250);
       } else {
         setDisabled(false);
-        setMsg("", false);
+        setMsg("", "");
       }
     }
 
@@ -248,13 +274,13 @@
       actionsEl.style.display = "none";
 
       let t = COUNTDOWN_START;
-      setMsg(`答案正确，即将进入下一题（${t}）`, true);
+      setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
 
       clearInterval(countdownTimer);
       countdownTimer = setInterval(() => {
         t--;
         if (t > 0){
-          setMsg(`答案正确，即将进入下一题（${t}）`, true);
+          setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
         } else {
           clearInterval(countdownTimer);
           location.href = NEXT_URL;
