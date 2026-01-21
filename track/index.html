@@ -4,120 +4,128 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Direction Choice</title>
+
   <style>
     :root{
-      --maxw: 920px;
+      --maxw: 720px;
 
       --fs-body: 16px;
       --lh-body: 1.7;
 
-      --fs-hint: 18px;     /* 提示/标题 */
+      --fs-hint: 18px;
       --lh-hint: 1.6;
 
-      --ctl-h: 52px;
-      --w-mainbtn: 240px;
+      --fs-btn: 16px;
+      --fw-btn: 600;
+      --h-btn: 52px;
 
-      --gap: 14px;
+      --gap: 18px;
+      --gap-tight: 12px;
 
-      --c-text:#111;
-      --c-border:#000;
-      --ok:#0b6b2b;
+      --c-text: #111;
+      --c-muted: #444;
+      --c-border: #000;
+      --c-danger: #b00020;
+      --ok: #0b6b2b;
     }
 
     html,body{
       margin:0;
-      padding:0;
-      width:100%;
-      height:100%;
       background:#fff;
       color:var(--c-text);
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC",
-                   "Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+                   "PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
       font-size:var(--fs-body);
       line-height:var(--lh-body);
     }
 
     .wrap{
-      max-width: var(--maxw);
-      margin: 0 auto;
-      padding: 18px 14px 28px;
-      box-sizing: border-box;
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:18px 14px 28px;
+      box-sizing:border-box;
     }
 
-    /* 顶部标题文字 */
+    /* 顶部标题 */
     .title{
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      margin: 0 0 var(--gap) 0;
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      margin:0 0 var(--gap) 0;
     }
 
     .image-box{
-      width: 100%;
-      border-radius: 10px;
-      overflow: hidden;
-      background: #f5f5f5;
+      width:100%;
+      border-radius:10px;
+      overflow:hidden;
+      background:#f5f5f5;
     }
     .image-box img{
-      width: 100%;
-      height: auto;
-      display: block;
-      user-select: none;
-      -webkit-user-drag: none;
+      width:100%;
+      height:auto;
+      display:block;
+      user-select:none;
+      -webkit-user-drag:none;
     }
 
     .hint{
-      margin-top: 10px;
-      font-size: 12px;
-      line-height: 1.4;
-      color: #444;
+      margin-top:var(--gap-tight);
+      font-size:12px;
+      line-height:1.4;
+      color:var(--c-muted);
     }
 
     .msg{
-      margin-top: 12px;
-      min-height: 20px;
-      font-size: 14px;
-      line-height: 1.4;
+      margin-top:var(--gap-tight);
+      min-height:20px;
+      font-size:14px;       /* 字号不变 */
+      line-height:1.4;
     }
-    .msg.ok{ color: var(--ok); }
+    .msg.ok{ color:var(--ok); }
 
-    /* 按钮区：两按钮并排，各自固定宽度，居中 */
+    /* 冻结提示：红色 + 加粗 */
+    .msg.locked{
+      color:var(--c-danger);
+      font-weight:700;
+    }
+
     .actions{
-      margin-top: 14px;
+      margin-top:var(--gap);
       display:flex;
-      gap:12px;
-      justify-content:center;
+      flex-direction:column;
       align-items:center;
-      flex-wrap:wrap;
+      gap:12px;
     }
 
-    /* 你指定的按钮风格/反馈 */
+    /* 按钮：不再过宽，手机单行 */
     button{
-      width:var(--w-mainbtn);
-      height:var(--ctl-h);
+      width:100%;
+      max-width:260px;            /* 关键：限制最大宽度 */
+      height:var(--h-btn);
       padding:0 18px;
       box-sizing:border-box;
-      font-size:var(--fs-body);
-      font-weight:600;
+      font-size:var(--fs-btn);
+      font-weight:var(--fw-btn);
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
+      white-space:nowrap;         /* 强制一行 */
     }
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
   </style>
 </head>
+
 <body>
   <div class="wrap">
-    <!-- 文字放最上面：标题样式 -->
-    <div class="title" id="questionText">
+
+    <div class="title">
       上一名玩家已经顺利找到了下一个解谜地点。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？
     </div>
 
-    <!-- 文字下面才是图 -->
     <div class="image-box">
-      <img src="track.png" alt="bike trace" />
+      <img src="track.png" alt="bike trace">
     </div>
 
     <div class="hint">
@@ -133,161 +141,110 @@
   </div>
 
   <script>
-    // ====== 配置 ======
-    const CORRECT = "right";                 // 向右走为正确答案
-    const LOCK_MS = 5 * 60 * 1000;           // 错误冻结 5 分钟
+    const CORRECT = "right";
+    const LOCK_MS = 5 * 60 * 1000;
     const STORAGE_KEY = "bike_trace_lock_until_v1";
 
     const COUNTDOWN_START = 3;
     const NEXT_URL = "https://sorcbear.github.io/playground/address/";
 
-    // ====== DOM ======
     const msgEl = document.getElementById("msg");
-    const actionsEl = document.getElementById("actions");
     const btnLeft = document.getElementById("btnLeft");
     const btnRight = document.getElementById("btnRight");
+    const actionsEl = document.getElementById("actions");
 
     let lockTimer = null;
-    let countdownTimer = null;
-
+    let successTimer = null;
     let isSuccessFlow = false;
-    let locked = false; // 成功倒计时锁（防二次触发）
 
-    function now(){ return Date.now(); }
-
-    function safeGet(storage, key){
-      try { return storage.getItem(key); } catch(e) { return null; }
-    }
-    function safeSet(storage, key, val){
-      try { storage.setItem(key, val); } catch(e) {}
-    }
+    const now = () => Date.now();
 
     function getLockUntil(){
-      const raw = safeGet(localStorage, STORAGE_KEY);
-      const t = raw ? Number(raw) : 0;
-      return Number.isFinite(t) ? t : 0;
+      const v = localStorage.getItem(STORAGE_KEY);
+      return v ? Number(v) : 0;
     }
 
     function setLockUntil(ts){
-      safeSet(localStorage, STORAGE_KEY, String(ts));
+      localStorage.setItem(STORAGE_KEY, String(ts));
     }
 
-    function fmtRemaining(ms){
-      const totalSec = Math.max(0, Math.ceil(ms / 1000));
-      const m = Math.floor(totalSec / 60);
-      const s = totalSec % 60;
-      return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    function fmt(ms){
+      const s = Math.ceil(ms/1000);
+      return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
     }
 
-    function setDisabled(disabled){
-      btnLeft.disabled = disabled;
-      btnRight.disabled = disabled;
+    function setDisabled(d){
+      btnLeft.disabled = d;
+      btnRight.disabled = d;
     }
 
-    function setMsg(text, ok=false){
+    function setMsg(text, cls){
       msgEl.textContent = text || "";
-      msgEl.classList.toggle("ok", !!ok);
+      msgEl.className = "msg" + (cls ? " " + cls : "");
     }
 
-    // ====== 冻结 UI ======
-    function showLockedUI(remainingMs){
-      setDisabled(true);
-      setMsg(`页面已冻结：${fmtRemaining(remainingMs)}`, false);
+    function lock(){
+      setLockUntil(now() + LOCK_MS);
+      applyLock();
     }
 
-    function showUnlockedUI(){
-      if (isSuccessFlow) return;
-      setDisabled(false);
-      setMsg("");
-    }
-
-    function lockForFiveMinutes(){
-      const until = now() + LOCK_MS;
-      setLockUntil(until);
-      applyLockState();
-    }
-
-    function applyLockState(){
+    function applyLock(){
       if (isSuccessFlow) return;
 
-      if (lockTimer){
-        clearInterval(lockTimer);
-        lockTimer = null;
-      }
-
-      const until = getLockUntil();
-      const rem = until - now();
+      clearInterval(lockTimer);
+      const rem = getLockUntil() - now();
 
       if (rem > 0){
-        showLockedUI(rem);
+        setDisabled(true);
+        setMsg(`页面已冻结：${fmt(rem)}`, "locked");
 
         lockTimer = setInterval(() => {
-          if (isSuccessFlow){
+          const r = getLockUntil() - now();
+          if (r <= 0){
             clearInterval(lockTimer);
-            lockTimer = null;
-            return;
+            setDisabled(false);
+            setMsg("");
+          } else {
+            setMsg(`页面已冻结：${fmt(r)}`, "locked");
           }
-
-          const until2 = getLockUntil();
-          const rem2 = until2 - now();
-
-          if (rem2 <= 0){
-            showUnlockedUI();
-            clearInterval(lockTimer);
-            lockTimer = null;
-            return;
-          }
-
-          showLockedUI(rem2);
         }, 250);
-      } else {
-        showUnlockedUI();
       }
     }
 
-    // ====== 成功倒计时并跳转 ======
-    function startCountdownAndRedirect(){
-      locked = true;
+    function success(){
       isSuccessFlow = true;
-
       setDisabled(true);
       actionsEl.style.display = "none";
 
       let t = COUNTDOWN_START;
-      setMsg(`答案正确，即将进入下一题（${t}）`, true);
+      setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
 
-      clearInterval(countdownTimer);
-      countdownTimer = setInterval(() => {
+      successTimer = setInterval(() => {
         t--;
         if (t > 0){
-          setMsg(`答案正确，即将进入下一题（${t}）`, true);
+          setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
         } else {
-          clearInterval(countdownTimer);
+          clearInterval(successTimer);
           location.href = NEXT_URL;
         }
       }, 1000);
     }
 
-    // ====== 点击处理：点左=直接冻结；点右=成功跳转 ======
-    function onChoose(choice){
-      if (locked || isSuccessFlow) return;
+    function choose(dir){
+      if (isSuccessFlow) return;
+      if (getLockUntil() - now() > 0) return;
 
-      const until = getLockUntil();
-      if (until - now() > 0) return;
-
-      if (choice === CORRECT){
-        startCountdownAndRedirect();
+      if (dir === CORRECT){
+        success();
       } else {
-        // 点击向左：立即冻结页面（不显示“再试一次”字样）
-        lockForFiveMinutes();
+        lock();
       }
     }
 
-    btnLeft.addEventListener("click", () => onChoose("left"));
-    btnRight.addEventListener("click", () => onChoose("right"));
+    btnLeft.onclick = () => choose("left");
+    btnRight.onclick = () => choose("right");
 
-    // 页面加载时检查是否冻结
-    applyLockState();
+    applyLock();
   </script>
 </body>
 </html>
