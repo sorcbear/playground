@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>paper instant safe</title>
+  <title>paper pickup</title>
 
-  <!-- 可选但推荐：提示浏览器优先加载第二张 -->
+  <!-- 建议预加载：减少慢网风险 -->
   <link rel="preload" as="image" href="p1.png">
+  <link rel="preload" as="image" href="p2.png">
 
   <style>
     :root{
@@ -29,6 +30,7 @@
       box-sizing:border-box;
     }
 
+    /* ===== 顶部板子（p0/p1）===== */
     .stage{
       position:relative;
       width:100%;
@@ -40,9 +42,9 @@
     .stage::before{
       content:"";
       display:block;
-      padding-top:74.70703125%; /* 765/1024 */
+      /* 你的板子图约 1024x765 */
+      padding-top:74.70703125%;
     }
-
     .layer{
       position:absolute;
       inset:0;
@@ -55,13 +57,13 @@
       pointer-events:none;
     }
 
-    /* 瞬间切换（display） */
+    /* 瞬间切换 */
     .imgA{ display:block; }
     .imgB{ display:none; }
     .revealed .imgA{ display:none; }
     .revealed .imgB{ display:block; }
 
-    /* 纸卷热点 */
+    /* p0 的纸卷热点 */
     .hotspot{
       position:absolute;
       left:22.8%;
@@ -74,65 +76,137 @@
       padding:0;
       margin:0;
     }
-
-    /* 加载未完成时禁用点击，但外观不变（仍然透明） */
     .hotspot:disabled{
       opacity:1;
       cursor:default;
       pointer-events:none;
     }
+    .revealed .hotspot{
+      pointer-events:none;
+      cursor:default;
+    }
 
-    /* 如果你想调试热点位置，临时打开这一行 */
-    /* .hotspot{ outline:2px dashed red; background:rgba(255,0,0,.08); } */
+    /* ===== 下方拿到的画卷（p2）===== */
+    .pickup{
+      max-width:1024px;
+      margin:18px auto 0;
+      display:none; /* 初始隐藏 */
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .revealed .pickup{
+      display:block; /* 点击后出现 */
+    }
+
+    /* p2 图片自适应 */
+    .p2box{
+      position:relative;
+      width:100%;
+      max-width:1024px;
+      margin:0 auto;
+    }
+    .p2box img{
+      width:100%;
+      height:auto;
+      display:block;
+    }
+
+    /* p2 的点击区域：默认整张都可点（最稳，不需要算热点） */
+    .p2btn{
+      position:absolute;
+      inset:0;
+      border:0;
+      background:transparent;
+      cursor:pointer;
+      padding:0;
+      margin:0;
+    }
+    .p2btn:disabled{
+      opacity:1;
+      cursor:default;
+      pointer-events:none;
+    }
+
+    /* 如果你只想“点画卷本体”才跳转，可把上面 inset:0 的整图点击
+       改成一个更小的热点（这里先留注释示例） */
+    /*
+    .p2btn{
+      left:37%;
+      top:5%;
+      width:26%;
+      height:88%;
+      inset:auto;
+    }
+    */
   </style>
 </head>
 
 <body>
   <div class="wrap">
+    <!-- 顶部：p0/p1 叠放 -->
     <div class="stage" id="stage">
       <div class="layer imgA">
-        <img src="p0.png" alt="with roll" />
+        <img src="p0.png" alt="board with roll" />
       </div>
-
       <div class="layer imgB">
-        <img src="p1.png" alt="no roll" />
+        <img src="p1.png" alt="board without roll" />
       </div>
+      <button class="hotspot" id="hotspot" aria-label="点击纸卷" title="点击纸卷" disabled></button>
+    </div>
 
-      <button class="hotspot" id="hotspot" aria-label="点击纸卷" disabled></button>
+    <!-- 下方：p2（点击后出现） -->
+    <div class="pickup" id="pickup">
+      <div class="p2box">
+        <img src="p2.png" alt="scroll" />
+        <button class="p2btn" id="p2btn" aria-label="打开画卷" title="打开画卷" disabled></button>
+      </div>
     </div>
   </div>
 
   <script>
     (function(){
       const stage = document.getElementById("stage");
-      const btn = document.getElementById("hotspot");
+      const btnRoll = document.getElementById("hotspot");
+      const btnP2 = document.getElementById("p2btn");
 
-      let ready = false;
-      let done = false;
+      const NEXT_URL = "https://sorcbear.github.io/playground/paper";
 
-      function setReady(ok){
-        ready = ok;
-        btn.disabled = !ok;
+      let p1Ready = false;
+      let p2Ready = false;
+      let revealed = false;
+
+      function syncReady(){
+        const ok = p1Ready && p2Ready;
+        btnRoll.disabled = !ok;
+        // p2 按钮只有在 revealed 后才有意义；但也先按资源情况设置
+        btnP2.disabled = !(ok && revealed);
       }
 
-      // 默认：先禁用，避免网络慢时点击造成卡顿
-      setReady(false);
+      // 预加载 p1 / p2，避免慢网点击后卡顿
+      function preload(src, cbOk, cbFail){
+        const im = new Image();
+        im.onload = cbOk;
+        im.onerror = cbFail;
+        im.src = src;
+      }
 
-      // 预加载第二张
-      const img = new Image();
-      img.onload = () => setReady(true);
-      img.onerror = () => {
-        // 加载失败：为了不“卡”，我们保持不可切换（也可以改成允许切换但可能空白）
-        setReady(false);
-        // 你也可以在这里加一个 console 提示
-        // console.warn("p1.png load failed");
-      };
-      img.src = "p1.png";
+      preload("p1.png", () => { p1Ready = true; syncReady(); }, () => { p1Ready = false; syncReady(); });
+      preload("p2.png", () => { p2Ready = true; syncReady(); }, () => { p2Ready = false; syncReady(); });
 
-      btn.addEventListener("click", () => {
-        if (!ready || done) return;
-        done = true;
+      // 初始禁用，等都 ready 再可点
+      syncReady();
+
+      btnRoll.addEventListener("click", () => {
+        if (btnRoll.disabled || revealed) return;
+        revealed = true;
         stage.classList.add("revealed");
+        btnP2.disabled = false; // 此时 p2Ready 必然为真（否则 btnRoll 不会可点）
+        syncReady();
+      }, { passive:true });
+
+      btnP2.addEventListener("click", () => {
+        if (btnP2.disabled) return;
+        location.href = NEXT_URL;
       }, { passive:true });
     })();
   </script>
