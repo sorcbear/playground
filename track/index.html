@@ -6,33 +6,49 @@
   <title>Direction Choice</title>
   <style>
     :root{
-      --btn-h: 52px;
+      --maxw: 920px;
+
+      --fs-body: 16px;
+      --lh-body: 1.7;
 
       --fs-hint: 18px;     /* 提示/标题 */
       --lh-hint: 1.6;
 
-      --ok: #0b6b2b;
+      --ctl-h: 52px;
+      --w-mainbtn: 240px;
+
+      --gap: 14px;
+
+      --c-text:#111;
+      --c-border:#000;
+      --ok:#0b6b2b;
     }
 
-    body{
+    html,body{
       margin:0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
-                   "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      padding:0;
+      width:100%;
+      height:100%;
       background:#fff;
-      color:#111;
+      color:var(--c-text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC",
+                   "Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
     }
+
     .wrap{
-      max-width: 920px;
+      max-width: var(--maxw);
       margin: 0 auto;
       padding: 18px 14px 28px;
       box-sizing: border-box;
     }
 
-    /* 顶部标题（原文字） */
+    /* 顶部标题文字 */
     .title{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
-      margin: 0 0 14px 0; /* 标题与图片的间距 */
+      margin: 0 0 var(--gap) 0;
     }
 
     .image-box{
@@ -58,42 +74,42 @@
 
     .msg{
       margin-top: 12px;
+      min-height: 20px;
       font-size: 14px;
       line-height: 1.4;
-      min-height: 20px;
     }
     .msg.ok{ color: var(--ok); }
 
+    /* 按钮区：两按钮并排，各自固定宽度，居中 */
     .actions{
       margin-top: 14px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      align-items:center;
+      flex-wrap:wrap;
     }
 
+    /* 你指定的按钮风格/反馈 */
     button{
-      height: var(--btn-h);
-      border: none;
-      border-radius: 10px;
-      background: #000;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-      user-select: none;
+      width:var(--w-mainbtn);
+      height:var(--ctl-h);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-body);
+      font-weight:600;
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
     }
-    button:disabled{
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .countdown{
-      font-variant-numeric: tabular-nums;
-    }
+    button:hover{ background:#000; color:#fff; }
+    button:disabled{ opacity:.45; cursor:default; }
   </style>
 </head>
 <body>
   <div class="wrap">
-
     <!-- 文字放最上面：标题样式 -->
     <div class="title" id="questionText">
       上一名玩家已经顺利找到了下一个解谜地点。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？
@@ -123,7 +139,7 @@
     const STORAGE_KEY = "bike_trace_lock_until_v1";
 
     const COUNTDOWN_START = 3;
-    const NEXT_URL = "https://sorcbear.github.io/playground/address/"; // 下一题
+    const NEXT_URL = "https://sorcbear.github.io/playground/address/";
 
     // ====== DOM ======
     const msgEl = document.getElementById("msg");
@@ -133,13 +149,17 @@
 
     let lockTimer = null;
     let countdownTimer = null;
-    let locked = false;         // 成功倒计时锁
-    let isSuccessFlow = false;  // 成功流程中
+
+    let isSuccessFlow = false;
+    let locked = false; // 成功倒计时锁（防二次触发）
 
     function now(){ return Date.now(); }
 
     function safeGet(storage, key){
       try { return storage.getItem(key); } catch(e) { return null; }
+    }
+    function safeSet(storage, key, val){
+      try { storage.setItem(key, val); } catch(e) {}
     }
 
     function getLockUntil(){
@@ -149,7 +169,7 @@
     }
 
     function setLockUntil(ts){
-      try { localStorage.setItem(STORAGE_KEY, String(ts)); } catch(e) {}
+      safeSet(localStorage, STORAGE_KEY, String(ts));
     }
 
     function fmtRemaining(ms){
@@ -169,24 +189,7 @@
       msgEl.classList.toggle("ok", !!ok);
     }
 
-    // ====== 按钮“短暂变字”效果（与你之前 submit 一样的逻辑）======
-    function setBtnText(btn, text, ms = 900){
-      const old = btn.textContent;
-      btn.textContent = text;
-      btn.disabled = true;
-
-      setTimeout(() => {
-        btn.textContent = old;
-
-        // 只有在没有冻结、也不是成功流程时，才恢复可点击
-        const lockRem = getLockUntil() - now();
-        if (!isSuccessFlow && lockRem <= 0){
-          btn.disabled = false;
-        }
-      }, ms);
-    }
-
-    // ====== 错误冻结流程 ======
+    // ====== 冻结 UI ======
     function showLockedUI(remainingMs){
       setDisabled(true);
       setMsg(`页面已冻结：${fmtRemaining(remainingMs)}`, false);
@@ -224,14 +227,17 @@
             lockTimer = null;
             return;
           }
+
           const until2 = getLockUntil();
           const rem2 = until2 - now();
+
           if (rem2 <= 0){
             showUnlockedUI();
             clearInterval(lockTimer);
             lockTimer = null;
             return;
           }
+
           showLockedUI(rem2);
         }, 250);
       } else {
@@ -239,7 +245,7 @@
       }
     }
 
-    // ====== 成功倒计时并跳转（按你给的那段结构整理）======
+    // ====== 成功倒计时并跳转 ======
     function startCountdownAndRedirect(){
       locked = true;
       isSuccessFlow = true;
@@ -262,26 +268,23 @@
       }, 1000);
     }
 
-    // ====== 点击处理（两按钮版本）======
-    function onAnswer(choice, btn){
+    // ====== 点击处理：点左=直接冻结；点右=成功跳转 ======
+    function onChoose(choice){
       if (locked || isSuccessFlow) return;
 
       const until = getLockUntil();
       if (until - now() > 0) return;
 
-      const okAns = (choice === CORRECT);
-
-      if (okAns){
+      if (choice === CORRECT){
         startCountdownAndRedirect();
       } else {
-        setMsg(""); // 不显示“错误提示句”，只用按钮短暂变字 + 冻结倒计时
-        setBtnText(btn, "不正确，再试一次", 900);
+        // 点击向左：立即冻结页面（不显示“再试一次”字样）
         lockForFiveMinutes();
       }
     }
 
-    btnLeft.addEventListener("click", () => onAnswer("left", btnLeft));
-    btnRight.addEventListener("click", () => onAnswer("right", btnRight));
+    btnLeft.addEventListener("click", () => onChoose("left"));
+    btnRight.addEventListener("click", () => onChoose("right"));
 
     // 页面加载时检查是否冻结
     applyLockState();
