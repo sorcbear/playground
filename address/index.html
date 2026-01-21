@@ -66,16 +66,16 @@
       white-space: pre-wrap;
     }
 
-    /* 三句对白：黑色、斜体、不加粗；与“已知”隔一行由 HTML 里的空行实现 */
+    /* 三句对白：黑色、斜体、不加粗；三句之间不空行 */
+    .quotes{ margin:0; }
     .quote{
-      margin: 0;
+      margin:0;
       color:#000;
       font-style: italic;
       font-weight: 400;
-      white-space: pre-wrap;
     }
 
-    /* 红字提示（与 track 红字一致：同字号同样加粗同色） */
+    /* 红字提示 */
     .hint{
       margin: 0;
       margin-top: var(--gap-tight);
@@ -97,7 +97,7 @@
       .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
-    /* ===== 按钮：完全按你给的规则（含 hover）+ 补 active 让手机按下也黑底 ===== */
+    /* ===== 按钮：按你给的规则 + :active 让手机按下也黑底 ===== */
     button{
       width:240px;
       height:52px;
@@ -115,27 +115,23 @@
       user-select:none;
       white-space: nowrap;
     }
-
     button:hover{
       background:#000;
       color:#fff;
     }
-
-    /* 让手机也有“黑底反馈”（按下时） */
     button:active{
       background:#000;
       color:#fff;
     }
-
     button:disabled{
       opacity:.45;
       cursor:default;
     }
 
-    /* 地址按钮在网格里铺满单元格宽度（不影响“获得提示”240px宽） */
+    /* 地址按钮铺满网格单元，不影响“获得提示”按钮 */
     button.addr{ width:100%; }
 
-    /* 倒计时/状态显示：与 track 冻结样式一致（红色加粗） */
+    /* 倒计时/状态显示 */
     .msg{
       margin-top: var(--gap-tight);
       min-height: 20px;
@@ -162,9 +158,11 @@
 
     <div class="story">已知：A知道街道名，B知道弄堂号码。
 
-<div class="quote">A说：“我不知道具体地点，但我知道B也不知道。”</div>
-<div class="quote">B说：“起初我不知道，但现在我知道了。”</div>
-<div class="quote">A说：“那我现在知道下个谜题在哪了。”</div>
+<div class="quotes">
+  <div class="quote">A说：“我不知道具体地点，但我知道B也不知道。”</div>
+  <div class="quote">B说：“起初我不知道，但现在我知道了。”</div>
+  <div class="quote">A说：“那我现在知道下个谜题在哪了。”</div>
+</div>
 
 那么下个谜题在哪里？请点击下面的正确地址。</div>
 
