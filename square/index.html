@@ -4,11 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Square Puzzle</title>
+
   <style>
     :root{
       --maxw: 900px;
 
-      /* ===== 贴近 Rotate 的变量 ===== */
+      /* ===== Rotate 风格变量 ===== */
       --fs-body: 16px;
       --lh-body: 1.7;
 
@@ -27,7 +28,6 @@
       --c-border:#000;
       --danger:#b00020;
 
-      --line2: rgba(0,0,0,.18);
       --bg:#fff;
     }
 
@@ -51,7 +51,7 @@
       padding: 24px 16px 40px;
     }
 
-    /* ===== 标题（按你给的 Rotate 范本） ===== */
+    /* ===== 标题（Rotate 同款） ===== */
     .title{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
@@ -61,21 +61,23 @@
       white-space: pre-wrap;
     }
 
+    /* ===== 图片：无边框 + 稍微缩小 ===== */
     .imgbox{
-      border: 1px solid var(--line2);
       overflow:hidden;
       background:#fff;
       margin-bottom: var(--gap);
     }
-    img{
+    .imgbox img{
       width:100%;
-      max-width: var(--maxw);
+      max-width: 800px;   /* 控制桌面端视觉尺寸 */
       height:auto;
       display:block;
+      margin: 0 auto;     /* 居中 */
       user-select:none;
       -webkit-user-drag:none;
     }
 
+    /* ===== 输入行 ===== */
     .row{
       display:flex;
       align-items:center;
@@ -86,13 +88,12 @@
     }
     .label{ font-weight: 600; }
 
-    /* 红色加粗问号 */
     .qmark{
       color: var(--danger);
       font-weight: 800;
     }
 
-    /* ===== 输入框：Rotate 的 ansInput 风格（直角、2px 边、高度 40）===== */
+    /* ===== 输入框：Rotate ansInput ===== */
     input[type="text"]{
       width: 6.2em;
       height: var(--h-input);
@@ -110,7 +111,7 @@
       box-shadow: 0 0 0 2px rgba(0,0,0,.10);
     }
 
-    /* ===== 两按钮区域：按 Rotate 的 btnRow 思路（居中、间距一致）===== */
+    /* ===== 两按钮行 ===== */
     .btnRow{
       margin-top: 56px;
       display:flex;
@@ -119,7 +120,7 @@
       flex-wrap: wrap;
     }
 
-    /* ===== 按钮：Rotate primaryBtn（白底黑字；PC hover 反转；触屏不反转；不下沉）===== */
+    /* ===== 按钮：Rotate primaryBtn ===== */
     .primaryBtn{
       height: var(--h-btn);
       min-width: 220px;
@@ -167,14 +168,18 @@
 
 <body>
   <div class="wrap">
-    <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div>
+    <div class="title">
+      康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。
+    </div>
 
     <div class="imgbox">
       <img src="puzzle.jpg" alt="square puzzle" />
     </div>
 
     <div class="row">
-      <span class="label"><span class="qmark">?</span>对应的是什么数字：</span>
+      <span class="label">
+        <span class="qmark">?</span>对应的是什么数字：
+      </span>
       <input id="answer" type="text" inputmode="numeric" autocomplete="off" />
     </div>
 
@@ -189,10 +194,8 @@
       const CORRECT = "7";
       const NEXT_URL = "https://sorcbear.github.io/playground/barrel/";
       const HINT_URL = "https://sorcbear.github.io/playground/square/hint";
-
       const COUNTDOWN_SECONDS = 3;
 
-      // 仅用于“从下一页返回时恢复正确样子”（沿用 Rotate 思路）
       const SOLVED_KEY = "square_solved_back_only_v1";
 
       const input = document.getElementById("answer");
@@ -202,7 +205,6 @@
       let locked = false;
       let countdownTimer = null;
 
-      // 仅改按钮文案，不改颜色（Rotate 风格）
       const BTN_TEXT_DEFAULT = "提交答案";
       let btnTextTimer = null;
 
@@ -297,7 +299,6 @@
         }, 1000);
       }
 
-      // ===== 事件绑定（Rotate 逻辑风格）=====
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") submitBtn.click();
       });
@@ -317,11 +318,11 @@
         }
       });
 
-      // pageshow：完全照搬 Rotate 的恢复逻辑
       window.addEventListener("pageshow", (e) => {
         const navType = getNavType();
 
-        if ((e.persisted || navType === "back_forward") && sessionStorage.getItem(SOLVED_KEY) === "1"){
+        if ((e.persisted || navType === "back_forward") &&
+            sessionStorage.getItem(SOLVED_KEY) === "1"){
           restoreSolvedUI();
           return;
         }
@@ -332,10 +333,10 @@
         }
       });
 
-      // 初始进入：同样按 Rotate 的判断
       (function init(){
         const navType = getNavType();
-        if (navType === "back_forward" && sessionStorage.getItem(SOLVED_KEY) === "1"){
+        if (navType === "back_forward" &&
+            sessionStorage.getItem(SOLVED_KEY) === "1"){
           restoreSolvedUI();
         }else{
           sessionStorage.removeItem(SOLVED_KEY);
@@ -343,7 +344,6 @@
         }
       })();
 
-      // 防止计时器残留
       window.addEventListener("pagehide", () => {
         clearCountdown();
       });
