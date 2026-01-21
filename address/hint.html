@@ -132,8 +132,11 @@
         <button id="hintBtn">看提示</button>
       </div>
 
-      <div class="hint-text" id="hintText">1.如果A知道B不知道具体地点，就说明具体地点不会是天平路75弄，天平路216弄和余庆路51弄。
-      </div>
+      <div class="hint-text" id="hintText">排除天平路、余庆路： A确定B不知道，说明A手里的街道不包含独一无二的号码（216和51）。凡是有这两个号码的街道（天平、余庆）全部排除。
+
+排除号码101： B此时知道了，说明号码在剩下的街道（康平、宛平）里是唯一的。101在两条路都有，所以排除101。
+
+确定康平路： A此时也知道了，说明A手里的街道只剩这唯一一个号码。宛平路还剩75和80两个可能，只有康平路只剩152一个可能。 </div>
 
     </div>
   </div>
@@ -145,7 +148,7 @@
     const hintText = document.getElementById('hintText');
 
     cancelBtn.addEventListener('click', () => {
-      location.href = 'https://sorcbear.github.io/playground/circle/';
+      location.href = 'https://sorcbear.github.io/playground/address/';
     });
 
     hintBtn.addEventListener('click', () => {
