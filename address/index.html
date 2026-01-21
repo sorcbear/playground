@@ -15,19 +15,12 @@
       --fs-hint: 18px;
       --lh-hint: 1.6;
 
-      --fs-btn: 16px;
-      --fw-btn: 600;
-      --h-btn: 52px;
-
       --gap: 18px;
       --gap-tight: 12px;
 
       --c-text: #111;
       --c-danger: #b00020;
       --c-border: #000;
-      --c-blue: #1f4ed8;
-      --c-green: #0b6b2b;   /* 和 track / ok 用的同一个绿 */
-.line-a
 
       --ok:#0b6b2b;
       --bg:#fff;
@@ -58,22 +51,31 @@
       line-height: var(--lh-hint);
       font-weight: 700;
       margin: 0;
+      text-align: left;
       white-space: pre-wrap;
     }
 
-    /* 故事区：整体标题 UI；对白用单独样式覆盖 */
+    /* 故事区：整体标题 UI；对白用 quote 覆盖 */
     .story{
       margin: 0;
       margin-top: var(--gap);
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
+      text-align: left;
       white-space: pre-wrap;
     }
-    .line-a{ font-weight: 400; color: var(--c-green); }
-    .line-b{ font-weight: 400; color: var(--c-blue); }
 
-    /* 红字提示 */
+    /* 三句对白：黑色、斜体、不加粗；与“已知”隔一行由 HTML 里的空行实现 */
+    .quote{
+      margin: 0;
+      color:#000;
+      font-style: italic;
+      font-weight: 400;
+      white-space: pre-wrap;
+    }
+
+    /* 红字提示（与 track 红字一致：同字号同样加粗同色） */
     .hint{
       margin: 0;
       margin-top: var(--gap-tight);
@@ -95,71 +97,43 @@
       .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
-    /* ===== 按钮：与你之前 circle/rotate 的“最终稳定版”一致 =====
-       默认白底黑字；仅 PC hover 反转；触屏不反转；iOS 点击不高亮
-    */
-    .btn{
+    /* ===== 按钮：完全按你给的规则（含 hover）+ 补 active 让手机按下也黑底 ===== */
+    button{
+      width:240px;
+      height:52px;
+      padding:0 18px;
+      font-size:16px;
+      font-weight:600;
+      background:#fff;
+      color:#000;
+      border:2px solid #000;
+      cursor:pointer;
+      border-radius:0;
       appearance:none;
-
-      height: var(--h-btn);
-      padding: 0 18px;
-      box-sizing: border-box;
-
-      border: 2px solid var(--c-border);
-      border-radius: 0;
-
-      background: #fff;
-      color: #000;
-
-      font-size: var(--fs-btn);
-      font-weight: var(--fw-btn);
-
-      cursor: pointer;
-      user-select: none;
-      white-space: nowrap;
-
-      transition: background-color 120ms ease, color 120ms ease;
-
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
+      user-select:none;
+      white-space: nowrap;
     }
 
-    /* 只在支持 hover 的设备（PC / 鼠标）上启用反转 */
-    @media (hover: hover) and (pointer: fine){
-      .btn:hover:not(:disabled){
-        background:#000;
-        color:#fff;
-      }
+    button:hover{
+      background:#000;
+      color:#fff;
     }
 
-    /* 触屏设备明确禁止 hover 反转，防止 Safari “黏住” */
-    @media (hover: none){
-      .btn:hover:not(:disabled){
-        background:#fff;
-        color:#000;
-      }
+    /* 让手机也有“黑底反馈”（按下时） */
+    button:active{
+      background:#000;
+      color:#fff;
     }
 
-    /* 点击不下沉、不闪 */
-    .btn:active{ transform:none; }
-
-    /* 禁用态：只降透明度 */
-    .btn:disabled{
-      opacity: .45;
-      cursor: default;
+    button:disabled{
+      opacity:.45;
+      cursor:default;
     }
 
-    /* 地址按钮与提示按钮：同一套样式，只有布局不同 */
+    /* 地址按钮在网格里铺满单元格宽度（不影响“获得提示”240px宽） */
     button.addr{ width:100%; }
-
-    .hintBtnRow{
-      margin-top: var(--gap);
-      display:flex;
-      justify-content:center;
-    }
-    button.hintBtn{
-      min-width: 260px;
-    }
 
     /* 倒计时/状态显示：与 track 冻结样式一致（红色加粗） */
     .msg{
@@ -172,6 +146,13 @@
     }
     .msg.ok{ color: var(--ok); font-weight: 700; }
     .msg.locked{ color: var(--c-danger); font-weight: 700; }
+
+    /* 获得提示按钮 */
+    .hintBtnRow{
+      margin-top: var(--gap);
+      display:flex;
+      justify-content:center;
+    }
   </style>
 </head>
 
@@ -180,9 +161,10 @@
     <div class="title">你遇到2个玩家A和B，他们在讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：</div>
 
     <div class="story">已知：A知道街道名，B知道弄堂号码。
-<span class="line-a">A说：“我不知道具体地点，但我知道B也不知道。”</span>
-<span class="line-b">B说：“起初我不知道，但现在我知道了。”</span>
-<span class="line-a">A说：“那我现在知道下个谜题在哪了。”</span>
+
+<div class="quote">A说：“我不知道具体地点，但我知道B也不知道。”</div>
+<div class="quote">B说：“起初我不知道，但现在我知道了。”</div>
+<div class="quote">A说：“那我现在知道下个谜题在哪了。”</div>
 
 那么下个谜题在哪里？请点击下面的正确地址。</div>
 
@@ -193,7 +175,7 @@
     <div class="msg" id="msg"></div>
 
     <div class="hintBtnRow">
-      <button class="btn hintBtn" id="btnHint" type="button">获得提示</button>
+      <button id="btnHint" type="button">获得提示</button>
     </div>
   </div>
 
@@ -206,10 +188,16 @@
   const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
 
   const ADDRS = [
-    "天平路75弄","天平路152弄","天平路216弄",
-    "余庆路80弄","余庆路51弄",
-    "康平路101弄","康平路152弄",
-    "宛平路75弄","宛平路80弄","宛平路101弄"
+    "天平路75弄",
+    "天平路152弄",
+    "天平路216弄",
+    "余庆路80弄",
+    "余庆路51弄",
+    "康平路101弄",
+    "康平路152弄",
+    "宛平路75弄",
+    "宛平路80弄",
+    "宛平路101弄",
   ];
 
   const CORRECT = "康平路152弄";
@@ -327,7 +315,7 @@
     grid.innerHTML = "";
     ADDRS.forEach(addr => {
       const btn = document.createElement("button");
-      btn.className = "btn addr";
+      btn.className = "addr";
       btn.type = "button";
       btn.textContent = addr;
       btn.addEventListener("click", () => handleClick(addr));
