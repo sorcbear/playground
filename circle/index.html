@@ -84,8 +84,20 @@
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
+      -webkit-tap-highlight-color:transparent;
     }
-    button:hover{ background:#000; color:#fff; }
+
+    /* PC hover */
+    @media (hover:hover) and (pointer:fine){
+      button:hover{ background:#000; color:#fff; }
+    }
+
+    /* JS 控制的点击反馈（与 square 一致） */
+    button.invert{
+      background:#000;
+      color:#fff;
+    }
+
     button:disabled{ opacity:.45; cursor:default; }
 
     .msg{
@@ -93,7 +105,12 @@
       min-height:1.4em;
       font-size:14px;
     }
-    .msg.ok{ color:var(--c-ok); }
+
+    /* 成功提示样式（与 square 一致：绿色 + 加粗） */
+    .msg.ok{
+      color:var(--c-ok);
+      font-weight:700;
+    }
   </style>
 </head>
 
@@ -161,6 +178,7 @@ const msg = document.getElementById("msg");
 const selected = new Array(CIRCLES.length).fill(false);
 let locked=false;
 let countdownTimer=null;
+let btnTimer=null;
 
 /* ===== 工具 ===== */
 function el(n,a={}){const e=document.createElementNS("http://www.w3.org/2000/svg",n);for(const k in a)e.setAttribute(k,a[k]);return e;}
@@ -203,19 +221,33 @@ function render(){
   });
 }
 
+/* ===== 复用 square 的按钮逻辑（不动其他部分） ===== */
+
+/* 公共：短暂黑底白字反馈（square 一致） */
+function flashInvert(btn, ms=120){
+  btn.classList.add("invert");
+  setTimeout(()=>btn.classList.remove("invert"), ms);
+}
+
 function setLocked(v){
   locked=v;
   submitBtn.disabled=v;
   hintBtn.disabled=v;
 }
 
+/* 错误提示用（square 一致） */
 function setBtnText(text, ms=900){
-  const old = submitBtn.textContent;
+  if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+
   submitBtn.textContent = text;
+  submitBtn.classList.add("invert");
   submitBtn.disabled = true;
-  setTimeout(()=>{
-    submitBtn.textContent = old;
+
+  btnTimer = setTimeout(()=>{
+    submitBtn.textContent = "提交答案";
+    submitBtn.classList.remove("invert");
     submitBtn.disabled = false;
+    btnTimer = null;
   }, ms);
 }
 
@@ -229,13 +261,19 @@ catcher.addEventListener("pointerdown",e=>{
   render();
 },{passive:false});
 
-hintBtn.onclick=()=> location.href = HINT_URL;
+/* 获得提示：先反馈，再跳转（square 一致） */
+hintBtn.onclick = ()=>{
+  if (locked) return;
+  flashInvert(hintBtn, 120);
+  setTimeout(()=>location.href = HINT_URL, 120);
+};
 
 submitBtn.onclick=()=>{
   if(locked) return;
 
   if(sameSet(userPts(),ANSWER_POINTS)){
     setLocked(true);
+
     let t=COUNTDOWN_START;
     msg.textContent=`答案正确，即将进入下一题（${t}）`;
     msg.classList.add("ok");
@@ -251,6 +289,7 @@ submitBtn.onclick=()=>{
     },1000);
   }else{
     msg.textContent="";
+    msg.classList.remove("ok");
     setBtnText("不正确，再试一次",900);
   }
 };
@@ -259,4 +298,3 @@ render();
 </script>
 </body>
 </html>
-
