@@ -22,137 +22,107 @@
       --w-mainbtn: 240px;
 
       --gap: 18px;
-
-      /* ✅ 与 index 页面完全一致的“仪式间距” */
       --space-action: 64px;
 
-      --c-text: #111;
-      --c-border: #000;
+      --c-text:#111;
+      --c-border:#000;
+      --c-danger:#b00020;
     }
 
-    html, body{
-      margin:0; padding:0;
-      width:100%; height:100%;
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
       background:#fff;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
       font-size:var(--fs-body);
       line-height:var(--lh-body);
       color:var(--c-text);
     }
-    button{ font-family: inherit; }
 
     .container{
-      width:100%; height:100%;
+      width:100%;
+      height:100%;
       display:flex;
       flex-direction:column;
-      align-items:center;
       justify-content:center;
-      gap:var(--gap);
+      align-items:center;
+      text-align:center;
       padding:18px;
       box-sizing:border-box;
-      text-align:center;
     }
 
-    /* 新增：用于“倒计时阶段”把两段文字居中堆叠 */
     .centerStack{
-      display:none;                 /* 初始不占位，保证按钮真居中 */
-      width:min(var(--maxw), 92vw);
-      text-align:center;
+      display:none;
+      width:min(var(--maxw),92vw);
     }
 
-    .hint,
-    .status{
-      margin:0;
-      user-select:none;
-      white-space:pre-wrap;
+    /* ===== 通用标题样式（来自 Rotate 页面，已验证） ===== */
+    .title{
+      font-size: var(--fs-hint);      /* 18px */
+      line-height: var(--lh-hint);    /* 1.6 */
+      font-weight: 700;               /* 粗标题 */
+      margin: 4px 0 var(--gap);       /* 与下一个元素隔 1 行 */
+      text-align: left;
+      white-space: pre-wrap;
     }
 
-    .hint{
-      font-size:var(--fs-hint);
-      line-height:var(--lh-hint);
+    /* 倒计时标题（红色） */
+    .title-danger{
+      color: var(--c-danger);
+      margin: 0;                      /* 不再额外制造空行 */
+      text-align: left;
     }
 
-    .status{
-      font-size:var(--fs-status);
-      font-weight:var(--fw-status);
-      line-height:1.4;
-      margin-top: 10px;            /* 两行之间一点点距离 */
-    }
-
-    /* ✅ 按钮行：与 index 相同的 64px 间距 */
     .btnRow{
-      width:100%;
-      display:flex;
-      justify-content:center;
-      margin-top: var(--space-action);
+      margin-top:var(--space-action);
     }
 
     button{
       width:var(--w-mainbtn);
       height:var(--ctl-h);
-      padding:0 18px;
-      box-sizing:border-box;
-      font-size:var(--fs-body);
+      font-size:16px;
       font-weight:600;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
-      border-radius:0;
     }
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
-
-    @media (max-width: 420px){
-      :root{
-        --w-mainbtn: 220px;
-        --ctl-h: 46px;
-        --fs-hint: 17px;
-        --fs-status: 17px;
-      }
-    }
   </style>
 </head>
 
 <body>
-  <div class="container">
+<div class="container">
 
-    <!-- 倒计时阶段只显示这个区域（文字 + 倒计时） -->
-    <div class="centerStack" id="centerStack">
-      <div class="hint" id="hint"></div>
-      <div class="status" id="status"></div>
+  <div class="centerStack" id="centerStack">
+    <div class="title" id="hint">
+      好像听到一段诡异的音乐...
     </div>
-
-    <div class="btnRow" id="btnRow">
-      <button id="startBtn">开始游戏</button>
-    </div>
+    <div class="title title-danger" id="status"></div>
   </div>
+
+  <div class="btnRow" id="btnRow">
+    <button id="startBtn">开始游戏</button>
+  </div>
+
+</div>
 
 <script>
 (() => {
   const NEXT_URL = "/playground/rotate/";
+  const COUNTDOWN_SEC = 10;
 
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
-  const COUNTDOWN_SEC = 10;
 
   const KEYS = [
-    {c:"green",n:"so",m:55},
-    {c:"green",n:"la",m:57},
-    {c:"green",n:"si",m:59},
-    {c:"red",n:"do",m:60},
-    {c:"red",n:"re",m:62},
-    {c:"red",n:"mi",m:64},
-    {c:"red",n:"fa",m:65},
-    {c:"red",n:"so",m:67},
-    {c:"red",n:"la",m:69},
-    {c:"red",n:"si",m:71},
-    {c:"blue",n:"do",m:72},
-    {c:"blue",n:"re",m:74},
-    {c:"blue",n:"mi",m:76},
-    {c:"blue",n:"fa",m:77},
-    {c:"blue",n:"so",m:79},
-    {c:"blue",n:"la",m:81},
+    {c:"green",n:"so",m:55},{c:"green",n:"la",m:57},{c:"green",n:"si",m:59},
+    {c:"red",n:"do",m:60},{c:"red",n:"re",m:62},{c:"red",n:"mi",m:64},
+    {c:"red",n:"fa",m:65},{c:"red",n:"so",m:67},{c:"red",n:"la",m:69},{c:"red",n:"si",m:71},
+    {c:"blue",n:"do",m:72},{c:"blue",n:"re",m:74},{c:"blue",n:"mi",m:76},
+    {c:"blue",n:"fa",m:77},{c:"blue",n:"so",m:79},{c:"blue",n:"la",m:81},
   ];
 
   const target = [
@@ -162,110 +132,89 @@
     ["red","do"],["red","mi"],["red","so"],["blue","do"],["blue","mi"],["red","so"],["blue","do"],["blue","mi"],
   ];
 
-  function targetToMidiSeq(){
-    return target.map(([tc,tn]) =>
-      KEYS.find(k => k.c===tc && k.n===tn)?.m
-    ).filter(Boolean);
-  }
-  const CORRECT_MIDI_SEQ = targetToMidiSeq();
+  const melody = target
+    .map(([c,n]) => KEYS.find(k => k.c===c && k.n===n)?.m)
+    .filter(Boolean);
 
   const centerStack = document.getElementById("centerStack");
-  const hintEl = document.getElementById("hint");
   const statusEl = document.getElementById("status");
-
   const btnRow = document.getElementById("btnRow");
   const startBtn = document.getElementById("startBtn");
 
-  // 初始：只显示按钮
-  hintEl.textContent = "";
-  statusEl.textContent = "";
-  centerStack.style.display = "none";
-  btnRow.style.display = "flex";
+  let audioCtx, audioEnabled=false, musicPlayed=false;
+  let timers=[];
 
-  let audioCtx = null;
-  let audioEnabled = false;
-
-  function ensureAudioCtx(){
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if(!audioCtx) audioCtx = new AC();
+  function ensureAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    }
     return audioCtx;
   }
 
   async function enableAudio(){
-    const ctx = ensureAudioCtx();
-    if(ctx.state === "suspended") await ctx.resume();
-    audioEnabled = true;
+    const ctx = ensureAudio();
+    if(ctx.state==="suspended") await ctx.resume();
+    audioEnabled=true;
   }
 
-  function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
-
-  function playTone(freq, duration){
-    if(!audioEnabled || !audioCtx) return;
-    const now = audioCtx.currentTime;
-
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-
-    o.type = "sine";
-    o.frequency.setValueAtTime(freq, now);
-
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.linearRampToValueAtTime(0.3, now + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    o.connect(g);
-    g.connect(audioCtx.destination);
-
-    o.start(now);
-    o.stop(now + duration + 0.05);
+  function playTone(freq,d){
+    if(!audioEnabled) return;
+    const t=audioCtx.currentTime;
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    o.frequency.value=freq;
+    g.gain.setValueAtTime(0.001,t);
+    g.gain.linearRampToValueAtTime(0.3,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+d);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t+d+0.05);
   }
 
   function playMelody(){
-    CORRECT_MIDI_SEQ.forEach((midi, i) => {
-      setTimeout(() => {
-        playTone(midiToFreq(midi), NOTE_DUR_SEC);
-      }, i * NOTE_GAP_SEC * 1000);
+    melody.forEach((m,i)=>{
+      setTimeout(
+        ()=>playTone(440*Math.pow(2,(m-69)/12),NOTE_DUR_SEC),
+        i*NOTE_GAP_SEC*1000
+      );
     });
   }
 
-  let timers = [];
   function clearTimers(){
-    timers.forEach(t => clearTimeout(t));
-    timers = [];
+    timers.forEach(clearTimeout);
+    timers=[];
   }
 
   function startCountdown(){
     let left = COUNTDOWN_SEC;
-    const tick = () => {
+    const tick = ()=>{
       statusEl.textContent = `倒计时：${left}`;
+
+      if(left === 8 && !musicPlayed){
+        musicPlayed = true;
+        playMelody();
+      }
+
       if(left <= 0){
         location.href = NEXT_URL;
         return;
       }
       left--;
-      timers.push(setTimeout(tick, 1000));
+      timers.push(setTimeout(tick,1000));
     };
     tick();
   }
 
   async function startFlow(){
-    startBtn.disabled = true;
-
-    // ✅ 关键：进入倒计时后隐藏按钮，显示居中文字区
-    btnRow.style.display = "none";
-    centerStack.style.display = "block";
-
-    hintEl.textContent = "好像听到一段诡异的音乐...";
-    statusEl.textContent = "";
+    startBtn.disabled=true;
+    btnRow.style.display="none";
+    centerStack.style.display="block";
 
     clearTimers();
     try{ await enableAudio(); }catch(e){}
-
-    playMelody();
     startCountdown();
   }
 
-  startBtn.addEventListener("click", startFlow);
+  startBtn.addEventListener("click",startFlow);
 })();
 </script>
 </body>
