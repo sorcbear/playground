@@ -3,22 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- 禁止 iOS Safari 自动识别地址/电话/邮箱 -->
   <meta name="format-detection" content="telephone=no,address=no,email=no">
-
   <title>Rotate</title>
 
   <style>
     :root{
-      /* ===== 尺度标准（只改这里即可全站统一）===== */
       --maxw: 720px;
       --panelw: 420px;
 
-      --fs-body: 16px;     /* 正文 */
+      --fs-body: 16px;
       --lh-body: 1.7;
 
-      --fs-hint: 18px;     /* 提示/标题 */
+      --fs-hint: 18px;
       --lh-hint: 1.6;
 
       --fs-status: 18px;
@@ -29,7 +25,7 @@
       --h-btn: 52px;
 
       --fs-input: 16px;
-      --h-input: 40px;     /* 输入框高度：更贴合文字 */
+      --h-input: 40px;
 
       --gap: 18px;
       --gap-tight: 12px;
@@ -39,7 +35,6 @@
       --c-danger: #b00020;
       --c-border: #000;
 
-      /* 本页补充 */
       --line: rgba(0,0,0,.10);
       --line2: rgba(0,0,0,.18);
       --bg: #fff;
@@ -62,7 +57,6 @@
       padding: 18px 14px 28px;
     }
 
-    /* 只保留这一句：当作“标题” */
     .titleLine{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
@@ -108,7 +102,6 @@
       display:block;
     }
 
-    /* ===== 正确地址：文字改成标题同款 ===== */
     .answerRow{
       margin-top: var(--gap);
       display:flex;
@@ -118,13 +111,12 @@
       text-align: left;
     }
     .fixedWord{
-      font-size: var(--fs-hint);     /* 18px */
-      line-height: var(--lh-hint);   /* 1.6 */
-      font-weight: 700;              /* 与标题一致 */
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
       color: var(--c-text);
     }
 
-    /* ===== 输入框：无任何高亮/光圈 ===== */
     .ansInput{
       width: 4.2em;
       height: var(--h-input);
@@ -142,20 +134,19 @@
       -webkit-appearance: none;
       appearance: none;
       -webkit-tap-highlight-color: transparent;
+      caret-color: #000; /* 可选：光标颜色更稳 */
     }
     .ansInput:focus{
       outline: none;
       box-shadow: none;
     }
 
-    /* 按钮居中，并与上面多空约两行正文 */
     .btnRow{
       margin-top: 56px;
       display:flex;
       justify-content:center;
     }
 
-    /* ===== 提交按钮（最终稳定版）===== */
     .primaryBtn{
       height: var(--h-btn);
       min-width: 260px;
@@ -164,21 +155,20 @@
       border: 2px solid var(--c-border);
       border-radius: 0;
 
-      background: #fff;        /* 默认白底 */
-      color: #000;             /* 默认黑字 */
+      background: #fff;
+      color: #000;
 
       font-size: var(--fs-btn);
       font-weight: var(--fw-btn);
 
       cursor: pointer;
-
       transition: background-color 120ms ease, color 120ms ease;
 
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
+      user-select: none; /* 安全补丁：防长按选中 */
     }
 
-    /* 只在支持 hover 的设备（PC）启用反转 */
     @media (hover: hover) and (pointer: fine){
       .primaryBtn:hover:not(:disabled){
         background: #000;
@@ -186,7 +176,6 @@
       }
     }
 
-    /* 触屏设备明确禁止 hover 反转（防 Safari 黏住） */
     @media (hover: none){
       .primaryBtn:hover:not(:disabled){
         background:#fff;
@@ -196,13 +185,11 @@
 
     .primaryBtn:active{ transform: none; }
 
-    /* 禁用态：不改配色，只降透明度 */
     .primaryBtn:disabled{
       opacity: .55;
       cursor: not-allowed;
     }
 
-    /* ===== Square 错误提示期间：强制黑底白字（JS 添加/移除）===== */
     .primaryBtn.invert{
       background:#000;
       color:#fff;
