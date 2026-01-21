@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Hint</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      --fs-body: 16px;
+      --fs-text: 18px;
+      --lh-text: 1.7;
+
+      --btn-h: 48px;
+      --btn-w: 200px;
+
+      --c-text: #111;
+      --c-border: #000;
+      --bg: #fff;
+    }
+
+    html, body{
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
+      background:var(--bg);
+      color:var(--c-text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+                   "PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      font-size:var(--fs-body);
+    }
+
+    .container{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .panel{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:24px;
+      text-align:center;
+    }
+
+    .btn-row{
+      display:flex;
+      gap:20px;
+    }
+
+    button{
+      width:var(--btn-w);
+      height:var(--btn-h);
+      background:#fff;
+      color:#000;
+      border:1.5px solid var(--c-border);
+      font-size:16px;
+      cursor:pointer;
+    }
+
+    button:active{
+      transform: translateY(1px);
+    }
+
+    .hint-text{
+      font-size:var(--fs-text);
+      line-height:var(--lh-text);
+      display:none;
+      white-space:pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="panel">
+      <div class="btn-row" id="buttons">
+        <button id="cancelBtn">暂时不看了</button>
+        <button id="hintBtn">确定要提示</button>
+      </div>
+
+      <div class="hint-text" id="hintText">
+墙上的公共厕所地图指南
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const cancelBtn = document.getElementById('cancelBtn');
+    const hintBtn   = document.getElementById('hintBtn');
+    const buttons   = document.getElementById('buttons');
+    const hintText  = document.getElementById('hintText');
+
+    cancelBtn.addEventListener('click', () => {
+      location.href = 'https://sorcbear.github.io/playground/circle/';
+    });
+
+    hintBtn.addEventListener('click', () => {
+      buttons.style.display = 'none';
+      hintText.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
