@@ -26,6 +26,8 @@
       --c-danger: #b00020;
       --c-border: #000;
       --c-blue: #1f4ed8;
+      --c-green: #0b6b2b;   /* 和 track / ok 用的同一个绿 */
+.line-a
 
       --ok:#0b6b2b;
       --bg:#fff;
@@ -59,25 +61,17 @@
       white-space: pre-wrap;
     }
 
-    /* 故事区：整体仍是标题 UI */
+    /* 故事区：整体标题 UI；对白用单独样式覆盖 */
     .story{
       margin: 0;
       margin-top: var(--gap);
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
-      font-weight: 700;            /* 默认粗体 */
+      font-weight: 700;
       white-space: pre-wrap;
     }
-
-    /* === 关键新增：三句对白 === */
-    .line-a{
-      font-weight: 400;            /* 不加粗 */
-      color: var(--c-danger);      /* 红色 */
-    }
-    .line-b{
-      font-weight: 400;            /* 不加粗 */
-      color: var(--c-blue);        /* 蓝色 */
-    }
+    .line-a{ font-weight: 400; color: var(--c-green); }
+    .line-b{ font-weight: 400; color: var(--c-blue); }
 
     /* 红字提示 */
     .hint{
@@ -90,6 +84,7 @@
       white-space: pre-wrap;
     }
 
+    /* 10 个地址按钮网格 */
     .grid{
       margin-top: var(--gap);
       display: grid;
@@ -100,35 +95,62 @@
       .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
-    button.addr, button.hintBtn{
+    /* ===== 按钮：与你之前 circle/rotate 的“最终稳定版”一致 =====
+       默认白底黑字；仅 PC hover 反转；触屏不反转；iOS 点击不高亮
+    */
+    .btn{
       appearance:none;
+
       height: var(--h-btn);
       padding: 0 18px;
+      box-sizing: border-box;
+
+      border: 2px solid var(--c-border);
+      border-radius: 0;
+
+      background: #fff;
+      color: #000;
+
       font-size: var(--fs-btn);
       font-weight: var(--fw-btn);
-      background:#fff;
-      color:#000;
-      border:2px solid var(--c-border);
-      border-radius:0;
-      cursor:pointer;
+
+      cursor: pointer;
+      user-select: none;
       white-space: nowrap;
+
+      transition: background-color 120ms ease, color 120ms ease;
+
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
     }
-    button.addr:disabled, button.hintBtn:disabled{
-      opacity:.45;
-      cursor:default;
+
+    /* 只在支持 hover 的设备（PC / 鼠标）上启用反转 */
+    @media (hover: hover) and (pointer: fine){
+      .btn:hover:not(:disabled){
+        background:#000;
+        color:#fff;
+      }
     }
 
-    .msg{
-      margin-top: var(--gap-tight);
-      min-height: 20px;
-      font-size: 14px;
-      line-height: 1.4;
-      white-space: pre-wrap;
+    /* 触屏设备明确禁止 hover 反转，防止 Safari “黏住” */
+    @media (hover: none){
+      .btn:hover:not(:disabled){
+        background:#fff;
+        color:#000;
+      }
     }
-    .msg.ok{ color: var(--ok); font-weight: 700; }
-    .msg.locked{ color: var(--c-danger); font-weight: 700; }
+
+    /* 点击不下沉、不闪 */
+    .btn:active{ transform:none; }
+
+    /* 禁用态：只降透明度 */
+    .btn:disabled{
+      opacity: .45;
+      cursor: default;
+    }
+
+    /* 地址按钮与提示按钮：同一套样式，只有布局不同 */
+    button.addr{ width:100%; }
 
     .hintBtnRow{
       margin-top: var(--gap);
@@ -138,6 +160,18 @@
     button.hintBtn{
       min-width: 260px;
     }
+
+    /* 倒计时/状态显示：与 track 冻结样式一致（红色加粗） */
+    .msg{
+      margin-top: var(--gap-tight);
+      min-height: 20px;
+      font-size: 14px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      color: var(--c-text);
+    }
+    .msg.ok{ color: var(--ok); font-weight: 700; }
+    .msg.locked{ color: var(--c-danger); font-weight: 700; }
   </style>
 </head>
 
@@ -154,12 +188,12 @@
 
     <div class="hint">提示：点击错误会导致本页面冻结3分钟。</div>
 
-    <div class="grid" id="btnGrid"></div>
+    <div class="grid" id="btnGrid" aria-label="地址选项"></div>
 
     <div class="msg" id="msg"></div>
 
     <div class="hintBtnRow">
-      <button class="hintBtn" id="btnHint" type="button">获得提示</button>
+      <button class="btn hintBtn" id="btnHint" type="button">获得提示</button>
     </div>
   </div>
 
@@ -167,7 +201,8 @@
 (() => {
   const NEXT_URL = "https://sorcbear.github.io/playground/square/";
   const HINT_URL = "https://sorcbear.github.io/playground/address/hint";
-  const LOCK_MS = 3 * 60 * 1000;
+
+  const LOCK_MS = 3 * 60 * 1000; // 3 minutes
   const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
 
   const ADDRS = [
@@ -176,75 +211,138 @@
     "康平路101弄","康平路152弄",
     "宛平路75弄","宛平路80弄","宛平路101弄"
   ];
+
   const CORRECT = "康平路152弄";
 
   const grid = document.getElementById("btnGrid");
   const msgEl = document.getElementById("msg");
   const btnHint = document.getElementById("btnHint");
 
-  let lockTimer=null, successTimer=null, inSuccessCountdown=false;
-  const now=()=>Date.now();
+  let lockTimer = null;
+  let successTimer = null;
+  let inSuccessCountdown = false;
 
-  const fmt=t=>{
-    t=Math.max(0,Math.ceil(t/1000));
-    return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
-  };
+  function now(){ return Date.now(); }
 
-  const getLock=()=>Number(localStorage.getItem(STORAGE_LOCK_UNTIL)||0);
-  const setLock=t=>localStorage.setItem(STORAGE_LOCK_UNTIL,String(t));
-  const clearLock=()=>localStorage.removeItem(STORAGE_LOCK_UNTIL);
+  function fmtMMSS(ms){
+    const t = Math.max(0, Math.ceil(ms / 1000));
+    const mm = String(Math.floor(t / 60)).padStart(2, "0");
+    const ss = String(t % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  }
 
-  const setBtns=e=>{
-    grid.querySelectorAll("button.addr").forEach(b=>b.disabled=!e);
-    btnHint.disabled=!e;
-  };
-  const show=(t,k)=>{msgEl.textContent=t||"";msgEl.className="msg"+(k?" "+k:"");};
+  function getLockUntil(){
+    const v = localStorage.getItem(STORAGE_LOCK_UNTIL);
+    if (!v) return 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
 
-  function startLock(){
-    clearInterval(lockTimer);
-    const tick=()=>{
-      if(inSuccessCountdown)return;
-      const left=getLock()-now();
-      if(left>0){
-        setBtns(false);
-        show(`页面已冻结：${fmt(left)}`,"locked");
-      }else{
-        clearLock();setBtns(true);show("");
-        clearInterval(lockTimer);lockTimer=null;
+  function setLockUntil(ts){
+    localStorage.setItem(STORAGE_LOCK_UNTIL, String(ts));
+  }
+
+  function clearLock(){
+    localStorage.removeItem(STORAGE_LOCK_UNTIL);
+  }
+
+  function setButtonsEnabled(enabled){
+    grid.querySelectorAll("button.addr").forEach(b => b.disabled = !enabled);
+    btnHint.disabled = !enabled;
+  }
+
+  function showMsg(text, kind){
+    msgEl.textContent = text || "";
+    msgEl.className = "msg" + (kind ? (" " + kind) : "");
+  }
+
+  function stopSuccessCountdown(){
+    if (successTimer){ clearInterval(successTimer); successTimer = null; }
+    inSuccessCountdown = false;
+  }
+
+  function startLockCountdown(){
+    if (lockTimer) clearInterval(lockTimer);
+
+    const tick = () => {
+      if (inSuccessCountdown) return;
+
+      const lockUntil = getLockUntil();
+      const left = lockUntil - now();
+      if (left > 0){
+        setButtonsEnabled(false);
+        showMsg(`页面已冻结：${fmtMMSS(left)}`, "locked");
+      } else {
+        clearLock();
+        setButtonsEnabled(true);
+        showMsg("", "");
+        if (lockTimer){ clearInterval(lockTimer); lockTimer = null; }
       }
     };
-    tick();lockTimer=setInterval(tick,250);
+
+    tick();
+    lockTimer = setInterval(tick, 250);
   }
 
-  function success(){
-    inSuccessCountdown=true;setBtns(false);
-    let n=3;show(`答案正确，即将进入下一题（${n}）`,"ok");
-    successTimer=setInterval(()=>{
-      n--;if(n>0)show(`答案正确，即将进入下一题（${n}）`,"ok");
-      else{clearInterval(successTimer);location.href=NEXT_URL;}
-    },1000);
+  function startSuccessCountdown(){
+    stopSuccessCountdown();
+    inSuccessCountdown = true;
+
+    setButtonsEnabled(false);
+
+    let n = 3;
+    showMsg(`答案正确，即将进入下一题（${n}）`, "ok");
+
+    successTimer = setInterval(() => {
+      n -= 1;
+      if (n >= 1){
+        showMsg(`答案正确，即将进入下一题（${n}）`, "ok");
+      } else {
+        clearInterval(successTimer);
+        successTimer = null;
+        location.href = NEXT_URL;
+      }
+    }, 1000);
   }
 
-  function clickAddr(a){
-    if(inSuccessCountdown)return;
-    if(getLock()>now()){startLock();return;}
-    if(a===CORRECT){success();return;}
-    setLock(now()+LOCK_MS);startLock();
+  function handleClick(addr){
+    if (inSuccessCountdown) return;
+
+    const lockUntil = getLockUntil();
+    if (lockUntil > now()){
+      startLockCountdown();
+      return;
+    }
+
+    if (addr === CORRECT){
+      startSuccessCountdown();
+      return;
+    }
+
+    setLockUntil(now() + LOCK_MS);
+    startLockCountdown();
   }
 
-  ADDRS.forEach(a=>{
-    const b=document.createElement("button");
-    b.className="addr";b.textContent=a;
-    b.onclick=()=>clickAddr(a);
-    grid.appendChild(b);
+  function buildButtons(){
+    grid.innerHTML = "";
+    ADDRS.forEach(addr => {
+      const btn = document.createElement("button");
+      btn.className = "btn addr";
+      btn.type = "button";
+      btn.textContent = addr;
+      btn.addEventListener("click", () => handleClick(addr));
+      grid.appendChild(btn);
+    });
+  }
+
+  btnHint.addEventListener("click", () => {
+    if (inSuccessCountdown) return;
+    if (getLockUntil() > now()) return;
+    location.href = HINT_URL;
   });
 
-  btnHint.onclick=()=>{
-    if(inSuccessCountdown||getLock()>now())return;
-    location.href=HINT_URL;
-  };
-
-  startLock();
+  buildButtons();
+  startLockCountdown();
 })();
 </script>
 </body>
