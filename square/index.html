@@ -36,7 +36,6 @@
       font-size:var(--fs-body);
       line-height:var(--lh-body);
       color:var(--c-text);
-      -webkit-text-size-adjust: 100%;
     }
 
     .wrap{
@@ -46,117 +45,82 @@
       box-sizing: border-box;
     }
 
-    /* ===== 标题（不留开头空白）===== */
+    /* ===== 标题 ===== */
     .title{
-      margin: 0 0 calc(var(--gap) * 1.2) 0; /* 与 circle 一致的节奏 */
+      margin: 0 0 calc(var(--gap) * 1.2) 0;
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
-      text-align: left;
       white-space: pre-wrap;
     }
 
-    /* 图片：无边框 + 稍微缩小 */
-    .imgbox{
-      margin: 0 0 var(--gap) 0;
-    }
+    /* 图片：无边框 + 稍缩 */
+    .imgbox{ margin-bottom: var(--gap); }
     .imgbox img{
-      width: 100%;
-      max-width: 800px;     /* 缩小一点 */
-      height: auto;
-      display: block;
-      margin: 0 auto;       /* 居中 */
-      user-select:none;
-      -webkit-user-drag:none;
+      width:100%;
+      max-width:800px;
+      margin:0 auto;
+      display:block;
     }
 
-    /* ===== 题目行：和 title 同样样式 ===== */
+    /* ===== 问题行（与标题同款） ===== */
     .qline{
       margin: 0 0 var(--gap) 0;
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
-      text-align: left;
-      white-space: pre-wrap;
       display:flex;
       align-items:center;
-      gap: 10px;
-      flex-wrap: nowrap;
+      gap:10px;
+      white-space: pre-wrap;
     }
+    .qmark{ color:var(--c-danger); font-weight:800; }
 
-    .qmark{
-      color: var(--c-danger);
-      font-weight: 800;
-    }
-
-    /* 输入框：保持你之前的直角风格 */
     .ansInput{
-      width: 6.2em;
-      height: 40px;
-      padding: 0 8px;
-      border: 2px solid var(--c-border);
-      border-radius: 0;
-      outline: none;
-      background:#fff;
-      color: var(--c-text);
-      font-size: 16px;
-      line-height: 40px;
-      text-align: center;
-      box-sizing: border-box;
-      flex: 0 0 auto;
-    }
-    .ansInput:focus{
-      box-shadow: 0 0 0 2px rgba(0,0,0,.10);
+      width:6.2em;
+      height:40px;
+      padding:0 8px;
+      border:2px solid var(--c-border);
+      border-radius:0;
+      font-size:16px;
+      text-align:center;
     }
 
-    /* ===== 按钮区域：强制一行并排（手机也不换行）===== */
+    /* ===== 按钮区：和 Circle 一致 ===== */
     .panel{
       margin-top: var(--gap);
       display:flex;
       gap: var(--gap-tight);
       justify-content:center;
-      flex-wrap: nowrap; /* 关键：不换行 */
+      flex-wrap: nowrap;
     }
 
-    /* circle/startgame 风格按钮 */
     button{
-      width: 240px;
-      height: var(--h-btn);
-      padding: 0 18px;
-      font-size: var(--fs-btn);
-      font-weight: var(--fw-btn);
+      width:240px;
+      height:var(--h-btn);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-btn);
+      font-weight:600;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
       -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-      user-select:none;
     }
-
-    /* 只在支持 hover 的设备上反转（避免手机黏住 hover） */
-    @media (hover:hover) and (pointer:fine){
-      button:hover{ background:#000; color:#fff; }
-    }
-    @media (hover:none){
-      button:hover{ background:#fff; color:#000; }
-    }
-
+    button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
 
-    /* 倒计时/状态行 */
     .msg{
-      margin-top: var(--gap-tight);
-      min-height: 1.4em;
-      font-size: 14px;
+      margin-top:var(--gap-tight);
+      min-height:1.4em;
+      font-size:14px;
     }
-    .msg.ok{ color: var(--c-ok); }
+    .msg.ok{ color:var(--c-ok); }
 
-    /* 极窄屏兜底：保证仍在一行但不溢出 */
-    @media (max-width: 520px){
-      .wrap{ padding: 18px 12px 28px; }
-      button{ width: 46vw; } /* 两个按钮仍并排 */
+    @media (max-width:520px){
+      button{ width:46vw; } /* 手机并排 */
     }
   </style>
 </head>
@@ -164,15 +128,17 @@
 <body>
 <div class="wrap">
 
-  <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div>
+  <div class="title">
+    康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。
+  </div>
 
   <div class="imgbox">
-    <img src="puzzle.jpg" alt="square puzzle" />
+    <img src="puzzle.jpg" alt="square puzzle">
   </div>
 
   <div class="qline">
     <span><span class="qmark">?</span>对应的是什么数字：</span>
-    <input id="answer" class="ansInput" type="text" inputmode="numeric" autocomplete="off" />
+    <input id="answer" class="ansInput" inputmode="numeric">
   </div>
 
   <div class="panel">
@@ -194,73 +160,49 @@
   const hintBtn = document.getElementById("hintBtn");
   const msg = document.getElementById("msg");
 
-  let locked = false;
-  let countdownTimer = null;
+  let locked=false, timer=null;
 
   function setLocked(v){
-    locked = v;
-    submitBtn.disabled = v;
-    hintBtn.disabled = v;
-    input.disabled = v;
+    locked=v;
+    submitBtn.disabled=v;
+    hintBtn.disabled=v;
+    input.disabled=v;
   }
 
-  // 按你给的 circle 逻辑：按钮短暂提示，然后恢复
   function setBtnText(text, ms=900){
-    const old = submitBtn.textContent;
-    submitBtn.textContent = text;
-    submitBtn.disabled = true;
+    const old=submitBtn.textContent;
+    submitBtn.textContent=text;
+    submitBtn.disabled=true;
     setTimeout(()=>{
-      submitBtn.textContent = old;
-      submitBtn.disabled = false;
-    }, ms);
+      submitBtn.textContent=old;
+      submitBtn.disabled=false;
+    },ms);
   }
 
-  function clearCountdown(){
-    if(countdownTimer){
-      clearInterval(countdownTimer);
-      countdownTimer = null;
-    }
-  }
+  hintBtn.onclick=()=>{ if(!locked) location.href=HINT_URL; };
 
-  // Enter 提交
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitBtn.click();
-  });
-
-  hintBtn.onclick = () => location.href = HINT_URL;
-
-  submitBtn.onclick = () => {
-    if (locked) return;
-
-    const val = (input.value || "").trim();
-
-    if (val === CORRECT){
+  submitBtn.onclick=()=>{
+    if(locked) return;
+    if(input.value.trim()===CORRECT){
       setLocked(true);
-      let t = COUNTDOWN_START;
-      msg.textContent = `答案正确，即将进入下一题（${t}）`;
+      let t=COUNTDOWN_START;
+      msg.textContent=`答案正确，即将进入下一题（${t}）`;
       msg.classList.add("ok");
-
-      clearCountdown();
-      countdownTimer = setInterval(() => {
+      timer=setInterval(()=>{
         t--;
-        if (t > 0){
-          msg.textContent = `答案正确，即将进入下一题（${t}）`;
+        if(t>0){
+          msg.textContent=`答案正确，即将进入下一题（${t}）`;
         }else{
-          clearCountdown();
-          location.href = NEXT_URL;
+          clearInterval(timer);
+          location.href=NEXT_URL;
         }
-      }, 1000);
-
-    } else {
-      msg.textContent = "";
+      },1000);
+    }else{
+      msg.textContent="";
       msg.classList.remove("ok");
-      setBtnText("不正确，再试一次", 900);
+      setBtnText("不正确，再试一次",900);
     }
   };
-
-  window.addEventListener("pagehide", () => {
-    clearCountdown();
-  });
 </script>
 
 </body>
