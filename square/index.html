@@ -5,93 +5,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Square Puzzle</title>
   <style>
-    :root {
+    :root{
       --maxw: 900px;
-      --ok: #0b6b2b; /* 绿色系 */
+
+      /* ===== 来自 Rotate 页的关键字号/间距变量 ===== */
+      --fs-body: 16px;
+      --lh-body: 1.7;
+
+      --fs-hint: 18px;   /* 标题 18px */
+      --lh-hint: 1.6;    /* 标题行高 1.6 */
+      --gap: 18px;       /* 标题与下方标准间距 */
+
+      --ctl-h: 48px;     /* 输入框/按钮高度（Rotate 常用） */
+
+      --c-text:#111;
+      --c-border:#000;
+
+      --ok:#0b6b2b;
+      --danger:#b00020;
     }
-    body {
-      margin: 0;
-      padding: 24px 16px 40px;
-      background: #fff;
-      color: #000;
+
+    html, body{
+      margin:0; padding:0;
+      width:100%;
+      background:#fff;
+      color:var(--c-text);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
                    "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
-    }
-    .wrap { max-width: var(--maxw); margin: 0 auto; }
-
-    .intro {
-      font-size: 18px;
-      line-height: 1.6;
-      margin-bottom: 18px;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
     }
 
-    .imgbox {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 18px;
-    }
-    img {
-      width: 100%;
+    .wrap{
       max-width: var(--maxw);
-      height: auto;
-      display: block;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+      box-sizing: border-box;
     }
-    .row {
-      display: flex;
-      align-items: center;
+
+    /* ===== 通用标题样式（来自 Rotate 页面，已验证） ===== */
+    .title{
+      font-size: var(--fs-hint);      /* 18px */
+      line-height: var(--lh-hint);    /* 1.6 */
+      font-weight: 700;               /* 关键：粗标题 */
+      margin: 4px 0 var(--gap);       /* 与正文/图片的标准间距 */
+      text-align: left;
+      white-space: pre-wrap;          /* 中文排版关键 */
+    }
+
+    .imgbox{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      margin-bottom: var(--gap);
+    }
+    img{
+      width:100%;
+      max-width: var(--maxw);
+      height:auto;
+      display:block;
+    }
+
+    .row{
+      display:flex;
+      align-items:center;
       gap: 12px;
       flex-wrap: wrap;
-      font-size: 18px;
+      font-size: var(--fs-hint);
       line-height: 1.2;
     }
-    .label { font-weight: 600; }
+    .label{ font-weight: 600; }
 
-    input[type="text"]{
-      width: 200px;
-      max-width: 70vw;
-      padding: 10px 12px;
-      font-size: 18px;
-      border: 1px solid #000;
-      border-radius: 10px;
-      outline: none;
+    /* 红色加粗问号 */
+    .qmark{
+      color: var(--danger);
+      font-weight: 800;
     }
 
+    /* ===== 输入框：Rotate 风格 ===== */
+    input[type="text"]{
+      height: var(--ctl-h);
+      width: 220px;
+      max-width: 70vw;
+      padding: 0 12px;
+      font-size: 18px;
+      border: 1px solid var(--c-border);
+      border-radius: 10px;
+      outline: none;
+      box-sizing: border-box;
+    }
+    input[type="text"]:focus{
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
+    }
+
+    /* ===== 按钮：Rotate 风格 + 反馈 ===== */
     button{
-      padding: 10px 14px;
+      height: var(--ctl-h);
+      padding: 0 16px;
       font-size: 16px;
-      border: 1px solid #000;
+      border: 1px solid var(--c-border);
       border-radius: 10px;
       background: #000;
       color: #fff;
       cursor: pointer;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
-    button:active { transform: translateY(1px); }
+    button:active{ transform: translateY(1px); }
+    button:disabled{
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
 
-    /* 倒计时文字：14px，继承 body 字体 */
-    .msg {
+    /* 反馈文案 */
+    .msg{
       margin-top: 14px;
       font-size: 14px;
       min-height: 20px;
-      font-weight: 600;
+      font-weight: 700;
     }
-    .msg.ok { color: var(--ok); }
+    .msg.ok{ color: var(--ok); }
+    .msg.bad{ color: var(--danger); }
   </style>
 </head>
+
 <body>
   <div class="wrap">
-    <div class="intro">
-      这是一条不超过200米的弄堂，请用这条弄堂里的环境信息完成以下谜题。
-    </div>
+    <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div>
 
     <div class="imgbox">
       <img src="puzzle.jpg" alt="square puzzle" />
     </div>
 
     <div class="row">
-      <span class="label">?对应的是什么数字：</span>
+      <span class="label"><span class="qmark">?</span>对应的是什么数字：</span>
       <input id="answer" type="text" inputmode="numeric" autocomplete="off" />
-      <button id="submitBtn" type="button">提交</button>
+      <button id="submitBtn" type="button">提交答案</button>
     </div>
 
     <div id="msg" class="msg"></div>
@@ -116,19 +166,21 @@
       }
 
       function setMsgOk(text) {
+        msg.classList.remove("bad");
         msg.classList.add("ok");
         msg.textContent = text;
       }
 
-      function setMsgNormal(text) {
+      function setMsgBad(text) {
         msg.classList.remove("ok");
+        msg.classList.add("bad");
         msg.textContent = text;
       }
 
       function startCountdownAndRedirect() {
         setLocked(true);
+        btn.textContent = "已提交";
 
-        // 立即显示（3），然后每 1 秒递减到（1），再 1 秒跳转
         let n = 3;
         setMsgOk(`答案正确，即将进入下一题（${n}）`);
 
@@ -149,10 +201,9 @@
 
         const val = (input.value || "").trim();
         if (val === CORRECT) {
-          // 不再显示 "success"，直接进入倒计时流程
           startCountdownAndRedirect();
         } else {
-          setMsgNormal("try again");
+          setMsgBad("try again");
         }
       }
 
@@ -161,7 +212,6 @@
         if (e.key === "Enter") check();
       });
 
-      // 防止页面跳转前，计时器残留（可选但稳妥）
       window.addEventListener("pagehide", () => {
         if (timerId) clearInterval(timerId);
       });
