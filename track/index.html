@@ -60,15 +60,16 @@
     }
 
     /* ===== 标题（完全沿用 Rotate 页 titleLine 规范）===== */
+/* ===== 通用标题样式（与 Rotate 页 100% 一致）===== */
     .title{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
-      margin: 0 0 var(--gap);
+      margin: 0 0 var(--gap);   /* 关键：第一行不留空 */
       text-align: left;
       white-space: pre-wrap;
-      text-decoration: none;
     }
+
 
     .image-box{
       width:100%;
