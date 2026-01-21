@@ -32,7 +32,7 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  // 仅改按钮文案，不改颜色
+  // 默认文案
   const BTN_TEXT_DEFAULT = "提交答案";
   let btnTextTimer = null;
 
@@ -43,17 +43,35 @@
     }
   }
 
+  /* ===== 改动点：Square 同款错误按钮反馈（黑底白字 + 自动恢复）===== */
   function setBtnText(text, ms = 900) {
     if (!btnSubmit) return;
     clearBtnHint();
+
     btnSubmit.textContent = text;
+
+    // 当出现“不正确…”时，强制黑底白字，并在这段时间禁用按钮
+    const isErrorHint = (text || "").includes("不正确");
+    if (isErrorHint) {
+      btnSubmit.classList.add("invert");
+      btnSubmit.disabled = true;
+    }
+
     if (ms > 0) {
       btnTextTimer = setTimeout(() => {
         btnSubmit.textContent = BTN_TEXT_DEFAULT;
+
+        // 恢复默认状态：白底黑字 + 可点击
+        if (isErrorHint) {
+          btnSubmit.classList.remove("invert");
+          btnSubmit.disabled = false;
+        }
+
         btnTextTimer = null;
       }, ms);
     }
   }
+  /* ===== 改动结束 ===== */
 
   function clearCountdown() {
     if (countdownTimer) {
@@ -121,6 +139,7 @@
     ansRoad.value = "";
     ansNo.value = "";
     btnSubmit.textContent = BTN_TEXT_DEFAULT;
+    btnSubmit.classList.remove("invert");   // 稳妥：确保初始白底黑字
   }
 
   function buildBoard() {
