@@ -19,7 +19,7 @@
   --digitColor:#243B8F;
   --digitStroke:#0B0F2E;
   --digitStrokeW:6px;
-  --digitShadow:0 4px 0 rgba(0,0,0,.14);
+  --digitShadow:none; /* ✅ 取消所有阴影 */
 
   --btnSize:76px;
   --btnGap:44px;
@@ -103,8 +103,11 @@ body{ -webkit-tap-highlight-color: transparent; }
   color:var(--digitColor);
   -webkit-text-stroke:var(--digitStrokeW) var(--digitStroke);
   paint-order:stroke fill;
-  text-shadow:var(--digitShadow);
+  text-shadow:var(--digitShadow); /* ✅ 始终 none */
   user-select:none;
+
+  /* ✅ 彻底避免某些浏览器的默认滤镜/阴影差异 */
+  filter:none;
 }
 
 /* 按钮 */
@@ -138,12 +141,12 @@ body{ -webkit-tap-highlight-color: transparent; }
   user-select:none;
 }
 
-/* 倒计时提示：在 .msg 显示 */
+/* 倒计时提示：✅ 不居中，居左 */
 .msg{
-  text-align:center;
+  text-align:left;          /* ✅ 改为居左 */
   margin-top:14px;
   min-height:22px;
-  font-size:14px;       /* 按你要求固定 14px */
+  font-size:14px;           /* 固定 14px */
   font-weight:700;
   color:#000;
 }
