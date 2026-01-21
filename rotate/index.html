@@ -4,21 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="format-detection" content="telephone=no,address=no,email=no">
+
   <title>Rotate</title>
 
   <style>
     :root{
       --maxw: 720px;
-      --panelw: 420px;
 
       --fs-body: 16px;
       --lh-body: 1.7;
 
       --fs-hint: 18px;
       --lh-hint: 1.6;
-
-      --fs-status: 18px;
-      --fw-status: 700;
 
       --fs-btn: 16px;
       --fw-btn: 600;
@@ -30,14 +27,13 @@
       --gap: 18px;
       --gap-tight: 12px;
 
-      --c-text: #111;
-      --c-muted: #444;
-      --c-danger: #b00020;
-      --c-border: #000;
+      --c-text:#111;
+      --c-border:#000;
+      --c-ok:#0b6b2b;
 
       --line: rgba(0,0,0,.10);
       --line2: rgba(0,0,0,.18);
-      --bg: #fff;
+      --bg:#fff;
     }
 
     *{ box-sizing:border-box; }
@@ -48,6 +44,8 @@
       color: var(--c-text);
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       -webkit-text-size-adjust: 100%;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
     }
     input, button{ font-family: inherit; font-size: inherit; }
 
@@ -102,6 +100,7 @@
       display:block;
     }
 
+    /* ===== 正确地址行：文字用标题同款（18/1.6/700） ===== */
     .answerRow{
       margin-top: var(--gap);
       display:flex;
@@ -117,6 +116,7 @@
       color: var(--c-text);
     }
 
+    /* 输入框：无任何蓝圈/光晕 */
     .ansInput{
       width: 4.2em;
       height: var(--h-input);
@@ -134,73 +134,60 @@
       -webkit-appearance: none;
       appearance: none;
       -webkit-tap-highlight-color: transparent;
-      caret-color: #000; /* 可选：光标颜色更稳 */
+      caret-color:#000;
     }
-    .ansInput:focus{
-      outline: none;
-      box-shadow: none;
-    }
+    .ansInput:focus{ outline:none; box-shadow:none; }
 
+    /* ===== 按钮区（Square 风格）===== */
     .btnRow{
       margin-top: 56px;
       display:flex;
       justify-content:center;
     }
 
-    .primaryBtn{
-      width:240px;              /* Square 一致：固定 240 */
-      height: var(--h-btn);
-      padding:0 18px;           /* Square 一致 */
+    .puzzleBtn{
+      width:240px;
+      height:var(--h-btn);
+      padding:0 18px;
       box-sizing:border-box;
-
-      border:2px solid var(--c-border);
-      border-radius:0;
-
+      font-size:var(--fs-btn);
+      font-weight:var(--fw-btn);
       background:#fff;
       color:#000;
-
-      font-size: var(--fs-btn);
-      font-weight: 600;
-
+      border:2px solid var(--c-border);
       cursor:pointer;
-
-      transition: none;         /* 关键：去掉渐变，恢复时不“滑一下” */
-
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
+      border-radius:0;
+      -webkit-tap-highlight-color:transparent;
+      -webkit-touch-callout:none;
       user-select:none;
+
+      transition:none; /* 关键：不做渐变，和 Square 一样“瞬切” */
     }
 
-    .primaryBtn:disabled{
-      opacity:.45;              /* Square 一致 */
+    @media (hover:hover) and (pointer:fine){
+      .puzzleBtn:hover{ background:#000; color:#fff; }
+    }
+
+    /* JS 错误反馈 */
+    .puzzleBtn.invert{
+      background:#000;
+      color:#fff;
+    }
+
+    .puzzleBtn:disabled{
+      opacity:.45;
       cursor:default;
     }
 
-
-    @media (hover: hover) and (pointer: fine){
-      .primaryBtn:hover:not(:disabled){
-        background: #000;
-        color: #fff;
-      }
+    /* ===== 成功提示（绿色 + 加粗）===== */
+    .msg{
+      margin-top:12px;
+      min-height:1.4em;
+      font-size:14px;
     }
-
-    @media (hover: none){
-      .primaryBtn:hover:not(:disabled){
-        background:#fff;
-        color:#000;
-      }
-    }
-
-    .primaryBtn:active{ transform: none; }
-
-    .primaryBtn:disabled{
-      opacity: .55;
-      cursor: not-allowed;
-    }
-
-    .primaryBtn.invert{
-      background:#000;
-      color:#fff;
+    .msg.ok{
+      color: var(--c-ok);
+      font-weight:700;
     }
   </style>
 </head>
@@ -222,10 +209,13 @@
     </div>
 
     <div class="btnRow">
-      <button id="btnSubmit" class="primaryBtn">提交答案</button>
+      <button id="btnSubmit" class="puzzleBtn">提交答案</button>
     </div>
+
+    <!-- 关键：成功倒计时显示在这里（绿色） -->
+    <div id="msg" class="msg"></div>
   </div>
 
-  <script src="./script.js?v=20260120b"></script>
+  <script src="./script.js?v=20260121a"></script>
 </body>
 </html>
