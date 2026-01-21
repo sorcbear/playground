@@ -45,48 +45,55 @@
       padding: 18px 14px 28px;
     }
 
-    /* 标题 UI */
+    /* 标题 */
     .title{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
       margin: 0;
-      text-align: left;
-      white-space: pre-wrap;
     }
 
-    /* 故事区：整体标题 UI；对白用 quote 覆盖 */
+    /* 故事整体：不再使用 pre-wrap */
     .story{
-      margin: 0;
       margin-top: var(--gap);
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
-      text-align: left;
-      white-space: pre-wrap;
     }
 
-    /* 三句对白：黑色、斜体、不加粗；三句之间不空行 */
-    .quotes{ margin:0; }
+    /* 已知行 */
+    .known{
+      margin: 0;
+    }
+
+    /* 对话整体：只在这里控制“隔一行” */
+    .quotes{
+      margin-top: 1em;   /* ← 只隔一行 */
+    }
+
+    /* 三句对白：紧贴、不空行 */
     .quote{
-      margin:0;
-      color:#000;
+      margin: 0;
       font-style: italic;
       font-weight: 400;
+      color: #000;
+    }
+
+    /* 结论行 */
+    .conclusion{
+      margin-top: 1em;
     }
 
     /* 红字提示 */
     .hint{
-      margin: 0;
       margin-top: var(--gap-tight);
       font-size: 12px;
       line-height: 1.4;
       color: var(--c-danger);
       font-weight: 700;
-      white-space: pre-wrap;
     }
 
-    /* 10 个地址按钮网格 */
+    /* 地址按钮网格 */
     .grid{
       margin-top: var(--gap);
       display: grid;
@@ -97,7 +104,7 @@
       .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
-    /* ===== 按钮：按你给的规则 + :active 让手机按下也黑底 ===== */
+    /* 按钮样式 */
     button{
       width:240px;
       height:52px;
@@ -110,10 +117,7 @@
       cursor:pointer;
       border-radius:0;
       appearance:none;
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
       user-select:none;
-      white-space: nowrap;
     }
     button:hover{
       background:#000;
@@ -127,23 +131,19 @@
       opacity:.45;
       cursor:default;
     }
-
-    /* 地址按钮铺满网格单元，不影响“获得提示”按钮 */
     button.addr{ width:100%; }
 
-    /* 倒计时/状态显示 */
+    /* 状态文字 */
     .msg{
       margin-top: var(--gap-tight);
       min-height: 20px;
       font-size: 14px;
       line-height: 1.4;
-      white-space: pre-wrap;
-      color: var(--c-text);
     }
     .msg.ok{ color: var(--ok); font-weight: 700; }
     .msg.locked{ color: var(--c-danger); font-weight: 700; }
 
-    /* 获得提示按钮 */
+    /* 提示按钮 */
     .hintBtnRow{
       margin-top: var(--gap);
       display:flex;
@@ -154,21 +154,25 @@
 
 <body>
   <div class="wrap">
-    <div class="title">你遇到2个玩家A和B，他们在讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：</div>
+    <div class="title">
+      你遇到2个玩家A和B，他们在讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：
+    </div>
 
-    <div class="story">已知：A知道街道名，B知道弄堂号码。
+    <div class="story">
+      <div class="known">已知：A知道街道名，B知道弄堂号码。</div>
 
-<div class="quotes">
-  <div class="quote">A说：“我不知道具体地点，但我知道B也不知道。”</div>
-  <div class="quote">B说：“起初我不知道，但现在我知道了。”</div>
-  <div class="quote">A说：“那我现在知道下个谜题在哪了。”</div>
-</div>
+      <div class="quotes">
+        <div class="quote">A说：“我不知道具体地点，但我知道B也不知道。”</div>
+        <div class="quote">B说：“起初我不知道，但现在我知道了。”</div>
+        <div class="quote">A说：“那我现在知道下个谜题在哪了。”</div>
+      </div>
 
-那么下个谜题在哪里？请点击下面的正确地址。</div>
+      <div class="conclusion">那么下个谜题在哪里？请点击下面的正确地址。</div>
+    </div>
 
     <div class="hint">提示：点击错误会导致本页面冻结3分钟。</div>
 
-    <div class="grid" id="btnGrid" aria-label="地址选项"></div>
+    <div class="grid" id="btnGrid"></div>
 
     <div class="msg" id="msg"></div>
 
@@ -181,154 +185,85 @@
 (() => {
   const NEXT_URL = "https://sorcbear.github.io/playground/square/";
   const HINT_URL = "https://sorcbear.github.io/playground/address/hint";
-
-  const LOCK_MS = 3 * 60 * 1000; // 3 minutes
+  const LOCK_MS = 3 * 60 * 1000;
   const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
 
   const ADDRS = [
-    "天平路75弄",
-    "天平路152弄",
-    "天平路216弄",
-    "余庆路80弄",
-    "余庆路51弄",
-    "康平路101弄",
-    "康平路152弄",
-    "宛平路75弄",
-    "宛平路80弄",
-    "宛平路101弄",
+    "天平路75弄","天平路152弄","天平路216弄",
+    "余庆路80弄","余庆路51弄",
+    "康平路101弄","康平路152弄",
+    "宛平路75弄","宛平路80弄","宛平路101弄"
   ];
-
   const CORRECT = "康平路152弄";
 
   const grid = document.getElementById("btnGrid");
   const msgEl = document.getElementById("msg");
   const btnHint = document.getElementById("btnHint");
 
-  let lockTimer = null;
-  let successTimer = null;
-  let inSuccessCountdown = false;
+  let lockTimer=null, successTimer=null, inSuccess=false;
 
-  function now(){ return Date.now(); }
+  const now=()=>Date.now();
+  const fmt=t=>{
+    t=Math.max(0,Math.ceil(t/1000));
+    return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
+  };
 
-  function fmtMMSS(ms){
-    const t = Math.max(0, Math.ceil(ms / 1000));
-    const mm = String(Math.floor(t / 60)).padStart(2, "0");
-    const ss = String(t % 60).padStart(2, "0");
-    return `${mm}:${ss}`;
-  }
+  const getLock=()=>Number(localStorage.getItem(STORAGE_LOCK_UNTIL)||0);
+  const setLock=t=>localStorage.setItem(STORAGE_LOCK_UNTIL,String(t));
+  const clearLock=()=>localStorage.removeItem(STORAGE_LOCK_UNTIL);
 
-  function getLockUntil(){
-    const v = localStorage.getItem(STORAGE_LOCK_UNTIL);
-    if (!v) return 0;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  }
+  const setBtns=e=>{
+    grid.querySelectorAll("button.addr").forEach(b=>b.disabled=!e);
+    btnHint.disabled=!e;
+  };
+  const show=(t,k)=>{msgEl.textContent=t||"";msgEl.className="msg"+(k?" "+k:"");};
 
-  function setLockUntil(ts){
-    localStorage.setItem(STORAGE_LOCK_UNTIL, String(ts));
-  }
-
-  function clearLock(){
-    localStorage.removeItem(STORAGE_LOCK_UNTIL);
-  }
-
-  function setButtonsEnabled(enabled){
-    grid.querySelectorAll("button.addr").forEach(b => b.disabled = !enabled);
-    btnHint.disabled = !enabled;
-  }
-
-  function showMsg(text, kind){
-    msgEl.textContent = text || "";
-    msgEl.className = "msg" + (kind ? (" " + kind) : "");
-  }
-
-  function stopSuccessCountdown(){
-    if (successTimer){ clearInterval(successTimer); successTimer = null; }
-    inSuccessCountdown = false;
-  }
-
-  function startLockCountdown(){
-    if (lockTimer) clearInterval(lockTimer);
-
-    const tick = () => {
-      if (inSuccessCountdown) return;
-
-      const lockUntil = getLockUntil();
-      const left = lockUntil - now();
-      if (left > 0){
-        setButtonsEnabled(false);
-        showMsg(`页面已冻结：${fmtMMSS(left)}`, "locked");
-      } else {
-        clearLock();
-        setButtonsEnabled(true);
-        showMsg("", "");
-        if (lockTimer){ clearInterval(lockTimer); lockTimer = null; }
+  function startLock(){
+    clearInterval(lockTimer);
+    const tick=()=>{
+      if(inSuccess)return;
+      const left=getLock()-now();
+      if(left>0){
+        setBtns(false);
+        show(`页面已冻结：${fmt(left)}`,"locked");
+      }else{
+        clearLock();setBtns(true);show("");
+        clearInterval(lockTimer);lockTimer=null;
       }
     };
-
-    tick();
-    lockTimer = setInterval(tick, 250);
+    tick();lockTimer=setInterval(tick,250);
   }
 
-  function startSuccessCountdown(){
-    stopSuccessCountdown();
-    inSuccessCountdown = true;
-
-    setButtonsEnabled(false);
-
-    let n = 3;
-    showMsg(`答案正确，即将进入下一题（${n}）`, "ok");
-
-    successTimer = setInterval(() => {
-      n -= 1;
-      if (n >= 1){
-        showMsg(`答案正确，即将进入下一题（${n}）`, "ok");
-      } else {
-        clearInterval(successTimer);
-        successTimer = null;
-        location.href = NEXT_URL;
-      }
-    }, 1000);
+  function success(){
+    inSuccess=true;setBtns(false);
+    let n=3;show(`答案正确，即将进入下一题（${n}）`,"ok");
+    successTimer=setInterval(()=>{
+      n--;if(n>0)show(`答案正确，即将进入下一题（${n}）`,"ok");
+      else{clearInterval(successTimer);location.href=NEXT_URL;}
+    },1000);
   }
 
-  function handleClick(addr){
-    if (inSuccessCountdown) return;
-
-    const lockUntil = getLockUntil();
-    if (lockUntil > now()){
-      startLockCountdown();
-      return;
-    }
-
-    if (addr === CORRECT){
-      startSuccessCountdown();
-      return;
-    }
-
-    setLockUntil(now() + LOCK_MS);
-    startLockCountdown();
+  function clickAddr(a){
+    if(inSuccess)return;
+    if(getLock()>now()){startLock();return;}
+    if(a===CORRECT){success();return;}
+    setLock(now()+LOCK_MS);startLock();
   }
 
-  function buildButtons(){
-    grid.innerHTML = "";
-    ADDRS.forEach(addr => {
-      const btn = document.createElement("button");
-      btn.className = "addr";
-      btn.type = "button";
-      btn.textContent = addr;
-      btn.addEventListener("click", () => handleClick(addr));
-      grid.appendChild(btn);
-    });
-  }
-
-  btnHint.addEventListener("click", () => {
-    if (inSuccessCountdown) return;
-    if (getLockUntil() > now()) return;
-    location.href = HINT_URL;
+  ADDRS.forEach(a=>{
+    const b=document.createElement("button");
+    b.className="addr";
+    b.textContent=a;
+    b.onclick=()=>clickAddr(a);
+    grid.appendChild(b);
   });
 
-  buildButtons();
-  startLockCountdown();
+  btnHint.onclick=()=>{
+    if(inSuccess||getLock()>now())return;
+    location.href=HINT_URL;
+  };
+
+  startLock();
 })();
 </script>
 </body>
