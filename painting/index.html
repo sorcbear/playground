@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>paper pickup</title>
 
-  <!-- 建议预加载：减少慢网风险 -->
   <link rel="preload" as="image" href="p1.png">
   <link rel="preload" as="image" href="p2.png">
 
@@ -42,8 +41,7 @@
     .stage::before{
       content:"";
       display:block;
-      /* 你的板子图约 1024x765 */
-      padding-top:74.70703125%;
+      padding-top:74.70703125%; /* 765/1024 */
     }
     .layer{
       position:absolute;
@@ -86,19 +84,14 @@
       cursor:default;
     }
 
-    /* ===== 下方拿到的画卷（p2）===== */
+    /* ===== 下方 p2：从一开始就显示 ===== */
     .pickup{
       max-width:1024px;
       margin:18px auto 0;
-      display:none; /* 初始隐藏 */
       user-select:none;
       -webkit-tap-highlight-color: transparent;
     }
-    .revealed .pickup{
-      display:block; /* 点击后出现 */
-    }
 
-    /* p2 图片自适应 */
     .p2box{
       position:relative;
       width:100%;
@@ -111,7 +104,7 @@
       display:block;
     }
 
-    /* p2 的点击区域：默认整张都可点（最稳，不需要算热点） */
+    /* 默认：整张 p2 都可点，但初始禁用 */
     .p2btn{
       position:absolute;
       inset:0;
@@ -127,15 +120,14 @@
       pointer-events:none;
     }
 
-    /* 如果你只想“点画卷本体”才跳转，可把上面 inset:0 的整图点击
-       改成一个更小的热点（这里先留注释示例） */
+    /* 可选：如果你只想点画卷本体才跳转，改成热点并调整百分比 */
     /*
     .p2btn{
+      inset:auto;
       left:37%;
       top:5%;
       width:26%;
       height:88%;
-      inset:auto;
     }
     */
   </style>
@@ -143,7 +135,6 @@
 
 <body>
   <div class="wrap">
-    <!-- 顶部：p0/p1 叠放 -->
     <div class="stage" id="stage">
       <div class="layer imgA">
         <img src="p0.png" alt="board with roll" />
@@ -154,8 +145,8 @@
       <button class="hotspot" id="hotspot" aria-label="点击纸卷" title="点击纸卷" disabled></button>
     </div>
 
-    <!-- 下方：p2（点击后出现） -->
-    <div class="pickup" id="pickup">
+    <!-- p2：从页面加载就显示在下方 -->
+    <div class="pickup">
       <div class="p2box">
         <img src="p2.png" alt="scroll" />
         <button class="p2btn" id="p2btn" aria-label="打开画卷" title="打开画卷" disabled></button>
@@ -175,33 +166,38 @@
       let p2Ready = false;
       let revealed = false;
 
-      function syncReady(){
-        const ok = p1Ready && p2Ready;
-        btnRoll.disabled = !ok;
-        // p2 按钮只有在 revealed 后才有意义；但也先按资源情况设置
-        btnP2.disabled = !(ok && revealed);
+      function sync(){
+        // p0 点击：要求 p1/p2 都 ready 才允许
+        btnRoll.disabled = !(p1Ready && p2Ready) || revealed;
+
+        // p2 点击：必须先 revealed，并且 p2 已 ready
+        btnP2.disabled = !(revealed && p2Ready);
       }
 
-      // 预加载 p1 / p2，避免慢网点击后卡顿
-      function preload(src, cbOk, cbFail){
+      function preload(src, ok, fail){
         const im = new Image();
-        im.onload = cbOk;
-        im.onerror = cbFail;
+        im.onload = ok;
+        im.onerror = fail;
         im.src = src;
       }
 
-      preload("p1.png", () => { p1Ready = true; syncReady(); }, () => { p1Ready = false; syncReady(); });
-      preload("p2.png", () => { p2Ready = true; syncReady(); }, () => { p2Ready = false; syncReady(); });
+      preload("p1.png",
+        () => { p1Ready = true; sync(); },
+        () => { p1Ready = false; sync(); }
+      );
 
-      // 初始禁用，等都 ready 再可点
-      syncReady();
+      preload("p2.png",
+        () => { p2Ready = true; sync(); },
+        () => { p2Ready = false; sync(); }
+      );
+
+      sync();
 
       btnRoll.addEventListener("click", () => {
-        if (btnRoll.disabled || revealed) return;
+        if (btnRoll.disabled) return;
         revealed = true;
         stage.classList.add("revealed");
-        btnP2.disabled = false; // 此时 p2Ready 必然为真（否则 btnRoll 不会可点）
-        syncReady();
+        sync();
       }, { passive:true });
 
       btnP2.addEventListener("click", () => {
