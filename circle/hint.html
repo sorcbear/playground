@@ -110,6 +110,12 @@
       font-size:var(--fs-text);
       line-height:var(--lh-text);
       white-space:pre-wrap;
+      text-align:left;             /* 关键：提示文字左对齐 */
+    }
+
+    /* 新增：提示下面的返回按钮行（默认隐藏） */
+    .return-row{
+      display:none;
     }
 
     /* 超小屏时，按钮略微缩紧一点 */
@@ -132,7 +138,12 @@
         <button id="hintBtn">看提示</button>
       </div>
 
-      <div class="hint-text" id="hintText">墙上的公共厕所地图指南</div>
+      <div class="hint-text" id="hintText">墙上的“公共厕所地图指南” </div>
+
+      <!-- 新增：提示文字下面的“返回游戏”按钮（同样式） -->
+      <div class="btn-row return-row" id="returnRow">
+        <button id="returnBtn">返回游戏</button>
+      </div>
 
     </div>
   </div>
@@ -140,16 +151,26 @@
   <script>
     const cancelBtn = document.getElementById('cancelBtn');
     const hintBtn   = document.getElementById('hintBtn');
-    const buttons  = document.getElementById('buttons');
-    const hintText = document.getElementById('hintText');
+    const buttons   = document.getElementById('buttons');
+    const hintText  = document.getElementById('hintText');
+
+    const returnRow = document.getElementById('returnRow');
+    const returnBtn = document.getElementById('returnBtn');
+
+    const BACK_URL = 'https://sorcbear.github.io/playground/circle/';
 
     cancelBtn.addEventListener('click', () => {
-      location.href = 'https://sorcbear.github.io/playground/circle/';
+      location.href = BACK_URL;
+    });
+
+    returnBtn.addEventListener('click', () => {
+      location.href = BACK_URL;
     });
 
     hintBtn.addEventListener('click', () => {
       buttons.style.display = 'none';
       hintText.style.display = 'block';
+      returnRow.style.display = 'flex';
     });
   </script>
 </body>
