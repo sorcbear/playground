@@ -53,13 +53,17 @@
       text-align:center;
     }
 
-    /* 初始不占位，保证按钮真居中 */
+    /* 新增：用于“倒计时阶段”把两段文字居中堆叠 */
+    .centerStack{
+      display:none;                 /* 初始不占位，保证按钮真居中 */
+      width:min(var(--maxw), 92vw);
+      text-align:center;
+    }
+
     .hint,
     .status{
-      display:none;
-      width:min(var(--maxw), 92vw);
-      user-select:none;
       margin:0;
+      user-select:none;
       white-space:pre-wrap;
     }
 
@@ -72,6 +76,7 @@
       font-size:var(--fs-status);
       font-weight:var(--fw-status);
       line-height:1.4;
+      margin-top: 10px;            /* 两行之间一点点距离 */
     }
 
     /* ✅ 按钮行：与 index 相同的 64px 间距 */
@@ -111,10 +116,14 @@
 
 <body>
   <div class="container">
-    <div class="hint" id="hint"></div>
-    <div class="status" id="status"></div>
 
-    <div class="btnRow">
+    <!-- 倒计时阶段只显示这个区域（文字 + 倒计时） -->
+    <div class="centerStack" id="centerStack">
+      <div class="hint" id="hint"></div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="btnRow" id="btnRow">
       <button id="startBtn">开始游戏</button>
     </div>
   </div>
@@ -160,14 +169,18 @@
   }
   const CORRECT_MIDI_SEQ = targetToMidiSeq();
 
+  const centerStack = document.getElementById("centerStack");
   const hintEl = document.getElementById("hint");
   const statusEl = document.getElementById("status");
+
+  const btnRow = document.getElementById("btnRow");
   const startBtn = document.getElementById("startBtn");
 
+  // 初始：只显示按钮
   hintEl.textContent = "";
   statusEl.textContent = "";
-  hintEl.style.display = "none";
-  statusEl.style.display = "none";
+  centerStack.style.display = "none";
+  btnRow.style.display = "flex";
 
   let audioCtx = null;
   let audioEnabled = false;
@@ -238,8 +251,9 @@
   async function startFlow(){
     startBtn.disabled = true;
 
-    hintEl.style.display = "block";
-    statusEl.style.display = "block";
+    // ✅ 关键：进入倒计时后隐藏按钮，显示居中文字区
+    btnRow.style.display = "none";
+    centerStack.style.display = "block";
 
     hintEl.textContent = "好像听到一段诡异的音乐...";
     statusEl.textContent = "";
