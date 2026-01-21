@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>paper instant safe</title>
+
+  <!-- 可选但推荐：提示浏览器优先加载第二张 -->
+  <link rel="preload" as="image" href="p1.png">
+
+  <style>
+    :root{
+      --maxw: 980px;
+      --pad: 18px;
+      --bg:#fff;
+      --text:#111;
+    }
+    html,body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+                   "PingFang SC","Microsoft YaHei",Arial,sans-serif;
+    }
+    .wrap{
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:var(--pad);
+      box-sizing:border-box;
+    }
+
+    .stage{
+      position:relative;
+      width:100%;
+      max-width:1024px;
+      margin:0 auto;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .stage::before{
+      content:"";
+      display:block;
+      padding-top:74.70703125%; /* 765/1024 */
+    }
+
+    .layer{
+      position:absolute;
+      inset:0;
+    }
+    .layer img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      display:block;
+      pointer-events:none;
+    }
+
+    /* 瞬间切换（display） */
+    .imgA{ display:block; }
+    .imgB{ display:none; }
+    .revealed .imgA{ display:none; }
+    .revealed .imgB{ display:block; }
+
+    /* 纸卷热点 */
+    .hotspot{
+      position:absolute;
+      left:22.8%;
+      top:66.3%;
+      width:15.5%;
+      height:5.8%;
+      border:0;
+      background:transparent;
+      cursor:pointer;
+      padding:0;
+      margin:0;
+    }
+
+    /* 加载未完成时禁用点击，但外观不变（仍然透明） */
+    .hotspot:disabled{
+      opacity:1;
+      cursor:default;
+      pointer-events:none;
+    }
+
+    /* 如果你想调试热点位置，临时打开这一行 */
+    /* .hotspot{ outline:2px dashed red; background:rgba(255,0,0,.08); } */
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="stage" id="stage">
+      <div class="layer imgA">
+        <img src="p0.png" alt="with roll" />
+      </div>
+
+      <div class="layer imgB">
+        <img src="p1.png" alt="no roll" />
+      </div>
+
+      <button class="hotspot" id="hotspot" aria-label="点击纸卷" disabled></button>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const stage = document.getElementById("stage");
+      const btn = document.getElementById("hotspot");
+
+      let ready = false;
+      let done = false;
+
+      function setReady(ok){
+        ready = ok;
+        btn.disabled = !ok;
+      }
+
+      // 默认：先禁用，避免网络慢时点击造成卡顿
+      setReady(false);
+
+      // 预加载第二张
+      const img = new Image();
+      img.onload = () => setReady(true);
+      img.onerror = () => {
+        // 加载失败：为了不“卡”，我们保持不可切换（也可以改成允许切换但可能空白）
+        setReady(false);
+        // 你也可以在这里加一个 console 提示
+        // console.warn("p1.png load failed");
+      };
+      img.src = "p1.png";
+
+      btn.addEventListener("click", () => {
+        if (!ready || done) return;
+        done = true;
+        stage.classList.add("revealed");
+      }, { passive:true });
+    })();
+  </script>
+</body>
+</html>
