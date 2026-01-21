@@ -19,6 +19,7 @@
   const btnSubmit = document.getElementById("btnSubmit");
   const ansRoad = document.getElementById("ansRoad");
   const ansNo = document.getElementById("ansNo");
+  const msg = document.getElementById("msg");
 
   const ANSWER_ROAD = "天平";
   const ANSWER_NO = "41";
@@ -32,7 +33,6 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  // ===== Square 同款：仅改按钮文案，不改颜色（颜色由 invert 控制）=====
   const BTN_TEXT_DEFAULT = "提交答案";
   let btnTextTimer = null;
 
@@ -41,25 +41,6 @@
       clearTimeout(btnTextTimer);
       btnTextTimer = null;
     }
-  }
-
-  // ===== Square 同款：错误提示用（黑底白字期间禁用），时间到恢复 =====
-  function setBtnText(text, ms = 900) {
-    if (!btnSubmit) return;
-    clearBtnHint();
-
-    btnSubmit.textContent = text;
-    btnSubmit.classList.add("invert");   // Square：提示期间黑底白字
-    btnSubmit.disabled = true;           // Square：提示期间禁用
-
-    btnTextTimer = setTimeout(() => {
-      // 先恢复样式，再恢复默认文案（避免“提交答案”出现时还是黑底白字）
-      btnSubmit.classList.remove("invert");
-      btnSubmit.textContent = BTN_TEXT_DEFAULT;
-      btnSubmit.disabled = false;
-
-      btnTextTimer = null;
-    }, ms);
   }
 
   function clearCountdown() {
@@ -75,10 +56,26 @@
     ansNo.disabled = on;
   }
 
-  function unlockUI() {
-    locked = false;
-    clearCountdown();
-    setDisabledAll(false);
+  function setLocked(on) {
+    locked = on;
+    setDisabledAll(on);
+  }
+
+  // Square 同款：错误提示（按钮 invert + 禁用，随后恢复）
+  function setBtnText(text, ms = 900) {
+    if (!btnSubmit) return;
+    clearBtnHint();
+
+    btnSubmit.textContent = text;
+    btnSubmit.classList.add("invert");
+    btnSubmit.disabled = true;
+
+    btnTextTimer = setTimeout(() => {
+      btnSubmit.textContent = BTN_TEXT_DEFAULT;
+      btnSubmit.classList.remove("invert");
+      btnSubmit.disabled = false;
+      btnTextTimer = null;
+    }, ms);
   }
 
   function getNavType() {
@@ -121,14 +118,21 @@
   }
 
   function resetAllToInitial() {
-    unlockUI();
+    setLocked(false);
+    clearCountdown();
     clearBtnHint();
+
     curSteps = seedSteps.slice();
     applyAllRotations();
+
     ansRoad.value = "";
     ansNo.value = "";
+
     btnSubmit.textContent = BTN_TEXT_DEFAULT;
-    btnSubmit.classList.remove("invert"); // 稳妥：初始一定白底黑字
+    btnSubmit.classList.remove("invert");
+
+    msg.textContent = "";
+    msg.classList.remove("ok");
   }
 
   function buildBoard() {
@@ -160,8 +164,34 @@
     }
   }
 
+  // 成功：完全按你给的 Square 模式 —— 绿色 msg 倒计时，不改按钮
+  function startCountdownAndRedirect() {
+    sessionStorage.setItem(SOLVED_KEY, "1");
+
+    setLocked(true);
+    clearBtnHint();
+    btnSubmit.classList.remove("invert"); // 稳妥：成功态不允许黑底白字
+
+    let left = COUNTDOWN_SECONDS;
+    msg.textContent = `答案正确，即将进入下一题（${left}）`;
+    msg.classList.add("ok");
+
+    clearCountdown();
+    countdownTimer = setInterval(() => {
+      left -= 1;
+      if (left > 0) {
+        msg.textContent = `答案正确，即将进入下一题（${left}）`;
+      } else {
+        clearCountdown();
+        location.href = NEXT_URL;
+      }
+    }, 1000);
+  }
+
+  // 返回恢复：仅显示“已确认”样式（不倒计时）
   function restoreSolvedUI() {
-    unlockUI();
+    setLocked(false);
+    clearCountdown();
     clearBtnHint();
 
     curSteps = new Array(TILE_COUNT).fill(0);
@@ -170,33 +200,11 @@
     ansRoad.value = ANSWER_ROAD;
     ansNo.value = ANSWER_NO;
 
-    // Square 同款：会走 setBtnText() 的黑底白字提示
-    setBtnText("答案已确认", 900);
-  }
-
-  function startCountdownAndRedirect() {
-    sessionStorage.setItem(SOLVED_KEY, "1");
-
-    locked = true;
-    setDisabledAll(true);
-    clearBtnHint();
-
-    // 确保倒计时开始时不是 invert（避免与 setBtnText 冲突）
+    btnSubmit.textContent = BTN_TEXT_DEFAULT;
     btnSubmit.classList.remove("invert");
 
-    let left = COUNTDOWN_SECONDS;
-    btnSubmit.textContent = `答案正确（${left}）`;
-
-    clearCountdown();
-    countdownTimer = setInterval(() => {
-      left -= 1;
-      if (left <= 0) {
-        clearCountdown();
-        location.href = NEXT_URL;
-        return;
-      }
-      btnSubmit.textContent = `答案正确（${left}）`;
-    }, 1000);
+    msg.textContent = "答案已确认";
+    msg.classList.add("ok");
   }
 
   // 稳定 hash + PRNG
@@ -254,6 +262,8 @@
       if (okPuzzle && okAns) {
         startCountdownAndRedirect();
       } else {
+        msg.textContent = "";
+        msg.classList.remove("ok");
         setBtnText("不正确，再试一次", 900);
       }
     };
@@ -331,6 +341,7 @@
   });
 
   init().catch(() => {
+    // 失败提示仍按 Square 的按钮提示逻辑（黑底白字短提示）
     setBtnText("图片加载失败", 1500);
   });
 })();
