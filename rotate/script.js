@@ -32,7 +32,7 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  // 默认文案
+  // ===== Square 同款：仅改按钮文案，不改颜色（颜色由 invert 控制）=====
   const BTN_TEXT_DEFAULT = "提交答案";
   let btnTextTimer = null;
 
@@ -43,35 +43,23 @@
     }
   }
 
-  /**
-   * 错误提示：按钮黑底白字（.invert）+ 禁用，ms 后恢复
-   * 关键保证：当文案回到“提交答案”时，必须已经是白底黑字
-   */
+  // ===== Square 同款：错误提示用（黑底白字期间禁用），时间到恢复 =====
   function setBtnText(text, ms = 900) {
     if (!btnSubmit) return;
     clearBtnHint();
 
-    const isErrorHint = (text || "").includes("不正确");
-
-    if (isErrorHint) {
-      // 错误提示：立刻黑底白字 + 禁用
-      btnSubmit.classList.add("invert");
-      btnSubmit.disabled = true;
-    }
-
     btnSubmit.textContent = text;
+    btnSubmit.classList.add("invert");   // Square：提示期间黑底白字
+    btnSubmit.disabled = true;           // Square：提示期间禁用
 
-    if (ms > 0) {
-      btnTextTimer = setTimeout(() => {
-        // 关键：先恢复样式，再设置默认文案
-        // 这样“提交答案”出现时，任何时刻都不会是黑底白字
-        btnSubmit.classList.remove("invert");
-        btnSubmit.disabled = false;
+    btnTextTimer = setTimeout(() => {
+      // 先恢复样式，再恢复默认文案（避免“提交答案”出现时还是黑底白字）
+      btnSubmit.classList.remove("invert");
+      btnSubmit.textContent = BTN_TEXT_DEFAULT;
+      btnSubmit.disabled = false;
 
-        btnSubmit.textContent = BTN_TEXT_DEFAULT;
-        btnTextTimer = null;
-      }, ms);
-    }
+      btnTextTimer = null;
+    }, ms);
   }
 
   function clearCountdown() {
@@ -140,7 +128,7 @@
     ansRoad.value = "";
     ansNo.value = "";
     btnSubmit.textContent = BTN_TEXT_DEFAULT;
-    btnSubmit.classList.remove("invert"); // 保险：初始一定白底黑字
+    btnSubmit.classList.remove("invert"); // 稳妥：初始一定白底黑字
   }
 
   function buildBoard() {
@@ -182,20 +170,19 @@
     ansRoad.value = ANSWER_ROAD;
     ansNo.value = ANSWER_NO;
 
-    // “答案已确认”不需要 invert；保持按钮默认白底黑字
-    btnSubmit.classList.remove("invert");
+    // Square 同款：会走 setBtnText() 的黑底白字提示
     setBtnText("答案已确认", 900);
   }
 
   function startCountdownAndRedirect() {
     sessionStorage.setItem(SOLVED_KEY, "1");
 
-    // 保险：开始倒计时前必须是默认样式
-    btnSubmit.classList.remove("invert");
-
     locked = true;
     setDisabledAll(true);
     clearBtnHint();
+
+    // 确保倒计时开始时不是 invert（避免与 setBtnText 冲突）
+    btnSubmit.classList.remove("invert");
 
     let left = COUNTDOWN_SECONDS;
     btnSubmit.textContent = `答案正确（${left}）`;
