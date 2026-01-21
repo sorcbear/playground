@@ -9,345 +9,259 @@
     :root{
       --maxw: 900px;
 
-      /* ===== Rotate 风格变量 ===== */
       --fs-body: 16px;
       --lh-body: 1.7;
 
       --fs-hint: 18px;
       --lh-hint: 1.6;
-      --gap: 18px;
 
       --fs-btn: 16px;
       --fw-btn: 600;
       --h-btn: 52px;
 
-      --fs-input: 16px;
-      --h-input: 40px;
+      --gap: 18px;
+      --gap-tight: 12px;
 
       --c-text:#111;
       --c-border:#000;
-      --danger:#b00020;
-
-      --bg:#fff;
+      --c-ok:#0b6b2b;
+      --c-danger:#b00020;
     }
 
-    *{ box-sizing:border-box; }
-    html, body{
-      margin:0; padding:0;
-      width:100%;
-      background: var(--bg);
-      color: var(--c-text);
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
-                   "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
+    html,body{
+      margin:0;
+      background:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+                   "PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+      color:var(--c-text);
       -webkit-text-size-adjust: 100%;
     }
-    input, button{ font-family: inherit; font-size: inherit; }
 
     .wrap{
       max-width: var(--maxw);
       margin: 0 auto;
       padding: 24px 16px 40px;
+      box-sizing: border-box;
     }
 
-    /* ===== 标题（Rotate 同款） ===== */
+    /* ===== 标题（不留开头空白）===== */
     .title{
+      margin: 0 0 calc(var(--gap) * 1.2) 0; /* 与 circle 一致的节奏 */
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
-      margin: 4px 0 var(--gap);
       text-align: left;
       white-space: pre-wrap;
     }
 
-    /* ===== 图片：无边框 + 稍微缩小 ===== */
+    /* 图片：无边框 + 稍微缩小 */
     .imgbox{
-      overflow:hidden;
-      background:#fff;
-      margin-bottom: var(--gap);
+      margin: 0 0 var(--gap) 0;
     }
     .imgbox img{
-      width:100%;
-      max-width: 800px;   /* 控制桌面端视觉尺寸 */
-      height:auto;
-      display:block;
-      margin: 0 auto;     /* 居中 */
+      width: 100%;
+      max-width: 800px;     /* 缩小一点 */
+      height: auto;
+      display: block;
+      margin: 0 auto;       /* 居中 */
       user-select:none;
       -webkit-user-drag:none;
     }
 
-    /* ===== 输入行 ===== */
-    .row{
+    /* ===== 题目行：和 title 同样样式 ===== */
+    .qline{
+      margin: 0 0 var(--gap) 0;
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
+      text-align: left;
+      white-space: pre-wrap;
       display:flex;
       align-items:center;
       gap: 10px;
-      flex-wrap: wrap;
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
+      flex-wrap: nowrap;
     }
-    .label{ font-weight: 600; }
 
     .qmark{
-      color: var(--danger);
+      color: var(--c-danger);
       font-weight: 800;
     }
 
-    /* ===== 输入框：Rotate ansInput ===== */
-    input[type="text"]{
+    /* 输入框：保持你之前的直角风格 */
+    .ansInput{
       width: 6.2em;
-      height: var(--h-input);
+      height: 40px;
       padding: 0 8px;
       border: 2px solid var(--c-border);
       border-radius: 0;
       outline: none;
       background:#fff;
       color: var(--c-text);
-      font-size: var(--fs-input);
-      line-height: var(--h-input);
+      font-size: 16px;
+      line-height: 40px;
       text-align: center;
+      box-sizing: border-box;
+      flex: 0 0 auto;
     }
-    input[type="text"]:focus{
+    .ansInput:focus{
       box-shadow: 0 0 0 2px rgba(0,0,0,.10);
     }
 
-    /* ===== 两按钮行 ===== */
-    .btnRow{
-      margin-top: 56px;
+    /* ===== 按钮区域：强制一行并排（手机也不换行）===== */
+    .panel{
+      margin-top: var(--gap);
       display:flex;
+      gap: var(--gap-tight);
       justify-content:center;
-      gap: 14px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap; /* 关键：不换行 */
     }
 
-    /* ===== 按钮：Rotate primaryBtn ===== */
-    .primaryBtn{
+    /* circle/startgame 风格按钮 */
+    button{
+      width: 240px;
       height: var(--h-btn);
-      min-width: 220px;
-      padding: 0 22px;
-
-      border: 2px solid var(--c-border);
-      border-radius: 0;
-
-      background:#fff;
-      color:#000;
-
+      padding: 0 18px;
       font-size: var(--fs-btn);
       font-weight: var(--fw-btn);
-
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
       cursor:pointer;
-      transition: background-color 120ms ease, color 120ms ease;
-
+      border-radius:0;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
       user-select:none;
     }
 
-    @media (hover: hover) and (pointer: fine){
-      .primaryBtn:hover:not(:disabled){
-        background:#000;
-        color:#fff;
-      }
+    /* 只在支持 hover 的设备上反转（避免手机黏住 hover） */
+    @media (hover:hover) and (pointer:fine){
+      button:hover{ background:#000; color:#fff; }
+    }
+    @media (hover:none){
+      button:hover{ background:#fff; color:#000; }
     }
 
-    @media (hover: none){
-      .primaryBtn:hover:not(:disabled){
-        background:#fff;
-        color:#000;
-      }
+    button:disabled{ opacity:.45; cursor:default; }
+
+    /* 倒计时/状态行 */
+    .msg{
+      margin-top: var(--gap-tight);
+      min-height: 1.4em;
+      font-size: 14px;
     }
+    .msg.ok{ color: var(--c-ok); }
 
-    .primaryBtn:active{ transform:none; }
-
-    .primaryBtn:disabled{
-      opacity:.55;
-      cursor:not-allowed;
+    /* 极窄屏兜底：保证仍在一行但不溢出 */
+    @media (max-width: 520px){
+      .wrap{ padding: 18px 12px 28px; }
+      button{ width: 46vw; } /* 两个按钮仍并排 */
     }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="title">
-      康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。
-    </div>
+<div class="wrap">
 
-    <div class="imgbox">
-      <img src="puzzle.jpg" alt="square puzzle" />
-    </div>
+  <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div>
 
-    <div class="row">
-      <span class="label">
-        <span class="qmark">? </span>对应的是什么数字：
-      </span>
-      <input id="answer" type="text" inputmode="numeric" autocomplete="off" />
-    </div>
-
-    <div class="btnRow">
-      <button id="hintBtn" class="primaryBtn" type="button">获得提示</button>
-      <button id="submitBtn" class="primaryBtn" type="button">提交答案</button>
-    </div>
+  <div class="imgbox">
+    <img src="puzzle.jpg" alt="square puzzle" />
   </div>
 
-  <script>
-    (function () {
-      const CORRECT = "7";
-      const NEXT_URL = "https://sorcbear.github.io/playground/barrel/";
-      const HINT_URL = "https://sorcbear.github.io/playground/square/hint";
-      const COUNTDOWN_SECONDS = 3;
+  <div class="qline">
+    <span><span class="qmark">?</span>对应的是什么数字：</span>
+    <input id="answer" class="ansInput" type="text" inputmode="numeric" autocomplete="off" />
+  </div>
 
-      const SOLVED_KEY = "square_solved_back_only_v1";
+  <div class="panel">
+    <button id="hintBtn">获得提示</button>
+    <button id="submitBtn">提交答案</button>
+  </div>
 
-      const input = document.getElementById("answer");
-      const hintBtn = document.getElementById("hintBtn");
-      const submitBtn = document.getElementById("submitBtn");
+  <div class="msg" id="msg"></div>
+</div>
 
-      let locked = false;
-      let countdownTimer = null;
+<script>
+  const CORRECT = "7";
+  const HINT_URL = "https://sorcbear.github.io/playground/square/hint";
+  const NEXT_URL = "https://sorcbear.github.io/playground/barrel/";
+  const COUNTDOWN_START = 3;
 
-      const BTN_TEXT_DEFAULT = "提交答案";
-      let btnTextTimer = null;
+  const input = document.getElementById("answer");
+  const submitBtn = document.getElementById("submitBtn");
+  const hintBtn = document.getElementById("hintBtn");
+  const msg = document.getElementById("msg");
 
-      function clearBtnHint(){
-        if (btnTextTimer){
-          clearTimeout(btnTextTimer);
-          btnTextTimer = null;
-        }
-      }
+  let locked = false;
+  let countdownTimer = null;
 
-      function setBtnText(text, ms = 900){
-        clearBtnHint();
-        submitBtn.textContent = text;
-        if (ms > 0){
-          btnTextTimer = setTimeout(() => {
-            submitBtn.textContent = BTN_TEXT_DEFAULT;
-            btnTextTimer = null;
-          }, ms);
-        }
-      }
+  function setLocked(v){
+    locked = v;
+    submitBtn.disabled = v;
+    hintBtn.disabled = v;
+    input.disabled = v;
+  }
 
-      function clearCountdown(){
-        if (countdownTimer){
-          clearInterval(countdownTimer);
-          countdownTimer = null;
-        }
-      }
+  // 按你给的 circle 逻辑：按钮短暂提示，然后恢复
+  function setBtnText(text, ms=900){
+    const old = submitBtn.textContent;
+    submitBtn.textContent = text;
+    submitBtn.disabled = true;
+    setTimeout(()=>{
+      submitBtn.textContent = old;
+      submitBtn.disabled = false;
+    }, ms);
+  }
 
-      function setDisabledAll(on){
-        submitBtn.disabled = on;
-        hintBtn.disabled = on;
-        input.disabled = on;
-      }
+  function clearCountdown(){
+    if(countdownTimer){
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+  }
 
-      function unlockUI(){
-        locked = false;
-        clearCountdown();
-        setDisabledAll(false);
-      }
+  // Enter 提交
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitBtn.click();
+  });
 
-      function getNavType(){
-        try{
-          const nav = performance.getEntriesByType("navigation");
-          if (nav && nav[0] && nav[0].type) return nav[0].type;
-        }catch{}
-        if (performance && performance.navigation){
-          const t = performance.navigation.type;
-          if (t === 1) return "reload";
-          if (t === 2) return "back_forward";
-          return "navigate";
-        }
-        return "navigate";
-      }
+  hintBtn.onclick = () => location.href = HINT_URL;
 
-      function resetAllToInitial(){
-        unlockUI();
-        clearBtnHint();
-        input.value = "";
-        submitBtn.textContent = BTN_TEXT_DEFAULT;
-      }
+  submitBtn.onclick = () => {
+    if (locked) return;
 
-      function restoreSolvedUI(){
-        unlockUI();
-        clearBtnHint();
-        input.value = CORRECT;
-        setBtnText("答案已确认", 900);
-      }
+    const val = (input.value || "").trim();
 
-      function isAnswerSolved(){
-        return (input.value || "").trim() === CORRECT;
-      }
+    if (val === CORRECT){
+      setLocked(true);
+      let t = COUNTDOWN_START;
+      msg.textContent = `答案正确，即将进入下一题（${t}）`;
+      msg.classList.add("ok");
 
-      function startCountdownAndRedirect(){
-        sessionStorage.setItem(SOLVED_KEY, "1");
-
-        locked = true;
-        setDisabledAll(true);
-        clearBtnHint();
-
-        let left = COUNTDOWN_SECONDS;
-        submitBtn.textContent = `答案正确（${left}）`;
-
-        clearCountdown();
-        countdownTimer = setInterval(() => {
-          left -= 1;
-          if (left <= 0){
-            clearCountdown();
-            location.href = NEXT_URL;
-            return;
-          }
-          submitBtn.textContent = `答案正确（${left}）`;
-        }, 1000);
-      }
-
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") submitBtn.click();
-      });
-
-      hintBtn.addEventListener("click", () => {
-        if (locked) return;
-        location.href = HINT_URL;
-      });
-
-      submitBtn.addEventListener("click", () => {
-        if (locked) return;
-
-        if (isAnswerSolved()){
-          startCountdownAndRedirect();
+      clearCountdown();
+      countdownTimer = setInterval(() => {
+        t--;
+        if (t > 0){
+          msg.textContent = `答案正确，即将进入下一题（${t}）`;
         }else{
-          setBtnText("不正确，再试一次", 900);
+          clearCountdown();
+          location.href = NEXT_URL;
         }
-      });
+      }, 1000);
 
-      window.addEventListener("pageshow", (e) => {
-        const navType = getNavType();
+    } else {
+      msg.textContent = "";
+      msg.classList.remove("ok");
+      setBtnText("不正确，再试一次", 900);
+    }
+  };
 
-        if ((e.persisted || navType === "back_forward") &&
-            sessionStorage.getItem(SOLVED_KEY) === "1"){
-          restoreSolvedUI();
-          return;
-        }
+  window.addEventListener("pagehide", () => {
+    clearCountdown();
+  });
+</script>
 
-        if (navType === "reload" || navType === "navigate"){
-          sessionStorage.removeItem(SOLVED_KEY);
-          resetAllToInitial();
-        }
-      });
-
-      (function init(){
-        const navType = getNavType();
-        if (navType === "back_forward" &&
-            sessionStorage.getItem(SOLVED_KEY) === "1"){
-          restoreSolvedUI();
-        }else{
-          sessionStorage.removeItem(SOLVED_KEY);
-          resetAllToInitial();
-        }
-      })();
-
-      window.addEventListener("pagehide", () => {
-        clearCountdown();
-      });
-    })();
-  </script>
 </body>
 </html>
