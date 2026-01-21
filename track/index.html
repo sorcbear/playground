@@ -7,71 +7,58 @@
 
   <style>
     :root{
-      /* ===== 尺度标准（与 Rotate 页一致，只改这里即可全站统一）===== */
       --maxw: 720px;
-      --panelw: 420px;
 
-      --fs-body: 16px;     /* 正文 */
+      --fs-body: 16px;
       --lh-body: 1.7;
 
-      --fs-hint: 18px;     /* 提示/标题 */
+      --fs-hint: 18px;
       --lh-hint: 1.6;
-
-      --fs-status: 18px;
-      --fw-status: 700;
 
       --fs-btn: 16px;
       --fw-btn: 600;
       --h-btn: 52px;
 
-      --fs-input: 16px;
-      --h-input: 52px;
-
       --gap: 18px;
       --gap-tight: 12px;
 
       --c-text: #111;
-      --c-muted: #444;
       --c-danger: #b00020;
       --c-border: #000;
 
-      /* 本页补充 */
-      --bg: #fff;
-      --ok: #0b6b2b;
+      --ok:#0b6b2b;
     }
 
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
+
     body{
       margin:0;
-      background: var(--bg);
-      color: var(--c-text);
+      background:#fff;
+      color:var(--c-text);
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-      -webkit-text-size-adjust: 100%;
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+      -webkit-text-size-adjust:100%;
     }
-    button{ font-family: inherit; font-size: inherit; }
 
     .wrap{
-      max-width: var(--maxw);
-      margin: 0 auto;
-      padding: 18px 14px 28px;
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:18px 14px 28px;
     }
 
-    /* ===== 标题（完全沿用 Rotate 页 titleLine 规范）===== */
-/* ===== 通用标题样式（与 Rotate 页 100% 一致）===== */
+    /* ===== 标题：无首行空隙（关键） ===== */
     .title{
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      font-weight: 700;
-      margin: 0 0 var(--gap);   /* 关键：第一行不留空 */
-      text-align: left;
-      white-space: pre-wrap;
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      font-weight:700;
+      margin:0;                 /* ← 彻底清零 */
+      white-space:pre-wrap;
     }
-
 
     .image-box{
+      margin-top:var(--gap);    /* 只在这里控制与标题的距离 */
       width:100%;
       border-radius:10px;
       overflow:hidden;
@@ -85,87 +72,76 @@
       -webkit-user-drag:none;
     }
 
-    /* 这句提示：红色 + 加粗（你要求的那句） */
+    /* ===== 红字提示：无首行空隙（关键） ===== */
     .hint{
-      margin-top: var(--gap-tight);
-      font-size: 12px; /* 字号不变 */
-      line-height: 1.4;
-      color: var(--c-danger);
-      font-weight: 700;
-      text-align:left;
-      white-space: pre-wrap;
+      margin:0;                 /* ← 彻底清零 */
+      margin-top:var(--gap-tight); /* 与图片的唯一距离来源 */
+      font-size:12px;
+      line-height:1.4;
+      color:var(--c-danger);
+      font-weight:700;
+      white-space:pre-wrap;
     }
 
     .msg{
-      margin-top: var(--gap-tight);
-      min-height: 20px;
-      font-size: 14px;
-      line-height: 1.4;
-      color: var(--c-text);
-      white-space: pre-wrap;
+      margin-top:var(--gap-tight);
+      min-height:20px;
+      font-size:14px;
+      line-height:1.4;
     }
     .msg.ok{
-      color: var(--ok);
-      font-weight: 700;
+      color:var(--ok);
+      font-weight:700;
     }
     .msg.locked{
-      color: var(--c-danger);
-      font-weight: 700;
+      color:var(--c-danger);
+      font-weight:700;
     }
 
-    /* ===== 两个按钮一行（与你现在想要的 track 页形态）===== */
+    /* ===== 按钮：同一行 ===== */
     .actions{
-      margin-top: var(--gap);
+      margin-top:var(--gap);
       display:flex;
       justify-content:center;
-      align-items:center;
-      gap: 12px;
-      flex-wrap: nowrap; /* 强制同一行 */
+      gap:12px;
+      flex-wrap:nowrap;
     }
 
-    /* ===== 按钮风格：按你给的那段（白底黑字，hover 反转）===== */
     button{
-      width: var(--panelw);         /* 使用 panelw，但下面会用 max-width 限制 */
-      max-width: 260px;             /* 避免太宽 */
-      flex: 1 1 0;                  /* 两按钮平均分配 */
-      height: var(--h-btn);
-      padding: 0 18px;
-      box-sizing:border-box;
-      font-size: var(--fs-btn);
-      font-weight: var(--fw-btn);
+      flex:1 1 0;
+      max-width:260px;
+      height:var(--h-btn);
+      padding:0 18px;
+      font-size:var(--fs-btn);
+      font-weight:var(--fw-btn);
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
+      white-space:nowrap;
       border-radius:0;
-      white-space: nowrap;          /* 按钮文字永不换行 */
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color:transparent;
     }
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
-
-    /* 极小屏兜底：仍保持一行 */
-    @media (max-width: 360px){
-      .actions{ gap:10px; }
-      button{ max-width: 220px; padding:0 12px; }
-    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
 
-    <div class="title" id="questionText">
-      上一名玩家已经顺利找到了下一个解谜地点。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？
+    <!-- 标题：无任何上边距 -->
+    <div class="title">
+上一名玩家已经顺利找到了下一个解谜地点。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？
     </div>
 
     <div class="image-box">
-      <img src="track.png" alt="bike trace" />
+      <img src="track.png" alt="bike trace">
     </div>
 
+    <!-- 红字：无任何上边距 -->
     <div class="hint">
-      如果选错，本页面将冻结 5 分钟无法再次提交获取线索。
+如果选错，本页面将冻结 5 分钟无法再次提交获取线索。
     </div>
 
     <div class="msg" id="msg"></div>
@@ -174,102 +150,78 @@
       <button id="btnLeft">向左走</button>
       <button id="btnRight">向右走</button>
     </div>
+
   </div>
 
   <script>
-    // ====== 配置 ======
     const CORRECT = "right";
     const LOCK_MS = 5 * 60 * 1000;
     const STORAGE_KEY = "bike_trace_lock_until_v1";
-
-    const COUNTDOWN_START = 3;
     const NEXT_URL = "https://sorcbear.github.io/playground/address/";
+    const COUNTDOWN_START = 3;
 
-    // ====== DOM ======
     const msgEl = document.getElementById("msg");
-    const actionsEl = document.getElementById("actions");
     const btnLeft = document.getElementById("btnLeft");
     const btnRight = document.getElementById("btnRight");
+    const actionsEl = document.getElementById("actions");
 
     let lockTimer = null;
     let countdownTimer = null;
     let isSuccessFlow = false;
 
-    function now(){ return Date.now(); }
+    const now = () => Date.now();
 
     function getLockUntil(){
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const t = raw ? Number(raw) : 0;
-      return Number.isFinite(t) ? t : 0;
+      return Number(localStorage.getItem(STORAGE_KEY) || 0);
     }
-
     function setLockUntil(ts){
       localStorage.setItem(STORAGE_KEY, String(ts));
     }
 
-    function fmtRemaining(ms){
-      const totalSec = Math.max(0, Math.ceil(ms / 1000));
-      const m = Math.floor(totalSec / 60);
-      const s = totalSec % 60;
-      return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    function fmt(ms){
+      const s = Math.ceil(ms/1000);
+      return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
     }
 
-    function setDisabled(disabled){
-      btnLeft.disabled = disabled;
-      btnRight.disabled = disabled;
+    function setDisabled(d){
+      btnLeft.disabled = d;
+      btnRight.disabled = d;
     }
 
-    function setMsg(text, cls){
-      msgEl.textContent = text || "";
+    function setMsg(t, cls){
+      msgEl.textContent = t || "";
       msgEl.className = "msg" + (cls ? " " + cls : "");
     }
 
-    // ====== 冻结流程 ======
-    function applyLockState(){
+    function applyLock(){
       if (isSuccessFlow) return;
 
-      if (lockTimer){
-        clearInterval(lockTimer);
-        lockTimer = null;
-      }
-
-      const until = getLockUntil();
-      const rem = until - now();
+      clearInterval(lockTimer);
+      const rem = getLockUntil() - now();
 
       if (rem > 0){
         setDisabled(true);
-        setMsg(`页面已冻结：${fmtRemaining(rem)}`, "locked");
+        setMsg(`页面已冻结：${fmt(rem)}`, "locked");
 
         lockTimer = setInterval(() => {
-          if (isSuccessFlow){
+          const r = getLockUntil() - now();
+          if (r <= 0){
             clearInterval(lockTimer);
-            lockTimer = null;
-            return;
-          }
-
-          const rem2 = getLockUntil() - now();
-          if (rem2 <= 0){
-            clearInterval(lockTimer);
-            lockTimer = null;
             setDisabled(false);
-            setMsg("", "");
+            setMsg("");
           } else {
-            setMsg(`页面已冻结：${fmtRemaining(rem2)}`, "locked");
+            setMsg(`页面已冻结：${fmt(r)}`, "locked");
           }
         }, 250);
-      } else {
-        setDisabled(false);
-        setMsg("", "");
       }
     }
 
-    function lockForFiveMinutes(){
+    function lock(){
       setLockUntil(now() + LOCK_MS);
-      applyLockState();
+      applyLock();
     }
 
-    // ====== 成功倒计时并跳转 ======
-    function startCountdownAndRedirect(){
+    function success(){
       isSuccessFlow = true;
       setDisabled(true);
       actionsEl.style.display = "none";
@@ -277,7 +229,6 @@
       let t = COUNTDOWN_START;
       setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
 
-      clearInterval(countdownTimer);
       countdownTimer = setInterval(() => {
         t--;
         if (t > 0){
@@ -289,22 +240,16 @@
       }, 1000);
     }
 
-    function onChoose(choice){
-      if (isSuccessFlow) return;
+    btnLeft.onclick = () => {
+      if (getLockUntil() > now()) return;
+      lock();
+    };
+    btnRight.onclick = () => {
+      if (getLockUntil() > now()) return;
+      success();
+    };
 
-      if (getLockUntil() - now() > 0) return;
-
-      if (choice === CORRECT){
-        startCountdownAndRedirect();
-      } else {
-        lockForFiveMinutes();
-      }
-    }
-
-    btnLeft.addEventListener("click", () => onChoose("left"));
-    btnRight.addEventListener("click", () => onChoose("right"));
-
-    applyLockState();
+    applyLock();
   </script>
 </body>
 </html>
