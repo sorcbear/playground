@@ -50,7 +50,7 @@ html,body{
   box-sizing:border-box;
 }
 
-/* title 样式（你要求 intro & 提示语都用这个） */
+/* ===== title 样式 ===== */
 .title{
   margin:0 0 12px 0;
   font-size:var(--fs-title);
@@ -65,7 +65,7 @@ img{
   margin:0;
 }
 
-/* 输入区：提示行与输入框分行 */
+/* ===== 输入区 ===== */
 .code{
   margin-top:18px;
 }
@@ -77,15 +77,17 @@ img{
   align-items:center;
   flex-wrap:wrap;
   gap:8px;
+  margin-bottom:36px; /* ✅ 与按钮之间多隔一行 */
 }
 
-/* 彩色输入框 */
+/* ===== 输入框（与 title 字体完全一致） ===== */
 .slot{
   height:40px;
-  line-height:44px;
-  border:2px solid #000;
-  font-size:16px;
+  line-height:40px;
+  border:2px solid var(--c-border);
+  font-size:var(--fs-title);
   font-weight:700;
+  font-family:inherit;
   text-align:center;
   resize:none;
   outline:none;
@@ -98,12 +100,13 @@ textarea{ overflow:hidden; }
 .w1{ width:50px; }
 .w2{ width:84px; }
 
-/* 位置固定字：路（替换原 RD） */
+/* ===== 固定字：路（与 title 完全一致） ===== */
 .fixedWord{
-  height:46px;
-  line-height:46px;
-  font-size:22px;
-  font-weight:900;
+  height:40px;
+  line-height:40px;
+  font-size:var(--fs-title);
+  font-weight:700;
+  font-family:inherit;
   color:#111;
   display:flex;
   align-items:center;
@@ -113,7 +116,7 @@ textarea{ overflow:hidden; }
   user-select:none;
 }
 
-/* ====== 按钮：改成 Square 风格 + Square 交互 ====== */
+/* ===== Square 风格按钮 ===== */
 .panel{
   margin-top:36px;
   display:flex;
@@ -137,12 +140,10 @@ button{
   -webkit-tap-highlight-color:transparent;
 }
 
-/* PC hover */
 @media (hover:hover) and (pointer:fine){
   button:hover{ background:#000; color:#fff; }
 }
 
-/* JS 控制的点击反馈 */
 button.invert{
   background:#000;
   color:#fff;
@@ -153,7 +154,7 @@ button:disabled{
   cursor:default;
 }
 
-/* msg：14px，成功绿色 */
+/* msg */
 .msg{
   margin-top:12px;
   min-height:1.4em;
@@ -182,7 +183,7 @@ button:disabled{
   <img src="puzzle.png" alt="puzzle">
 
   <div class="code">
-    <!-- 提示语：title 样式，且与输入框换行 -->
+    <!-- 提示语：title 样式 -->
     <div class="title">请在彩色方框内输入暗号：</div>
 
     <div class="slots">
@@ -191,7 +192,6 @@ button:disabled{
       <textarea id="s3" class="slot w1" style="background:var(--c-green)"></textarea>
       <textarea id="s4" class="slot w2" style="background:var(--c-lgreen)"></textarea>
 
-      <!-- 原 RD 取消，换成固定“路”字 -->
       <div class="fixedWord">路</div>
 
       <textarea id="s5" class="slot w1" style="background:var(--c-yellow)"></textarea>
@@ -201,7 +201,6 @@ button:disabled{
     </div>
   </div>
 
-  <!-- 两个按钮：获得提示 / 提交答案（Square 交互） -->
   <div class="panel">
     <button id="hintBtn">获得提示</button>
     <button id="submitBtn">提交答案</button>
@@ -214,7 +213,7 @@ button:disabled{
 const ANSWER = ["四","君子","在","衡山","五","四","三","号"];
 const ids = ["s1","s2","s3","s4","s5","s6","s7","s8"];
 
-const HINT_URL = "https://sorcbear.github.io/playground/ppl/hint"; // 按你实际路径改
+const HINT_URL = "https://sorcbear.github.io/playground/ppl/hint";
 const NEXT_URL = "https://sorcbear.github.io/playground/riddle/";
 const COUNTDOWN_START = 3;
 
@@ -230,7 +229,6 @@ function clean(v){
   return (v || "").replace(/\s/g,"");
 }
 
-/* Square：短暂黑底白字反馈 */
 function flashInvert(btn, ms=120){
   btn.classList.add("invert");
   setTimeout(()=>btn.classList.remove("invert"), ms);
@@ -240,16 +238,14 @@ function setLocked(v){
   locked = v;
   hintBtn.disabled = v;
   submitBtn.disabled = v;
-  ids.forEach(id => {
+  ids.forEach(id=>{
     const el = document.getElementById(id);
-    if (el) el.disabled = v;
+    if(el) el.disabled = v;
   });
 }
 
-/* Square：错误提示在按钮本身（不在 msg 显示 try again） */
 function setBtnText(text, ms=900){
-  if (btnTimer){ clearTimeout(btnTimer); btnTimer = null; }
-
+  if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
   submitBtn.textContent = text;
   submitBtn.classList.add("invert");
   submitBtn.disabled = true;
@@ -262,11 +258,10 @@ function setBtnText(text, ms=900){
   }, ms);
 }
 
-/* 获得提示：先反馈，再跳转（Square 同款） */
 hintBtn.onclick = ()=>{
-  if (locked) return;
-  flashInvert(hintBtn, 120);
-  setTimeout(()=>location.href = HINT_URL, 120);
+  if(locked) return;
+  flashInvert(hintBtn,120);
+  setTimeout(()=>location.href = HINT_URL,120);
 };
 
 function isCorrect(){
@@ -274,31 +269,29 @@ function isCorrect(){
 }
 
 submitBtn.onclick = ()=>{
-  if (locked) return;
+  if(locked) return;
 
-  if (isCorrect()){
+  if(isCorrect()){
     setLocked(true);
-
     let t = COUNTDOWN_START;
     msg.textContent = `答案正确，即将进入下一题（${t}）`;
     msg.classList.add("ok");
 
-    if (timer) clearInterval(timer);
+    if(timer) clearInterval(timer);
     timer = setInterval(()=>{
       t--;
-      if (t > 0){
+      if(t > 0){
         msg.textContent = `答案正确，即将进入下一题（${t}）`;
       }else{
         clearInterval(timer);
-        timer = null;
         location.href = NEXT_URL;
       }
-    }, 1000);
+    },1000);
 
   }else{
     msg.textContent = "";
     msg.classList.remove("ok");
-    setBtnText("不正确，再试一次", 900);
+    setBtnText("不正确，再试一次",900);
   }
 };
 </script>
