@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Color Scratch (Palette + P reveal)</title>
+  <title>Color Scratch</title>
 
   <style>
     :root{
@@ -13,11 +13,10 @@
 
       --bg:#fff;
       --text:#111;
-      --border:#000;
 
-      --swatch: 44px;       /* 色点大小 */
-      --swatch-gap: 14px;  /* 色点间距 */
-      --ring: 4px;         /* 选中外圈粗细 */
+      --swatch: 44px;
+      --swatch-gap: 14px;
+      --ring: 4px;
 
       --hint-fs:14px;
       --hint-lh:1.6;
@@ -86,22 +85,22 @@
       justify-content:center;
     }
 
-    /* 未选中：纯色圆点，无任何边框 */
+    /* 未选中：纯色圆点 */
     .swatch{
       width:var(--swatch);
       height:var(--swatch);
       border-radius:999px;
       background:var(--c);
-      border:none;                 /* 关键：无边框 */
+      border:none;
       padding:0;
       cursor:pointer;
       outline:none;
       -webkit-tap-highlight-color:transparent;
     }
 
-    /* 选中：只加外圈，不破坏内部 */
+    /* 选中：白色外圈（与你给的图一致） */
     .swatch.selected{
-      box-shadow:0 0 0 var(--ring) #000;
+      box-shadow: 0 0 0 var(--ring) #fff;
     }
 
     .hint{
@@ -144,15 +143,16 @@
   const BASE_MASK_URL = "mask_base.png";
   const CORRECT_RED = "#ff0000";
 
+  // ✅ 8 种颜色（已移除白色，新增深灰）
   const COLORS = [
-    "#000000",
-    "#00e5ff",
-    CORRECT_RED,
-    "#ffc000",
-    "#00b050",
-    "#7030a0",
-    "#ffffff",
-    "#0070c0"
+    "#000000", // 黑
+    "#00e5ff", // 青
+    CORRECT_RED, // 正确红
+    "#ffc000", // 黄
+    "#00b050", // 绿
+    "#7030a0", // 紫
+    "#0070c0", // 蓝
+    "#444444"  // 深灰（替代白色）
   ];
 
   const img = document.getElementById("bw");
@@ -219,7 +219,10 @@
   }
 
   cv.addEventListener("pointerdown",e=>{
-    if(!currentColor){ hintEl.innerHTML="请先<strong>选择颜色</strong>。"; return; }
+    if(!currentColor){
+      hintEl.innerHTML="请先<strong>选择一种颜色</strong>。";
+      return;
+    }
     down=true;
     last=pos(e);
     dab(last.x,last.y);
