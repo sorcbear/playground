@@ -4,21 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Color Scratch (Palette + P reveal)</title>
+
   <style>
     :root{
       --maxw: 980px;
       --pad: 18px;
       --radius: 10px;
-      --bg: #fff;
+
+      --bg:#fff;
       --text:#111;
       --border:#000;
 
-      --swatch: 44px;         /* 调色盘色块大小 */
-      --swatch-gap: 14px;     /* 色块间距 */
-      --swatch-ring: 3px;     /* 选中外圈粗细 */
+      --swatch: 44px;       /* 色点大小 */
+      --swatch-gap: 14px;  /* 色点间距 */
+      --ring: 4px;         /* 选中外圈粗细 */
 
-      --hint-fs: 14px;
-      --hint-lh: 1.6;
+      --hint-fs:14px;
+      --hint-lh:1.6;
     }
 
     *{ box-sizing:border-box; }
@@ -30,19 +32,19 @@
     }
 
     .wrap{
-      max-width: var(--maxw);
-      margin: 0 auto;
-      padding: var(--pad);
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:var(--pad);
     }
 
     .stage{
-      position: relative;
-      width: 100%;
-      border-radius: var(--radius);
-      overflow: hidden;
+      position:relative;
+      width:100%;
+      border-radius:var(--radius);
+      overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
-      touch-action:none; /* 移动端拖动不滚屏 */
+      touch-action:none;
       background:#eee;
     }
 
@@ -54,7 +56,6 @@
       width:100%;
       height:100%;
       display:block;
-      pointer-events:auto;
     }
 
     .loading{
@@ -64,324 +65,197 @@
       align-items:center;
       justify-content:center;
       font-size:14px;
-      background: rgba(255,255,255,.78);
-      backdrop-filter: blur(2px);
+      background:rgba(255,255,255,.78);
+      backdrop-filter:blur(2px);
     }
     .loading.hide{ display:none; }
 
-    /* 调色盘 */
+    /* ===== 调色盘 ===== */
     .paletteWrap{
-      margin-top: 14px;
+      margin-top:14px;
       display:flex;
       flex-direction:column;
-      gap: 10px;
       align-items:center;
+      gap:10px;
     }
 
     .palette{
       display:flex;
+      gap:var(--swatch-gap);
       flex-wrap:wrap;
       justify-content:center;
-      gap: var(--swatch-gap);
     }
 
+    /* 未选中：纯色圆点，无任何边框 */
     .swatch{
-      width: var(--swatch);
-      height: var(--swatch);
-      border-radius: 999px;
-      border: 2px solid rgba(0,0,0,.25);
-      background: var(--c);
-      cursor: pointer;
-      position: relative;
+      width:var(--swatch);
+      height:var(--swatch);
+      border-radius:999px;
+      background:var(--c);
+      border:none;                 /* 关键：无边框 */
       padding:0;
+      cursor:pointer;
       outline:none;
-      -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color:transparent;
     }
 
-    /* ✅ 选中样式：只用外圈，不加任何“内部白点/小圆” */
+    /* 选中：只加外圈，不破坏内部 */
     .swatch.selected{
-      border-color: var(--border);
-      box-shadow: 0 0 0 var(--swatch-ring) #000;
+      box-shadow:0 0 0 var(--ring) #000;
     }
 
     .hint{
-      font-size: var(--hint-fs);
-      line-height: var(--hint-lh);
+      font-size:var(--hint-fs);
+      line-height:var(--hint-lh);
       opacity:.78;
       text-align:center;
     }
     .hint strong{ opacity:1; }
 
-    @media (max-width: 420px){
+    @media (max-width:420px){
       :root{
-        --swatch: 40px;
-        --swatch-gap: 12px;
+        --swatch:40px;
+        --swatch-gap:12px;
       }
     }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="stage" id="stage">
-      <img id="bw" src="bw.jpg" alt="bw" />
-      <canvas id="paint" class="overlay"></canvas>
-      <div id="loading" class="loading">资源加载中</div>
-    </div>
+<div class="wrap">
+  <div class="stage">
+    <img id="bw" src="bw.jpg" alt="">
+    <canvas id="paint" class="overlay"></canvas>
+    <div id="loading" class="loading">资源加载中</div>
+  </div>
 
-    <div class="paletteWrap">
-      <div class="palette" id="palette"></div>
-      <div class="hint" id="hint">
-        请先选择一种颜色，然后在画面上涂抹。<br/>
-        <strong>只有选中正确的红色，才会显示隐藏的 P。</strong>
-      </div>
+  <div class="paletteWrap">
+    <div class="palette" id="palette"></div>
+    <div class="hint" id="hint">
+      请先选择一种颜色，再开始涂抹。<br>
+      <strong>只有正确的红色，才能显示隐藏的 P。</strong>
     </div>
   </div>
+</div>
 
 <script>
 (() => {
-  // ===== 可调参数 =====
-  const BRUSH_RADIUS_CSSPX = 18;          // 画笔半径（CSS像素）
-  const BASE_MASK_URL = "mask_base.png";  // 透明基础蒙版（avec toi 白框/文字）
-  const CORRECT_RED = "#ff0000";          // ✅ 只有选中这个红色才启用 P 挖洞
+  const BRUSH_RADIUS = 18;
+  const BASE_MASK_URL = "mask_base.png";
+  const CORRECT_RED = "#ff0000";
 
-  // 8 色调色盘（可自行替换）
   const COLORS = [
-    "#000000", // 黑
-    "#00e5ff", // 青
-    CORRECT_RED, // 正确红（必须保留）
-    "#ffc000", // 橙黄
-    "#00b050", // 绿
-    "#7030a0", // 紫
-    "#ffffff", // 白
-    "#0070c0"  // 蓝
+    "#000000",
+    "#00e5ff",
+    CORRECT_RED,
+    "#ffc000",
+    "#00b050",
+    "#7030a0",
+    "#ffffff",
+    "#0070c0"
   ];
-  // ====================
 
   const img = document.getElementById("bw");
   const cv = document.getElementById("paint");
-  const loading = document.getElementById("loading");
+  const ctx = cv.getContext("2d");
   const paletteEl = document.getElementById("palette");
   const hintEl = document.getElementById("hint");
+  const loading = document.getElementById("loading");
 
-  const ctx = cv.getContext("2d", { alpha:true });
-
-  // 离屏：基础 mask（始终挖洞）
-  const baseMaskCanvas = document.createElement("canvas");
-  const baseMaskCtx = baseMaskCanvas.getContext("2d");
-
-  const baseMaskImg = new Image();
-  baseMaskImg.decoding = "async";
-  baseMaskImg.src = BASE_MASK_URL;
-
-  // 离屏：P mask（仅在正确红色时挖洞）
-  const pMaskCanvas = document.createElement("canvas");
-  const pMaskCtx = pMaskCanvas.getContext("2d");
-
-  // 当前选中颜色（必须先选）
   let currentColor = null;
+  let down = false, last = null;
 
-  function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
+  const baseMask = new Image();
+  baseMask.src = BASE_MASK_URL;
 
-  // ====== 画 P（白色笔画绘制在 pMaskCanvas 上）======
-  function rebuildPMask(){
-    const w = pMaskCanvas.width;
-    const h = pMaskCanvas.height;
+  const maskCanvas = document.createElement("canvas");
+  const maskCtx = maskCanvas.getContext("2d");
 
-    pMaskCtx.setTransform(1,0,0,1,0,0);
-    pMaskCtx.clearRect(0,0,w,h);
+  function dpr(){ return window.devicePixelRatio || 1; }
 
-    // 调这些比例改变 P 位置与大小
-    const cx = w * 0.58;
-    const cy = h * 0.58;
-    const s  = Math.min(w/1200, h/800) * 1.0; // 整体缩放
-    const strokeW = Math.max(36, Math.round(58 * (w/1200)));
+  function resize(){
+    const r = img.getBoundingClientRect();
+    const s = dpr();
+    cv.width = r.width * s;
+    cv.height = r.height * s;
+    ctx.setTransform(s,0,0,s,0,0);
 
-    const p = new Path2D();
-
-    // 主竖
-    p.moveTo(cx + (-40)*s, cy + (-220)*s);
-    p.quadraticCurveTo(cx + (-60)*s, cy + (-80)*s,  cx + (-40)*s, cy + (80)*s);
-    p.quadraticCurveTo(cx + (-30)*s, cy + (160)*s,  cx + (-40)*s, cy + (240)*s);
-
-    // 上半圆肚
-    p.moveTo(cx + (-40)*s, cy + (-200)*s);
-    p.quadraticCurveTo(cx + (90)*s,  cy + (-215)*s, cx + (150)*s, cy + (-160)*s);
-    p.quadraticCurveTo(cx + (210)*s, cy + (-120)*s, cx + (195)*s, cy + (-50)*s);
-    p.quadraticCurveTo(cx + (175)*s, cy + (25)*s,   cx + (95)*s,  cy + (55)*s);
-    p.quadraticCurveTo(cx + (25)*s,  cy + (80)*s,   cx + (-40)*s, cy + (65)*s);
-
-    pMaskCtx.save();
-    pMaskCtx.strokeStyle = "white";
-    pMaskCtx.lineWidth = strokeW;
-    pMaskCtx.lineCap = "round";
-    pMaskCtx.lineJoin = "round";
-    pMaskCtx.stroke(p);
-    pMaskCtx.restore();
+    maskCanvas.width = cv.width;
+    maskCanvas.height = cv.height;
+    maskCtx.clearRect(0,0,maskCanvas.width,maskCanvas.height);
+    maskCtx.drawImage(baseMask,0,0,maskCanvas.width,maskCanvas.height);
   }
 
-  // ====== 尺寸对齐：canvas + 两个离屏 mask ======
-  function resizeAll(){
-    const rect = img.getBoundingClientRect();
-    const scale = dpr();
-
-    // 可见涂抹层：按 CSS 像素绘制
-    cv.width  = Math.round(rect.width  * scale);
-    cv.height = Math.round(rect.height * scale);
-    ctx.setTransform(scale,0,0,scale,0,0);
-
-    // 基础 mask：像素坐标
-    baseMaskCanvas.width  = cv.width;
-    baseMaskCanvas.height = cv.height;
-
-    // P mask：像素坐标
-    pMaskCanvas.width  = cv.width;
-    pMaskCanvas.height = cv.height;
-
-    // 绘制基础 mask
-    baseMaskCtx.setTransform(1,0,0,1,0,0);
-    baseMaskCtx.clearRect(0,0,baseMaskCanvas.width, baseMaskCanvas.height);
-    baseMaskCtx.drawImage(baseMaskImg, 0, 0, baseMaskCanvas.width, baseMaskCanvas.height);
-
-    // 重建 P
-    rebuildPMask();
-  }
-
-  // ====== 挖洞：基础蒙版始终挖；P 仅在选中正确红时挖 ======
-  function punchOutMasks(){
-    const w = cv.width, h = cv.height;
-
+  function punch(){
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.globalCompositeOperation = "destination-out";
-
-    // 1) 基础蒙版
-    ctx.drawImage(baseMaskCanvas, 0, 0, w, h);
-
-    // 2) 仅正确红色挖 P
-    if (currentColor && currentColor.toLowerCase() === CORRECT_RED) {
-      ctx.drawImage(pMaskCanvas, 0, 0, w, h);
-    }
-
+    ctx.drawImage(maskCanvas,0,0);
     ctx.restore();
   }
 
-  // ====== 绘制：纯色不透明 ======
-  function dab(x, y){
-    ctx.save();
-    ctx.globalCompositeOperation = "source-over";
+  function dab(x,y){
     ctx.fillStyle = currentColor;
     ctx.beginPath();
-    ctx.arc(x, y, BRUSH_RADIUS_CSSPX, 0, Math.PI*2);
+    ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
     ctx.fill();
-    ctx.restore();
-
-    punchOutMasks();
+    punch();
   }
 
-  function strokeLine(x0,y0,x1,y1){
-    const dx = x1-x0, dy = y1-y0;
-    const dist = Math.hypot(dx,dy);
-    const step = Math.max(2, BRUSH_RADIUS_CSSPX * 0.5);
-    const n = Math.max(1, Math.ceil(dist / step));
-    for(let i=1;i<=n;i++){
-      const t = i/n;
-      dab(x0 + dx*t, y0 + dy*t);
+  function stroke(a,b,c,d){
+    const dx=c-a, dy=d-b;
+    const dist=Math.hypot(dx,dy);
+    const step=Math.max(2,BRUSH_RADIUS*.5);
+    for(let i=0;i<=dist;i+=step){
+      const t=i/dist;
+      dab(a+dx*t,b+dy*t);
     }
   }
 
-  function getXY(e){
-    const r = cv.getBoundingClientRect();
-    const p = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
-    return { x: p.clientX - r.left, y: p.clientY - r.top };
+  function pos(e){
+    const r=cv.getBoundingClientRect();
+    const p=e.touches?e.touches[0]:e;
+    return {x:p.clientX-r.left,y:p.clientY-r.top};
   }
 
-  let down = false, last = null;
+  cv.addEventListener("pointerdown",e=>{
+    if(!currentColor){ hintEl.innerHTML="请先<strong>选择颜色</strong>。"; return; }
+    down=true;
+    last=pos(e);
+    dab(last.x,last.y);
+  });
 
-  function warnNeedColor(){
-    hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br/><strong>只有正确红色才会显示隐藏的 P。</strong>';
-  }
-
-  function onDown(e){
-    e.preventDefault();
-    if(!currentColor){ warnNeedColor(); return; }
-
-    down = true;
-    const p = getXY(e);
-    last = p;
-    dab(p.x, p.y);
-  }
-  function onMove(e){
+  window.addEventListener("pointermove",e=>{
     if(!down) return;
-    e.preventDefault();
-    const p = getXY(e);
-    if(last) strokeLine(last.x, last.y, p.x, p.y);
-    last = p;
-  }
-  function onUp(e){
-    if(!down) return;
-    e.preventDefault();
-    down = false;
-    last = null;
-  }
+    const p=pos(e);
+    stroke(last.x,last.y,p.x,p.y);
+    last=p;
+  });
 
-  // ====== 事件绑定 ======
-  cv.addEventListener("pointerdown", onDown, { passive:false });
-  window.addEventListener("pointermove", onMove, { passive:false });
-  window.addEventListener("pointerup", onUp, { passive:false });
-  window.addEventListener("pointercancel", onUp, { passive:false });
+  window.addEventListener("pointerup",()=>{ down=false; });
 
-  // touch fallback
-  cv.addEventListener("touchstart", onDown, { passive:false });
-  window.addEventListener("touchmove", onMove, { passive:false });
-  window.addEventListener("touchend", onUp, { passive:false });
-  window.addEventListener("touchcancel", onUp, { passive:false });
-
-  // ====== 调色盘 UI ======
   function renderPalette(){
-    paletteEl.innerHTML = "";
-    COLORS.forEach((c) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "swatch";
-      b.style.setProperty("--c", c);
-      b.setAttribute("aria-label", "color " + c);
-
-      b.addEventListener("click", () => {
-        currentColor = c;
-
-        [...paletteEl.querySelectorAll(".swatch")].forEach(x => x.classList.remove("selected"));
+    COLORS.forEach(c=>{
+      const b=document.createElement("button");
+      b.className="swatch";
+      b.style.setProperty("--c",c);
+      b.onclick=()=>{
+        currentColor=c;
+        [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
         b.classList.add("selected");
-
-        if (c.toLowerCase() === CORRECT_RED) {
-          hintEl.innerHTML = '已选中<strong>正确红色</strong>：现在涂抹将显示隐藏的 P。';
-        } else {
-          hintEl.innerHTML = '已选中颜色：可以涂抹。但<strong>只有正确红色</strong>才会显示隐藏的 P。';
-        }
-      });
-
+        hintEl.innerHTML =
+          c===CORRECT_RED
+            ? "已选中<strong>正确红色</strong>，现在可以显示 P。"
+            : "已选中颜色，但<strong>只有正确红色</strong>才会显示 P。";
+      };
       paletteEl.appendChild(b);
     });
   }
 
-  // ====== 资源加载 ======
-  function ready(){
-    resizeAll();
-    renderPalette();
-    loading.classList.add("hide");
-  }
+  img.onload = ()=>{ if(baseMask.complete){ resize(); loading.classList.add("hide"); renderPalette(); } };
+  baseMask.onload = ()=>{ if(img.complete){ resize(); loading.classList.add("hide"); renderPalette(); } };
 
-  let imgOK = false, baseMaskOK = false;
-
-  img.addEventListener("load", () => { imgOK = true; if(baseMaskOK) ready(); });
-  img.addEventListener("error", () => { loading.textContent = "底图 bw.jpg 加载失败"; });
-
-  baseMaskImg.addEventListener("load", () => { baseMaskOK = true; if(imgOK) ready(); });
-  baseMaskImg.addEventListener("error", () => { loading.textContent = "蒙版 mask_base.png 加载失败"; });
-
-  window.addEventListener("resize", () => {
-    if(imgOK && baseMaskOK) resizeAll();
-  });
+  window.addEventListener("resize",()=>{ if(img.complete && baseMask.complete) resize(); });
 })();
 </script>
 </body>
