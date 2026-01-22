@@ -16,7 +16,7 @@
 
       --swatch: 44px;
       --swatch-gap: 14px;
-      --ring: 4px;
+      --ring: 5px;          /* 选中白圈粗细 */
 
       --hint-fs:14px;
       --hint-lh:1.6;
@@ -43,7 +43,7 @@
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
-      touch-action:none;
+      touch-action:none; /* 移动端拖动不滚屏 */
       background:#eee;
     }
 
@@ -85,7 +85,7 @@
       justify-content:center;
     }
 
-    /* 未选中：纯色圆点 */
+    /* 未选中：纯色圆点（无边框） */
     .swatch{
       width:var(--swatch);
       height:var(--swatch);
@@ -98,7 +98,7 @@
       -webkit-tap-highlight-color:transparent;
     }
 
-    /* 选中：白色外圈（与你给的图一致） */
+    /* 选中：白色外圈（不破坏内部颜色） */
     .swatch.selected{
       box-shadow: 0 0 0 var(--ring) #fff;
     }
@@ -139,11 +139,12 @@
 
 <script>
 (() => {
+  // ===== 核心参数 =====
   const BRUSH_RADIUS = 18;
-  const BASE_MASK_URL = "mask_base.png";
-  const CORRECT_RED = "#ff0000";
+  const BASE_MASK_URL = "mask_base.png"; // 透明蒙版：白框/白字
+  const CORRECT_RED = "#ff0000";         // 只有这个红色才显示 P
 
-  // ✅ 8 种颜色（已移除白色，新增深灰）
+  // 8 色（不含白色）
   const COLORS = [
     "#000000", // 黑
     "#00e5ff", // 青
@@ -152,12 +153,13 @@
     "#00b050", // 绿
     "#7030a0", // 紫
     "#0070c0", // 蓝
-    "#444444"  // 深灰（替代白色）
+    "#444444"  // 深灰
   ];
+  // ====================
 
   const img = document.getElementById("bw");
   const cv = document.getElementById("paint");
-  const ctx = cv.getContext("2d");
+  const ctx = cv.getContext("2d", { alpha:true });
   const paletteEl = document.getElementById("palette");
   const hintEl = document.getElementById("hint");
   const loading = document.getElementById("loading");
@@ -165,100 +167,193 @@
   let currentColor = null;
   let down = false, last = null;
 
-  const baseMask = new Image();
-  baseMask.src = BASE_MASK_URL;
+  // 基础蒙版（白框/白字）：始终挖洞
+  const baseMaskImg = new Image();
+  baseMaskImg.decoding = "async";
+  baseMaskImg.src = BASE_MASK_URL;
 
-  const maskCanvas = document.createElement("canvas");
-  const maskCtx = maskCanvas.getContext("2d");
+  const baseMaskCanvas = document.createElement("canvas");
+  const baseMaskCtx = baseMaskCanvas.getContext("2d");
 
-  function dpr(){ return window.devicePixelRatio || 1; }
+  // P 蒙版：仅正确红色时挖洞
+  const pMaskCanvas = document.createElement("canvas");
+  const pMaskCtx = pMaskCanvas.getContext("2d");
 
-  function resize(){
-    const r = img.getBoundingClientRect();
-    const s = dpr();
-    cv.width = r.width * s;
-    cv.height = r.height * s;
-    ctx.setTransform(s,0,0,s,0,0);
+  function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
-    maskCanvas.width = cv.width;
-    maskCanvas.height = cv.height;
-    maskCtx.clearRect(0,0,maskCanvas.width,maskCanvas.height);
-    maskCtx.drawImage(baseMask,0,0,maskCanvas.width,maskCanvas.height);
+  function rebuildPMask(){
+    const w = pMaskCanvas.width;
+    const h = pMaskCanvas.height;
+
+    pMaskCtx.setTransform(1,0,0,1,0,0);
+    pMaskCtx.clearRect(0,0,w,h);
+
+    // P 的位置/大小（你要微调就改这里三个数）
+    const cx = w * 0.58;
+    const cy = h * 0.58;
+    const s  = Math.min(w/1200, h/800) * 1.0;
+    const strokeW = Math.max(36, Math.round(58 * (w/1200)));
+
+    const p = new Path2D();
+
+    // 主竖
+    p.moveTo(cx + (-40)*s, cy + (-220)*s);
+    p.quadraticCurveTo(cx + (-60)*s, cy + (-80)*s,  cx + (-40)*s, cy + (80)*s);
+    p.quadraticCurveTo(cx + (-30)*s, cy + (160)*s,  cx + (-40)*s, cy + (240)*s);
+
+    // 上半圆肚
+    p.moveTo(cx + (-40)*s, cy + (-200)*s);
+    p.quadraticCurveTo(cx + (90)*s,  cy + (-215)*s, cx + (150)*s, cy + (-160)*s);
+    p.quadraticCurveTo(cx + (210)*s, cy + (-120)*s, cx + (195)*s, cy + (-50)*s);
+    p.quadraticCurveTo(cx + (175)*s, cy + (25)*s,   cx + (95)*s,  cy + (55)*s);
+    p.quadraticCurveTo(cx + (25)*s,  cy + (80)*s,   cx + (-40)*s, cy + (65)*s);
+
+    pMaskCtx.save();
+    pMaskCtx.strokeStyle = "white";
+    pMaskCtx.lineWidth = strokeW;
+    pMaskCtx.lineCap = "round";
+    pMaskCtx.lineJoin = "round";
+    pMaskCtx.stroke(p);
+    pMaskCtx.restore();
   }
 
+  function resizeAll(){
+    const r = img.getBoundingClientRect();
+    const s = dpr();
+
+    cv.width = Math.round(r.width * s);
+    cv.height = Math.round(r.height * s);
+    ctx.setTransform(s,0,0,s,0,0);
+
+    baseMaskCanvas.width = cv.width;
+    baseMaskCanvas.height = cv.height;
+
+    pMaskCanvas.width = cv.width;
+    pMaskCanvas.height = cv.height;
+
+    baseMaskCtx.setTransform(1,0,0,1,0,0);
+    baseMaskCtx.clearRect(0,0,baseMaskCanvas.width,baseMaskCanvas.height);
+    baseMaskCtx.drawImage(baseMaskImg, 0, 0, baseMaskCanvas.width, baseMaskCanvas.height);
+
+    rebuildPMask();
+  }
+
+  function isCorrectRed(){
+    if(!currentColor) return false;
+    return currentColor.trim().toLowerCase() === CORRECT_RED;
+  }
+
+  // 挖洞：基础蒙版总挖；P 仅正确红时挖
   function punch(){
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.globalCompositeOperation = "destination-out";
-    ctx.drawImage(maskCanvas,0,0);
+
+    ctx.drawImage(baseMaskCanvas, 0, 0);
+
+    if (isCorrectRed()){
+      ctx.drawImage(pMaskCanvas, 0, 0);
+    }
+
     ctx.restore();
   }
 
   function dab(x,y){
-    ctx.fillStyle = currentColor;
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = currentColor; // 100% 纯色
     ctx.beginPath();
     ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
     ctx.fill();
+    ctx.restore();
+
     punch();
   }
 
   function stroke(a,b,c,d){
     const dx=c-a, dy=d-b;
     const dist=Math.hypot(dx,dy);
-    const step=Math.max(2,BRUSH_RADIUS*.5);
-    for(let i=0;i<=dist;i+=step){
-      const t=i/dist;
-      dab(a+dx*t,b+dy*t);
+    const step=Math.max(2,BRUSH_RADIUS*0.5);
+    const n=Math.max(1, Math.ceil(dist/step));
+    for(let i=1;i<=n;i++){
+      const t=i/n;
+      dab(a+dx*t, b+dy*t);
     }
   }
 
   function pos(e){
     const r=cv.getBoundingClientRect();
-    const p=e.touches?e.touches[0]:e;
-    return {x:p.clientX-r.left,y:p.clientY-r.top};
+    const p=(e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+    return {x:p.clientX-r.left, y:p.clientY-r.top};
   }
 
-  cv.addEventListener("pointerdown",e=>{
-    if(!currentColor){
-      hintEl.innerHTML="请先<strong>选择一种颜色</strong>。";
-      return;
-    }
+  function warnNeedColor(){
+    hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br><strong>只有正确红色才会显示隐藏的 P。</strong>';
+  }
+
+  cv.addEventListener("pointerdown", e=>{
+    e.preventDefault();
+    if(!currentColor){ warnNeedColor(); return; }
     down=true;
     last=pos(e);
     dab(last.x,last.y);
-  });
+  }, {passive:false});
 
-  window.addEventListener("pointermove",e=>{
+  window.addEventListener("pointermove", e=>{
     if(!down) return;
+    e.preventDefault();
     const p=pos(e);
     stroke(last.x,last.y,p.x,p.y);
     last=p;
-  });
+  }, {passive:false});
 
-  window.addEventListener("pointerup",()=>{ down=false; });
+  window.addEventListener("pointerup", e=>{
+    down=false;
+    last=null;
+  }, {passive:true});
 
+  window.addEventListener("pointercancel", ()=>{
+    down=false; last=null;
+  }, {passive:true});
+
+  // 调色盘
   function renderPalette(){
+    paletteEl.innerHTML = "";
     COLORS.forEach(c=>{
       const b=document.createElement("button");
+      b.type="button";
       b.className="swatch";
-      b.style.setProperty("--c",c);
-      b.onclick=()=>{
-        currentColor=c;
+      b.style.setProperty("--c", c);
+      b.addEventListener("click", ()=>{
+        currentColor = c;
         [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
         b.classList.add("selected");
-        hintEl.innerHTML =
-          c===CORRECT_RED
-            ? "已选中<strong>正确红色</strong>，现在可以显示 P。"
-            : "已选中颜色，但<strong>只有正确红色</strong>才会显示 P。";
-      };
+
+        hintEl.innerHTML = isCorrectRed()
+          ? '已选中<strong>正确红色</strong>：现在涂抹将显示隐藏的 P。'
+          : '已选中颜色：可以涂抹。但<strong>只有正确红色</strong>才会显示隐藏的 P。';
+      });
       paletteEl.appendChild(b);
     });
   }
 
-  img.onload = ()=>{ if(baseMask.complete){ resize(); loading.classList.add("hide"); renderPalette(); } };
-  baseMask.onload = ()=>{ if(img.complete){ resize(); loading.classList.add("hide"); renderPalette(); } };
+  function ready(){
+    resizeAll();
+    renderPalette();
+    loading.classList.add("hide");
+  }
 
-  window.addEventListener("resize",()=>{ if(img.complete && baseMask.complete) resize(); });
+  let imgOK=false, maskOK=false;
+
+  img.addEventListener("load", ()=>{ imgOK=true; if(maskOK) ready(); });
+  img.addEventListener("error", ()=>{ loading.textContent="底图 bw.jpg 加载失败"; });
+
+  baseMaskImg.addEventListener("load", ()=>{ maskOK=true; if(imgOK) ready(); });
+  baseMaskImg.addEventListener("error", ()=>{ loading.textContent="蒙版 mask_base.png 加载失败"; });
+
+  window.addEventListener("resize", ()=>{
+    if(imgOK && maskOK) resizeAll();
+  });
 })();
 </script>
 </body>
