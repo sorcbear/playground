@@ -3,8 +3,6 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- 禁止 iOS Safari 自动识别地址/电话/邮箱 -->
   <meta name="format-detection" content="telephone=no,address=no,email=no">
 
   <title>Post Puzzle</title>
@@ -16,6 +14,9 @@
       --fs-body: 16px;
       --lh-body: 1.8;
 
+      --fs-title: 18px;
+      --lh-title: 1.6;
+
       --fs-btn: 16px;
       --fw-btn: 600;
       --h-btn: 52px;
@@ -23,7 +24,6 @@
       --c-text:#111;
       --c-border:#000;
       --c-ok:#0b6b2b;
-      --c-danger:#b00020;
     }
 
     body{
@@ -42,10 +42,17 @@
       margin:0 auto;
     }
 
-    .text{
-      font-size:16px;
+    /* ===== title 统一样式 ===== */
+    .title{
+      font-size:var(--fs-title);
+      line-height:var(--lh-title);
+      font-weight:700;
+      margin:0 0 18px;
+    }
+
+    /* 顶部那段故事文字，仅控制下边距 */
+    .title.story{
       margin-bottom:24px;
-      white-space:pre-wrap;
     }
 
     .image-box{
@@ -59,12 +66,13 @@
       margin:0 auto;
     }
 
+    /* ===== 输入区 ===== */
     .answer{
       display:flex;
       gap:12px;
-      margin-bottom:14px;
       align-items:center;
       flex-wrap:nowrap;
+      margin-bottom:18px; /* 与按钮之间空 1 行 */
     }
 
     .answer input{
@@ -83,9 +91,8 @@
     .answer input.short{ width:60px; }
     .answer input:focus{ outline:none; box-shadow:none; }
 
-    /* ====== 按钮区：按 Square Puzzle 规格 ====== */
+    /* ===== 按钮区（Square Puzzle 规格） ===== */
     .panel{
-      margin-top:18px;
       display:flex;
       gap:12px;
       justify-content:center;
@@ -98,7 +105,7 @@
       padding:0 18px;
       box-sizing:border-box;
       font-size:var(--fs-btn);
-      font-weight:var(--fw-btn);
+      font-weight:600;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
@@ -108,12 +115,10 @@
       font-family:inherit;
     }
 
-    /* PC hover */
     @media (hover:hover) and (pointer:fine){
       button:hover{ background:#000; color:#fff; }
     }
 
-    /* JS 控制的点击反馈 / 错误提示态 */
     button.invert{
       background:#000;
       color:#fff;
@@ -144,7 +149,8 @@
 <body>
   <div class="container">
 
-    <div class="text">
+    <!-- ★ 顶部文字：title 样式 -->
+    <div class="title story">
 在刚刚路过的十字路口的一角好像看到个绿色大邮筒。这也是个老物件了，记得运营这个邮筒公众号的小编，也曾经是这个游戏的玩家。但她仿佛消失了一样，好久没有她的消息了，她上次更新公众号是什么日子？
     </div>
 
@@ -152,10 +158,13 @@
       <img src="post.png" alt="post" />
     </div>
 
+    <!-- ★ 输入说明：title 样式 -->
+    <div class="title">最后更新日期：</div>
+
     <div class="answer">
-      <input id="year" placeholder="YYYY" inputmode="numeric" autocomplete="off" />
+      <input id="year"  placeholder="YYYY" inputmode="numeric" autocomplete="off" />
       <input id="month" class="short" placeholder="MM" inputmode="numeric" autocomplete="off" />
-      <input id="day" class="short" placeholder="DD" inputmode="numeric" autocomplete="off" />
+      <input id="day"   class="short" placeholder="DD" inputmode="numeric" autocomplete="off" />
     </div>
 
     <div class="panel">
@@ -167,104 +176,89 @@
   </div>
 
   <script>
-    // ===== 可配置项 =====
-    const HINT_URL = "https://sorcbear.github.io/playground/post/hint"; // 你按实际路径改
+    const HINT_URL = "https://sorcbear.github.io/playground/post/hint";
     const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";
     const COUNTDOWN_START = 3;
 
-    // 正确答案：2015-02-14（保持你现在逻辑）
-    const CORRECT = { y: 2015, m: 2, d: 14 };
+    const CORRECT = { y:2015, m:2, d:14 };
 
     const yearInput  = document.getElementById("year");
     const monthInput = document.getElementById("month");
     const dayInput   = document.getElementById("day");
+    const submitBtn  = document.getElementById("submitBtn");
+    const hintBtn    = document.getElementById("hintBtn");
+    const msg        = document.getElementById("msg");
 
-    const submitBtn = document.getElementById("submitBtn");
-    const hintBtn   = document.getElementById("hintBtn");
-    const msg       = document.getElementById("msg");
+    let locked=false;
+    let timer=null;
+    let btnTimer=null;
 
-    let locked = false;
-    let timer = null;
-    let btnTimer = null;
-
-    /* 公共：短暂黑底白字反馈（与 Square Puzzle 一致） */
     function flashInvert(btn, ms=120){
       btn.classList.add("invert");
       setTimeout(()=>btn.classList.remove("invert"), ms);
     }
 
     function setLocked(v){
-      locked = v;
-      submitBtn.disabled = v;
-      hintBtn.disabled = v;
-      yearInput.disabled = v;
-      monthInput.disabled = v;
-      dayInput.disabled = v;
+      locked=v;
+      submitBtn.disabled=v;
+      hintBtn.disabled=v;
+      yearInput.disabled=v;
+      monthInput.disabled=v;
+      dayInput.disabled=v;
     }
 
-    /* 错误提示：提交按钮短暂改字 + 黑底白字 + 禁用（与 Square Puzzle 一致） */
     function setBtnText(text, ms=900){
-      if (btnTimer){ clearTimeout(btnTimer); btnTimer = null; }
-
-      submitBtn.textContent = text;
+      if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+      submitBtn.textContent=text;
       submitBtn.classList.add("invert");
-      submitBtn.disabled = true;
+      submitBtn.disabled=true;
 
-      btnTimer = setTimeout(()=>{
-        submitBtn.textContent = "提交答案";
+      btnTimer=setTimeout(()=>{
+        submitBtn.textContent="提交答案";
         submitBtn.classList.remove("invert");
-        submitBtn.disabled = false;
-        btnTimer = null;
+        submitBtn.disabled=false;
+        btnTimer=null;
       }, ms);
     }
 
-    /* 获得提示：先反馈，再跳转（与 Square Puzzle 一致） */
-    hintBtn.onclick = ()=>{
-      if (locked) return;
-      flashInvert(hintBtn, 120);
-      setTimeout(()=>location.href = HINT_URL, 120);
+    hintBtn.onclick=()=>{
+      if(locked) return;
+      flashInvert(hintBtn,120);
+      setTimeout(()=>location.href=HINT_URL,120);
     };
 
     function isCorrect(){
-      const y = Number(yearInput.value.trim());
-      const m = Number(monthInput.value.trim());
-      const d = Number(dayInput.value.trim());
-
-      return (
-        !Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d) &&
-        y === CORRECT.y && m === CORRECT.m && d === CORRECT.d
-      );
+      const y=Number(yearInput.value.trim());
+      const m=Number(monthInput.value.trim());
+      const d=Number(dayInput.value.trim());
+      return !Number.isNaN(y)&&!Number.isNaN(m)&&!Number.isNaN(d)
+        && y===CORRECT.y && m===CORRECT.m && d===CORRECT.d;
     }
 
-    submitBtn.onclick = ()=>{
-      if (locked) return;
+    submitBtn.onclick=()=>{
+      if(locked) return;
 
-      if (isCorrect()){
+      if(isCorrect()){
         setLocked(true);
-
-        let t = COUNTDOWN_START;
-        msg.textContent = `答案正确，即将进入下一题（${t}）`;
+        let t=COUNTDOWN_START;
+        msg.textContent=`答案正确，即将进入下一题（${t}）`;
         msg.classList.add("ok");
 
-        if (timer) clearInterval(timer);
-        timer = setInterval(()=>{
+        timer=setInterval(()=>{
           t--;
-          if (t > 0){
-            msg.textContent = `答案正确，即将进入下一题（${t}）`;
+          if(t>0){
+            msg.textContent=`答案正确，即将进入下一题（${t}）`;
           }else{
             clearInterval(timer);
-            timer = null;
-            location.href = NEXT_URL;
+            location.href=NEXT_URL;
           }
-        }, 1000);
-
+        },1000);
       }else{
-        msg.textContent = "";
+        msg.textContent="";
         msg.classList.remove("ok");
-        setBtnText("不正确，再试一次", 900);
+        setBtnText("不正确，再试一次",900);
       }
     };
   </script>
-
 </body>
 </html>
