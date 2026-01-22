@@ -32,8 +32,8 @@
     *{ box-sizing:border-box; }
     html,body{
       height:100%;
-      margin:0;       /* ✅ 清除默认外边距 */
-      padding:0;      /* ✅ 清除默认内边距 */
+      margin:0;
+      padding:0;
     }
 
     body{
@@ -51,13 +51,14 @@
       padding:0 14px;     /* ✅ 只留左右，不要上下白边 */
     }
 
-    /* 标题：无任何上边距 */
+    /* ===== 标题：按 Rotate 规范（只改这里，其它不动） ===== */
     .title{
-      font-size:var(--fs-hint);
-      line-height:var(--lh-hint);
-      font-weight:700;
-      margin:0;                 /* ✅ 清零 */
-      white-space:pre-wrap;
+      font-size: 18px;          /* Rotate: 18px */
+      line-height: 1.6;         /* Rotate: 1.6（不使用当前 --lh-hint=1.4） */
+      font-weight: 700;         /* Rotate: 700 */
+      margin: 4px 0 18px;       /* Rotate: 4px 上 + 18px 下 */
+      text-align: left;         /* Rotate: left */
+      white-space: pre-wrap;    /* Rotate: pre-wrap */
     }
 
     .image-box{
@@ -106,7 +107,7 @@
       justify-content:center;
       gap:12px;
       flex-wrap:nowrap;
-      padding-bottom: 18px; /* ✅ 给底部一点点“触底缓冲”，避免手机误触到浏览器底栏 */
+      padding-bottom: 18px;
     }
 
     button{
