@@ -27,6 +27,9 @@
   --c-border:#000;
   --c-ok:#0b6b2b;
   --c-danger:#b00020;
+
+  /* ✅ 为了严格对齐 Rotate：补齐 gap（Rotate 就是 18px） */
+  --gap: 18px;
 }
 
 html,body{
@@ -46,13 +49,16 @@ html,body{
   box-sizing:border-box;
 }
 
-/* 标题 */
+/* ✅ 标题：严格等同 Rotate 的 .titleLine 排版 */
 .title{
-  margin:0;
-  padding:0;
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
+  margin:4px 0 var(--gap);   /* Rotate: 上4px，下18px */
+  padding:0;
+
+  text-align:left;           /* Rotate: left */
+  white-space:pre-wrap;      /* Rotate: pre-wrap */
 }
 
 /* 图片 */
@@ -141,7 +147,7 @@ button:disabled{
 }
 .msg.ok{
   color:var(--c-ok);
-  font-weight:700; /* 或 600，看你整体字重 */
+  font-weight:700;
 }
 
 @media (max-width:520px){
