@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Scratch Reveal (P mask)</title>
+  <title>Scratch Reveal (Combined Mask)</title>
   <style>
     :root{
       --maxw: 980px;
@@ -19,11 +19,7 @@
       color:var(--text);
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
     }
-    .wrap{
-      max-width: var(--maxw);
-      margin: 0 auto;
-      padding: var(--pad);
-    }
+    .wrap{ max-width: var(--maxw); margin: 0 auto; padding: var(--pad); }
     .stage{
       position: relative;
       width: 100%;
@@ -31,27 +27,19 @@
       overflow: hidden;
       user-select: none;
       -webkit-user-select: none;
-      touch-action: none; /* 关键：移动端手指划动不触发页面滚动 */
+      touch-action: none;
       background: #eee;
     }
-    .stage img{
-      width: 100%;
-      display: block;
-    }
+    .stage img{ width: 100%; display:block; }
     canvas.overlay{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
+      position:absolute; inset:0;
+      width:100%; height:100%;
       display:block;
       pointer-events:auto;
     }
     .loading{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
       font-size:14px;
       background: rgba(255,255,255,.78);
       backdrop-filter: blur(2px);
@@ -63,10 +51,10 @@
 <body>
   <div class="wrap">
     <div class="stage" id="stage">
-      <!-- 你的黑白底图文件名：bw.jpg（放在同目录） -->
+      <!-- 黑白底图 -->
       <img id="bw" src="bw.jpg" alt="bw" />
 
-      <!-- 红色涂抹层（会被 mask 抠出透明 P） -->
+      <!-- 红色涂抹层 -->
       <canvas id="paint" class="overlay"></canvas>
 
       <div id="loading" class="loading">资源加载中</div>
@@ -75,100 +63,113 @@
 
 <script>
 (() => {
-  // ===== 可调参数（你之后只需要改这些）=====
-  const BRUSH_RADIUS_CSSPX = 18;   // 画笔半径（CSS像素）
-  const BRUSH_COLOR = "#ff0000";   // ✅ 100% 纯红（不透明）
-  // =======================================
+  // ===== 可调参数 =====
+  const BRUSH_RADIUS_CSSPX = 18;      // 画笔半径（CSS像素）
+  const BRUSH_COLOR = "#ff0000";      // 100% 纯红
+  const BASE_MASK_URL = "mask_base.png"; // 你上传的“白框+文字”蒙版
+  // ====================
 
   const img = document.getElementById("bw");
   const cv = document.getElementById("paint");
   const loading = document.getElementById("loading");
-
   const ctx = cv.getContext("2d", { alpha:true });
 
-  // 离屏：mask（白色=需要被抠掉的字母区域）
+  // 离屏：合成 mask（基础蒙版 + 手写P）
   const maskCanvas = document.createElement("canvas");
   const maskCtx = maskCanvas.getContext("2d");
 
-  // 手写P蒙版（白色笔画）——小一点
-  const P_MASK_SVG = `
-<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1200" height="800" fill="transparent"/>
-  <path
-    d="
-      M 560 240
-      Q 540 360 560 520
-      Q 570 600 560 660
+  // 基础蒙版图片（你发的那张）
+  const baseMaskImg = new Image();
+  baseMaskImg.decoding = "async";
+  baseMaskImg.src = BASE_MASK_URL;
 
-      M 560 260
-      Q 650 245 705 290
-      Q 755 330 740 395
-      Q 725 455 655 480
-      Q 600 498 560 485
-    "
-    fill="none"
-    stroke="white"
-    stroke-width="60"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-</svg>`.trim();
+  // 手写P：用 Path2D 直接画进 maskCanvas（白色=需要被抠掉的区域）
+  function drawHandwrittenP_ontoMask() {
+    // 这里用“相对画面”的比例定位，保证不同尺寸下也相对稳定
+    const w = maskCanvas.width;
+    const h = maskCanvas.height;
 
-  const maskImg = new Image();
-  maskImg.decoding = "async";
-  maskImg.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(P_MASK_SVG);
+    // 你可以通过调这些比例来移动/缩放 P
+    const cx = w * 0.58;   // 中心 x（越大越往右）
+    const cy = h * 0.58;   // 中心 y（越大越往下）
+    const scale = Math.min(w/1200, h/800) * 1.0; // 整体缩放因子（越大P越大）
 
-  // 设备像素比（保证清晰、触点对齐）
+    // 画笔粗细（像素）
+    const strokeW = Math.max(40, Math.round(60 * (w/1200))); // 根据画面宽度自适应
+
+    // 用 path 表达 P（与之前类似，但改成“局部定位”）
+    const p = new Path2D();
+    // 主竖
+    p.moveTo(cx + (-40)*scale, cy + (-220)*scale);
+    p.quadraticCurveTo(cx + (-60)*scale, cy + (-80)*scale,  cx + (-40)*scale, cy + (80)*scale);
+    p.quadraticCurveTo(cx + (-30)*scale, cy + (160)*scale,  cx + (-40)*scale, cy + (240)*scale);
+
+    // 上半圆肚
+    p.moveTo(cx + (-40)*scale, cy + (-200)*scale);
+    p.quadraticCurveTo(cx + (90)*scale,  cy + (-215)*scale, cx + (150)*scale, cy + (-160)*scale);
+    p.quadraticCurveTo(cx + (210)*scale, cy + (-120)*scale, cx + (195)*scale, cy + (-50)*scale);
+    p.quadraticCurveTo(cx + (175)*scale, cy + (25)*scale,   cx + (95)*scale,  cy + (55)*scale);
+    p.quadraticCurveTo(cx + (25)*scale,  cy + (80)*scale,   cx + (-40)*scale, cy + (65)*scale);
+
+    maskCtx.save();
+    maskCtx.strokeStyle = "white";
+    maskCtx.lineWidth = strokeW;
+    maskCtx.lineCap = "round";
+    maskCtx.lineJoin = "round";
+    maskCtx.stroke(p);
+    maskCtx.restore();
+  }
+
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
-  // 根据 img 的显示尺寸重置 canvas（保持像素级对齐）
-  function resizeAll(){
+  // 重新对齐尺寸，并重建合成 mask
+  function rebuildMask(){
     const rect = img.getBoundingClientRect();
     const scale = dpr();
 
-    // 可见层
+    // 可见涂抹层：按 CSS 像素绘制
     cv.width  = Math.round(rect.width  * scale);
     cv.height = Math.round(rect.height * scale);
-
-    // 以后按 CSS 像素作画
     ctx.setTransform(scale,0,0,scale,0,0);
 
-    // mask 离屏层（与可见层同像素）
+    // 合成 mask：像素尺寸
     maskCanvas.width  = cv.width;
     maskCanvas.height = cv.height;
 
-    // 把 mask 图缩放绘制到离屏层（覆盖全画面）
+    // 1) 先画基础蒙版（你的 mask_base.png）
     maskCtx.setTransform(1,0,0,1,0,0);
     maskCtx.clearRect(0,0,maskCanvas.width, maskCanvas.height);
-    maskCtx.drawImage(maskImg, 0, 0, maskCanvas.width, maskCanvas.height);
+    maskCtx.drawImage(baseMaskImg, 0, 0, maskCanvas.width, maskCanvas.height);
+
+    // 2) 再叠加手写 P（白色）
+    drawHandwrittenP_ontoMask();
   }
 
-  // 抠洞：把“P 区域”从红色涂层里清除为透明
-  function punchOutP(){
+  // 用合成 mask 抠洞：把 mask 白色区域从红色层里清除成透明
+  function punchOutCombinedMask(){
     const w = cv.width, h = cv.height;
     ctx.save();
-    // 临时切到像素坐标系（因为 maskCanvas 是像素尺寸）
-    ctx.setTransform(1,0,0,1,0,0);
+    ctx.setTransform(1,0,0,1,0,0); // 切到像素坐标系
     ctx.globalCompositeOperation = "destination-out";
     ctx.drawImage(maskCanvas, 0, 0, w, h);
     ctx.restore();
   }
 
-  // 在 (x,y) 画一个“纯红”圆（不透明，不叠加变深）
+  // 画纯红点
   function dab(x, y){
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = BRUSH_COLOR; // ✅ 纯色，不透明
+    ctx.fillStyle = BRUSH_COLOR; // 纯色不透明
     ctx.beginPath();
     ctx.arc(x, y, BRUSH_RADIUS_CSSPX, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
 
-    // 画完立刻抠洞：P 区域永远透明（显示底下黑白图）
-    punchOutP();
+    // 每次画完立刻抠洞（基础蒙版 + P）
+    punchOutCombinedMask();
   }
 
-  // 连续划线：在两点间插值打点，避免断裂
+  // 连续划线：插值打点
   function strokeLine(x0,y0,x1,y1){
     const dx = x1-x0, dy = y1-y0;
     const dist = Math.hypot(dx,dy);
@@ -180,18 +181,13 @@
     }
   }
 
-  // 坐标转换：事件 -> canvas CSS像素坐标
   function getXY(e){
     const r = cv.getBoundingClientRect();
     const p = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
-    return {
-      x: p.clientX - r.left,
-      y: p.clientY - r.top
-    };
+    return { x: p.clientX - r.left, y: p.clientY - r.top };
   }
 
-  let down = false;
-  let last = null;
+  let down = false, last = null;
 
   function onDown(e){
     e.preventDefault();
@@ -214,34 +210,34 @@
     last = null;
   }
 
-  // 绑定（指针事件优先）
+  // 绑定事件
   cv.addEventListener("pointerdown", onDown, { passive:false });
   window.addEventListener("pointermove", onMove, { passive:false });
   window.addEventListener("pointerup", onUp, { passive:false });
   window.addEventListener("pointercancel", onUp, { passive:false });
 
-  // 兼容少数环境
+  // touch fallback
   cv.addEventListener("touchstart", onDown, { passive:false });
   window.addEventListener("touchmove", onMove, { passive:false });
   window.addEventListener("touchend", onUp, { passive:false });
   window.addEventListener("touchcancel", onUp, { passive:false });
 
   function ready(){
-    resizeAll();
+    rebuildMask();
     loading.classList.add("hide");
   }
 
-  let imgOK = false, maskOK = false;
+  let imgOK = false, baseMaskOK = false;
 
-  img.addEventListener("load", () => { imgOK = true; if(maskOK) ready(); });
+  img.addEventListener("load", () => { imgOK = true; if(baseMaskOK) ready(); });
   img.addEventListener("error", () => { loading.textContent = "底图 bw.jpg 加载失败"; });
 
-  maskImg.addEventListener("load", () => { maskOK = true; if(imgOK) ready(); });
-  maskImg.addEventListener("error", () => { loading.textContent = "P 蒙版加载失败"; });
+  baseMaskImg.addEventListener("load", () => { baseMaskOK = true; if(imgOK) ready(); });
+  baseMaskImg.addEventListener("error", () => { loading.textContent = "基础蒙版 mask_base.png 加载失败"; });
 
-  // 窗口变化（旋转/缩放）会触发 canvas 重置（涂抹层会清空）
   window.addEventListener("resize", () => {
-    if(imgOK && maskOK) resizeAll();
+    // resize 会清空涂层；如需保留涂抹进度，需要做缓存（可再加）
+    if(imgOK && baseMaskOK) rebuildMask();
   });
 })();
 </script>
