@@ -66,44 +66,45 @@ img{
 }
 
 /* ===== 输入区 ===== */
-.code{
-  margin-top:18px;
-}
+.code{ margin-top:18px; }
 
-/* 输入框行 */
 .slots{
   margin-top:12px;
   display:flex;
   align-items:center;
   flex-wrap:wrap;
   gap:8px;
-  margin-bottom:36px; /* ✅ 与按钮之间多隔一行 */
+  margin-bottom:36px; /* 与按钮之间多隔一行 */
 }
 
-/* ===== 输入框（与 title 字体完全一致） ===== */
+/* ===== 单行 input：真正垂直居中 ===== */
 .slot{
-  height:40px;
-  line-height:40px;
+  height:46px;
+  line-height:46px;          /* ✅ input 垂直居中关键 */
   border:2px solid var(--c-border);
   font-size:var(--fs-title);
   font-weight:700;
   font-family:inherit;
   text-align:center;
-  resize:none;
-  outline:none;
-  padding:0 8px;
+  padding:0 6px;             /* 左右内边距，不影响垂直居中 */
   box-sizing:border-box;
+  outline:none;
   caret-color:#000;
+  border-radius:0;
+  -webkit-appearance:none;
 }
-textarea{ overflow:hidden; }
 
+/* 防止 iOS 乱加阴影/圆角 */
+.slot:focus{ outline:none; box-shadow:none; }
+
+/* 宽度 */
 .w1{ width:50px; }
 .w2{ width:84px; }
 
-/* ===== 固定字：路（与 title 完全一致） ===== */
+/* 固定字：路（与 title 完全一致） */
 .fixedWord{
-  height:40px;
-  line-height:40px;
+  height:46px;
+  line-height:46px;
   font-size:var(--fs-title);
   font-weight:700;
   font-family:inherit;
@@ -175,7 +176,6 @@ button:disabled{
 <body>
 <div class="wrap">
 
-  <!-- 顶部文字：title 样式 -->
   <p class="title">
     原来是那一天，记得参加完签售会后，我去了衡山公园约会，那里有一个名人雕塑，或许有下一个谜题的线索。
   </p>
@@ -183,21 +183,20 @@ button:disabled{
   <img src="puzzle.png" alt="puzzle">
 
   <div class="code">
-    <!-- 提示语：title 样式 -->
     <div class="title">请在彩色方框内输入暗号：</div>
 
     <div class="slots">
-      <textarea id="s1" class="slot w1" style="background:var(--c-blue)"></textarea>
-      <textarea id="s2" class="slot w2" style="background:var(--c-cyan)"></textarea>
-      <textarea id="s3" class="slot w1" style="background:var(--c-green)"></textarea>
-      <textarea id="s4" class="slot w2" style="background:var(--c-lgreen)"></textarea>
+      <input id="s1" class="slot w1" style="background:var(--c-blue)"  inputmode="text" autocomplete="off" />
+      <input id="s2" class="slot w2" style="background:var(--c-cyan)"  inputmode="text" autocomplete="off" />
+      <input id="s3" class="slot w1" style="background:var(--c-green)" inputmode="text" autocomplete="off" />
+      <input id="s4" class="slot w2" style="background:var(--c-lgreen)" inputmode="text" autocomplete="off" />
 
       <div class="fixedWord">路</div>
 
-      <textarea id="s5" class="slot w1" style="background:var(--c-yellow)"></textarea>
-      <textarea id="s6" class="slot w1" style="background:var(--c-orange)"></textarea>
-      <textarea id="s7" class="slot w1" style="background:var(--c-red)"></textarea>
-      <textarea id="s8" class="slot w1" style="background:var(--c-purple)"></textarea>
+      <input id="s5" class="slot w1" style="background:var(--c-yellow)" inputmode="text" autocomplete="off" />
+      <input id="s6" class="slot w1" style="background:var(--c-orange)" inputmode="text" autocomplete="off" />
+      <input id="s7" class="slot w1" style="background:var(--c-red)"    inputmode="text" autocomplete="off" />
+      <input id="s8" class="slot w1" style="background:var(--c-purple)" inputmode="text" autocomplete="off" />
     </div>
   </div>
 
