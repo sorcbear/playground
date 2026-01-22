@@ -40,18 +40,18 @@
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
-      padding:12px;
+      padding:18px 14px 28px; /* ✅ 关键：与 Rotate 完全一致 */
       box-sizing:border-box;
     }
 
-    /* ===== 顶部说明文字（严格等同 Rotate 的 titleLine） ===== */
+    /* ===== 顶部说明文字：与 Rotate 的 .titleLine 一致 ===== */
     .title{
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      font-weight: 700;
       margin: 4px 0 var(--gap);
-      text-align: left;
-      white-space: pre-wrap;
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      font-weight:700;
+      text-align:left;
+      white-space:pre-wrap;
     }
 
     .stage{
@@ -74,6 +74,7 @@
       justify-content:center;
     }
 
+    /* startgame 风格按钮 */
     button{
       width:240px;
       height:var(--h-btn);
@@ -115,7 +116,7 @@
 <body>
 <div class="wrap">
 
-  <!-- ⚠️ 关键：文字不以换行/空格开头 -->
+  <!-- 关键：不以换行/空格开头（避免 pre-wrap 显示缩进） -->
   <div class="title">走到天平路41号马路正对面的行人道上，面向天平路康平路路口方向，留意50米范围内的墙面信息，进行答题。点击正确位置的圆圈后提交答案。</div>
 
   <div class="stage">
@@ -218,6 +219,33 @@ function render(){
   });
 }
 
+/* ===== 复用 square 的按钮逻辑（不动其他部分） ===== */
+function flashInvert(btn, ms=120){
+  btn.classList.add("invert");
+  setTimeout(()=>btn.classList.remove("invert"), ms);
+}
+
+function setLocked(v){
+  locked=v;
+  submitBtn.disabled=v;
+  hintBtn.disabled=v;
+}
+
+function setBtnText(text, ms=900){
+  if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+
+  submitBtn.textContent = text;
+  submitBtn.classList.add("invert");
+  submitBtn.disabled = true;
+
+  btnTimer = setTimeout(()=>{
+    submitBtn.textContent = "提交答案";
+    submitBtn.classList.remove("invert");
+    submitBtn.disabled = false;
+    btnTimer = null;
+  }, ms);
+}
+
 /* ===== 事件 ===== */
 catcher.addEventListener("pointerdown",e=>{
   if(locked) return;
@@ -230,7 +258,7 @@ catcher.addEventListener("pointerdown",e=>{
 
 hintBtn.onclick = ()=>{
   if (locked) return;
-  hintBtn.classList.add("invert");
+  flashInvert(hintBtn, 120);
   setTimeout(()=>location.href = HINT_URL, 120);
 };
 
@@ -238,34 +266,25 @@ submitBtn.onclick=()=>{
   if(locked) return;
 
   if(sameSet(userPts(),ANSWER_POINTS)){
-    locked=true;
-    submitBtn.disabled=true;
-    hintBtn.disabled=true;
+    setLocked(true);
 
     let t=COUNTDOWN_START;
     msg.textContent=`答案正确，即将进入下一题（${t}）`;
     msg.classList.add("ok");
 
-    const timer=setInterval(()=>{
+    countdownTimer=setInterval(()=>{
       t--;
       if(t>0){
         msg.textContent=`答案正确，即将进入下一题（${t}）`;
       }else{
-        clearInterval(timer);
+        clearInterval(countdownTimer);
         location.href=NEXT_URL;
       }
     },1000);
   }else{
     msg.textContent="";
     msg.classList.remove("ok");
-    submitBtn.textContent="不正确，再试一次";
-    submitBtn.classList.add("invert");
-    submitBtn.disabled=true;
-    setTimeout(()=>{
-      submitBtn.textContent="提交答案";
-      submitBtn.classList.remove("invert");
-      submitBtn.disabled=false;
-    },900);
+    setBtnText("不正确，再试一次",900);
   }
 };
 
