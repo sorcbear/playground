@@ -50,9 +50,10 @@
       margin:0 0 18px;
     }
 
-    /* 顶部那段故事文字，仅控制下边距 */
+    /* 顶部故事文字 */
     .title.story{
       margin-bottom:24px;
+      white-space:pre-wrap;
     }
 
     .image-box{
@@ -66,30 +67,35 @@
       margin:0 auto;
     }
 
-    /* ===== 输入区 ===== */
-    .answer{
+    /* ===== 最后更新日期：文字 + 输入框同一行（title 样式） ===== */
+    .title-row{
       display:flex;
-      gap:12px;
       align-items:center;
+      gap:14px;               /* 文字与 YYYY 之间的距离 */
+      font-size:var(--fs-title);
+      line-height:var(--lh-title);
+      font-weight:700;
+      margin:0 0 36px;        /* 与按钮之间多空一行 */
       flex-wrap:nowrap;
-      margin-bottom:18px; /* 与按钮之间空 1 行 */
     }
 
-    .answer input{
-      width:90px;
+    /* 输入框 */
+    .ansInput{
       height:40px;
       padding:0 8px;
-      font-size:16px;
       border:2px solid var(--c-border);
       border-radius:0;
-      outline:none;
+      font-size:16px;
       text-align:center;
-      box-sizing:border-box;
+      outline:none;
       box-shadow:none;
       -webkit-appearance:none;
+      box-sizing:border-box;
     }
-    .answer input.short{ width:60px; }
-    .answer input:focus{ outline:none; box-shadow:none; }
+    .ansInput:focus{ outline:none; box-shadow:none; }
+
+    .ansInput.year{ width:90px; }
+    .ansInput.short{ width:60px; }
 
     /* ===== 按钮区（Square Puzzle 规格） ===== */
     .panel{
@@ -149,7 +155,6 @@
 <body>
   <div class="container">
 
-    <!-- ★ 顶部文字：title 样式 -->
     <div class="title story">
 在刚刚路过的十字路口的一角好像看到个绿色大邮筒。这也是个老物件了，记得运营这个邮筒公众号的小编，也曾经是这个游戏的玩家。但她仿佛消失了一样，好久没有她的消息了，她上次更新公众号是什么日子？
     </div>
@@ -158,13 +163,12 @@
       <img src="post.png" alt="post" />
     </div>
 
-    <!-- ★ 输入说明：title 样式 -->
-    <div class="title">最后更新日期：</div>
-
-    <div class="answer">
-      <input id="year"  placeholder="YYYY" inputmode="numeric" autocomplete="off" />
-      <input id="month" class="short" placeholder="MM" inputmode="numeric" autocomplete="off" />
-      <input id="day"   class="short" placeholder="DD" inputmode="numeric" autocomplete="off" />
+    <!-- 最后更新日期：与输入框同一行，不换行 -->
+    <div class="title-row">
+      <span>最后更新日期：</span>
+      <input id="year"  class="ansInput year"  placeholder="YYYY" inputmode="numeric" autocomplete="off" />
+      <input id="month" class="ansInput short" placeholder="MM"   inputmode="numeric" autocomplete="off" />
+      <input id="day"   class="ansInput short" placeholder="DD"   inputmode="numeric" autocomplete="off" />
     </div>
 
     <div class="panel">
