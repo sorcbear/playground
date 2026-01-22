@@ -3,12 +3,28 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no,address=no,email=no">
+
 <title>Barrel Puzzle</title>
 
 <style>
 :root{
-  --bg:#ffffff;
+  /* ===== Rotate 同源 UI 基础 ===== */
+  --maxw: 720px;
 
+  --fs-body: 18px;
+  --lh-body: 1.6;
+
+  --fs-hint: 18px;
+  --lh-hint: 1.6;
+
+  --gap: 18px;
+  --gap-tight: 12px;
+
+  --bg:#ffffff;
+  --c-text:#111;
+
+  /* ===== Barrel 本题专用（保留你的设定） ===== */
   --outerLine:4px;
   --midLine:4px;
   --lineColor:#000;
@@ -29,30 +45,41 @@
 }
 
 *{ box-sizing:border-box; }
+html,body{ height:100%; }
 
-html,body{
+body{
   margin:0;
-  padding:0;
   background:var(--bg);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  color:var(--c-text);
+
+  /* ✅ Rotate 同款字体栈 */
+  font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+
+  /* ✅ Rotate 同款 */
+  -webkit-text-size-adjust:100%;
+
+  /* 防止手机点击闪影 */
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* 防止手机点击按钮闪影 */
-body{ -webkit-tap-highlight-color: transparent; }
-
+/* ✅ Rotate 同源：页面容器上下左右间距完全一致 */
 .wrap{
-  width:min(1200px, 94vw);
-  margin:24px auto 18px;
-  padding:0 10px;
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:18px 14px 28px;
 }
 
-/* 顶部提示文字 */
+/* ✅ 顶部提示文字：严格等同 Rotate 的 titleLine */
 .topHint{
-  width:100%;
-  margin:0 0 14px;
-  font-size:18px;
-  line-height:1.5;
+  margin:4px 0 var(--gap);
+  font-size:var(--fs-hint);
+  line-height:var(--lh-hint);
   font-weight:700;
+  text-align:left;
+  white-space:pre-wrap;
   color:#000;
 }
 
@@ -106,16 +133,16 @@ body{ -webkit-tap-highlight-color: transparent; }
   text-shadow:var(--digitShadow); /* ✅ 始终 none */
   user-select:none;
 
-  /* ✅ 彻底避免某些浏览器的默认滤镜/阴影差异 */
+  /* ✅ 避免默认滤镜差异 */
   filter:none;
 }
 
-/* 按钮 */
+/* 按钮区：用同源间距体系 */
 .buttons{
   display:flex;
   justify-content:center;
   gap:var(--btnGap);
-  margin-top:26px;
+  margin-top:var(--gap);          /* ✅ 原 26px → 同源 gap=18px */
 }
 
 .coinBtn{
@@ -141,18 +168,18 @@ body{ -webkit-tap-highlight-color: transparent; }
   user-select:none;
 }
 
-/* 倒计时提示：✅ 不居中，居左 */
+/* 倒计时提示：同源间距 + 14px 字号保留 */
 .msg{
-  text-align:left;          /* ✅ 改为居左 */
-  margin-top:14px;
+  text-align:left;
+  margin-top:var(--gap-tight);    /* ✅ 原 14px → 同源 gap-tight=12px */
   min-height:22px;
-  font-size:14px;           /* 固定 14px */
+  font-size:14px;
   font-weight:700;
   color:#000;
 }
 .msg.ok{ color:var(--ok); }
 
-/* 手机适配 */
+/* 手机适配：只动题目内部，不动同源容器间距 */
 @media (max-width:900px){
   :root{
     --digitSize:min(30vw,210px);
@@ -169,9 +196,7 @@ body{ -webkit-tap-highlight-color: transparent; }
 <body>
 <div class="wrap">
 
-  <div class="topHint">
-    走到弄堂与宛平路的交汇处，右转，走到第一个路口，过到十字路口斜对面，沿着康平路方向前进，在100米的距离内留意墙面信息，完成以下谜题。
-  </div>
+  <div class="topHint">走到弄堂与宛平路的交汇处，右转，走到第一个路口，过到十字路口斜对面，沿着康平路方向前进，在100米的距离内留意墙面信息，完成以下谜题。</div>
 
   <div class="strip">
     <div class="divider div1"></div>
