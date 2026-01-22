@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>paper pickup</title>
 
-  <!-- 预加载，避免慢网不顺 -->
   <link rel="preload" as="image" href="p1.png">
   <link rel="preload" as="image" href="p2.png">
 
@@ -13,6 +12,9 @@
     :root{
       --maxw: 980px;
       --pad: 18px;
+
+      --fs-hint: 18px;
+      --lh-hint: 1.6;
     }
 
     html,body{
@@ -29,19 +31,28 @@
       box-sizing:border-box;
     }
 
+    /* ===== 标题 ===== */
+    .UI.title{
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
+      margin: 0 0 12px 0;
+    }
+
     /* ===== 顶部画板 ===== */
     .stage{
       position:relative;
+      width:100%;
       max-width:1024px;
       margin:0 auto;
       user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    /* 固定比例：765 / 1024 */
     .stage::before{
       content:"";
       display:block;
-      padding-top:74.70703125%;
+      padding-top:74.70703125%; /* 765 / 1024 */
     }
 
     .layer{
@@ -55,22 +66,23 @@
       object-fit:contain;
       display:block;
       pointer-events:none;
+      backface-visibility:hidden;
+      transform: translateZ(0);
     }
 
-    /* ===== 关键：用 opacity，不用 display ===== */
+    /* p0 / p1：瞬时 opacity 切换，无过渡 */
     .imgA, .imgB{
       position:absolute;
       inset:0;
       opacity:0;
       transition:none;
+      will-change: opacity;
     }
-
     .imgA{ opacity:1; }
-
     .revealed .imgA{ opacity:0; }
     .revealed .imgB{ opacity:1; }
 
-    /* ===== p0 纸卷热点（按新图校准） ===== */
+    /* 纸卷热点（按最新图校准） */
     .hotspot{
       position:absolute;
       left:12.79%;
@@ -81,32 +93,46 @@
       background:transparent;
       cursor:pointer;
       padding:0;
+      margin:0;
+      -webkit-tap-highlight-color: transparent;
     }
-
     .hotspot:disabled{
       pointer-events:none;
       cursor:default;
     }
+    .hotspot:focus{ outline:none; }
 
-    /* ===== p2：初始隐藏 ===== */
+    /* ===== p2：初始不可见 ===== */
     .pickup{
-      display:none;
       max-width:1024px;
       margin:18px auto 0;
+
+      visibility:hidden;
+      opacity:0;
+      transition:none;
+      height:0;
+      overflow:hidden;
     }
 
     .revealed ~ .pickup{
-      display:block;
+      visibility:visible;
+      opacity:1;
+      height:auto;
+      overflow:visible;
     }
 
     .p2box{
       position:relative;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .p2box img{
       width:100%;
       height:auto;
       display:block;
+      backface-visibility:hidden;
+      transform: translateZ(0);
     }
 
     .p2btn{
@@ -115,27 +141,34 @@
       border:0;
       background:transparent;
       cursor:pointer;
+      padding:0;
+      margin:0;
+      -webkit-tap-highlight-color: transparent;
     }
+    .p2btn:focus{ outline:none; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
 
+    <p class="UI title">
+      翻看这幅画对面，原来藏了一张图纸，点击获取图纸，并查看图纸内容
+    </p>
+
     <div class="stage" id="stage">
       <div class="layer imgA">
-        <img src="p0.png" alt="">
+        <img id="img0" src="p0.png" alt="">
       </div>
       <div class="layer imgB">
-        <img src="p1.png" alt="">
+        <img id="img1" src="p1.png" alt="">
       </div>
-
       <button class="hotspot" id="hotspot" disabled></button>
     </div>
 
-    <div class="pickup">
+    <div class="pickup" id="pickup">
       <div class="p2box">
-        <img src="p2.png" alt="">
+        <img id="img2" src="p2.png" alt="">
         <button class="p2btn" id="p2btn"></button>
       </div>
     </div>
@@ -145,33 +178,40 @@
   <script>
     (function(){
       const stage = document.getElementById("stage");
-      const rollBtn = document.getElementById("hotspot");
-      const p2Btn = document.getElementById("p2btn");
+      const btnRoll = document.getElementById("hotspot");
+      const btnP2 = document.getElementById("p2btn");
 
-      const NEXT = "https://sorcbear.github.io/playground/paper";
+      const img1 = document.getElementById("img1");
+      const img2 = document.getElementById("img2");
 
-      let ready1 = false;
-      let ready2 = false;
+      const NEXT_URL = "https://sorcbear.github.io/playground/paper";
 
-      function sync(){
-        rollBtn.disabled = !(ready1 && ready2);
+      btnRoll.addEventListener("pointerdown", e=>e.preventDefault());
+      btnP2.addEventListener("pointerdown", e=>e.preventDefault());
+
+      async function waitReady(img){
+        if (!img.complete) {
+          await new Promise(res => img.addEventListener("load", res, {once:true}));
+        }
+        if (img.decode) {
+          try{ await img.decode(); }catch(e){}
+        }
       }
 
-      function preload(src, cb){
-        const i = new Image();
-        i.onload = cb;
-        i.src = src;
-      }
+      (async ()=>{
+        try{
+          await Promise.all([waitReady(img1), waitReady(img2)]);
+          btnRoll.disabled = false;
+        }catch(e){}
+      })();
 
-      preload("p1.png", ()=>{ ready1=true; sync(); });
-      preload("p2.png", ()=>{ ready2=true; sync(); });
-
-      rollBtn.addEventListener("click", ()=>{
+      btnRoll.addEventListener("click", ()=>{
+        if (btnRoll.disabled) return;
         stage.classList.add("revealed");
       });
 
-      p2Btn.addEventListener("click", ()=>{
-        location.href = NEXT;
+      btnP2.addEventListener("click", ()=>{
+        location.href = NEXT_URL;
       });
     })();
   </script>
