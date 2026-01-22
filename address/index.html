@@ -45,12 +45,14 @@
       padding: 18px 14px 28px;
     }
 
-    /* 标题 */
+    /* ✅ 标题：严格对齐 Rotate 的 .titleLine */
     .title{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
-      margin: 0;
+      margin: 4px 0 var(--gap);
+      text-align: left;
+      white-space: pre-wrap;
     }
 
     /* 故事整体：不再使用 pre-wrap */
@@ -154,9 +156,8 @@
 
 <body>
   <div class="wrap">
-    <div class="title">
-      你遇到2个玩家A和B，他们在讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：
-    </div>
+    <!-- ✅ 关键：不以换行/空格开头（配合 pre-wrap，避免前导缩进） -->
+    <div class="title">你遇到2个玩家A和B，他们在讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：</div>
 
     <div class="story">
       <div class="known">已知：A知道街道名，B知道弄堂号码。</div>
