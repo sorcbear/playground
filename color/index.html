@@ -3,237 +3,247 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>paper pickup</title>
-
-  <link rel="preload" as="image" href="p1.png">
-  <link rel="preload" as="image" href="p2.png">
-
+  <title>Scratch Reveal (P mask)</title>
   <style>
     :root{
-      /* ✅ 同源（Rotate） */
-      --maxw: 720px;
-
-      --fs-hint: 18px;
-      --lh-hint: 1.6;
-
-      /* ✅ 同源间距 */
-      --gap: 18px;
-
-      --bg:#fff;
-      --c-text:#111;
+      --maxw: 980px;
+      --pad: 18px;
+      --radius: 10px;
+      --bg: #fff;
+      --text: #111;
     }
-
     *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-
-    html,body{
+    body{
       margin:0;
       background:var(--bg);
-      /* ✅ 同源字体栈 */
+      color:var(--text);
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-      color:var(--c-text);
-      -webkit-text-size-adjust:100%;
     }
-
     .wrap{
-      max-width:var(--maxw);
-      margin:0 auto;
-      /* ✅ 同源 padding（保证“距离顶部”一致） */
-      padding:18px 14px 28px;
-      box-sizing:border-box;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: var(--pad);
     }
-
-    /* ✅ 顶部文字：同源 titleLine 规范（严格对齐 Rotate） */
-    .UI.title{
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      font-weight: 700;
-      margin: 4px 0 var(--gap);
-      text-align: left;
-      white-space: pre-wrap;
-    }
-
-    /* ===== 顶部画板（不动） ===== */
     .stage{
-      position:relative;
-      width:100%;
-      max-width:1024px;
-      margin:0 auto;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius);
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none; /* 关键：移动端手指划动不触发页面滚动 */
+      background: #eee;
     }
-
-    .stage::before{
-      content:"";
-      display:block;
-      padding-top:74.70703125%; /* 765 / 1024 */
+    .stage img{
+      width: 100%;
+      display: block;
     }
-
-    .layer{
+    canvas.overlay{
       position:absolute;
       inset:0;
-    }
-
-    .layer img{
       width:100%;
       height:100%;
-      object-fit:contain;
       display:block;
-      pointer-events:none;
-      backface-visibility:hidden;
-      transform: translateZ(0);
+      pointer-events:auto;
     }
-
-    /* p0 / p1：瞬时 opacity 切换，无过渡 */
-    .imgA, .imgB{
+    .loading{
       position:absolute;
       inset:0;
-      opacity:0;
-      transition:none;
-      will-change: opacity;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:14px;
+      background: rgba(255,255,255,.78);
+      backdrop-filter: blur(2px);
     }
-    .imgA{ opacity:1; }
-    .revealed .imgA{ opacity:0; }
-    .revealed .imgB{ opacity:1; }
-
-    /* 纸卷热点（按最新图校准） */
-    .hotspot{
-      position:absolute;
-      left:12.79%;
-      top:71.24%;
-      width:21.48%;
-      height:12.42%;
-      border:0;
-      background:transparent;
-      cursor:pointer;
-      padding:0;
-      margin:0;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .hotspot:disabled{
-      pointer-events:none;
-      cursor:default;
-    }
-    .hotspot:focus{ outline:none; }
-
-    /* ===== p2：初始不可见 ===== */
-    .pickup{
-      max-width:1024px;
-      margin:18px auto 0;
-
-      visibility:hidden;
-      opacity:0;
-      transition:none;
-      height:0;
-      overflow:hidden;
-    }
-
-    .revealed ~ .pickup{
-      visibility:visible;
-      opacity:1;
-      height:auto;
-      overflow:visible;
-    }
-
-    .p2box{
-      position:relative;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .p2box img{
-      width:100%;
-      height:auto;
-      display:block;
-      backface-visibility:hidden;
-      transform: translateZ(0);
-    }
-
-    /* p2：仅白色卷轴本体（收紧版） */
-    .p2btn{
-      position:absolute;
-      inset:auto;
-
-      left:36.9%;
-      top:4.8%;
-      width:26.4%;
-      height:90.2%;
-
-      border:0;
-      background:transparent;
-      cursor:pointer;
-      padding:0;
-      margin:0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .p2btn:focus{ outline:none; }
+    .loading.hide{ display:none; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-
-    <p class="UI title">翻看这幅画对面，原来藏了一张图纸，点击获取图纸，并查看图纸内容</p>
-
     <div class="stage" id="stage">
-      <div class="layer imgA">
-        <img id="img0" src="p0.png" alt="">
-      </div>
-      <div class="layer imgB">
-        <img id="img1" src="p1.png" alt="">
-      </div>
-      <button class="hotspot" id="hotspot" disabled></button>
-    </div>
+      <!-- 你的黑白底图文件名：bw.jpg（放在同目录） -->
+      <img id="bw" src="bw.jpg" alt="bw" />
 
-    <div class="pickup" id="pickup">
-      <div class="p2box">
-        <img id="img2" src="p2.png" alt="">
-        <button class="p2btn" id="p2btn"></button>
-      </div>
-    </div>
+      <!-- 红色涂抹层（会被 mask 抠出透明 P） -->
+      <canvas id="paint" class="overlay"></canvas>
 
+      <div id="loading" class="loading">资源加载中</div>
+    </div>
   </div>
 
-  <script>
-    (function(){
-      const stage = document.getElementById("stage");
-      const btnRoll = document.getElementById("hotspot");
-      const btnP2 = document.getElementById("p2btn");
+<script>
+(() => {
+  // ===== 可调参数（你之后只需要改这些）=====
+  const BRUSH_RADIUS_CSSPX = 18;   // 画笔半径（CSS像素）
+  const BRUSH_COLOR = "#ff0000";   // ✅ 100% 纯红（不透明）
+  // =======================================
 
-      const img1 = document.getElementById("img1");
-      const img2 = document.getElementById("img2");
+  const img = document.getElementById("bw");
+  const cv = document.getElementById("paint");
+  const loading = document.getElementById("loading");
 
-      const NEXT_URL = "https://sorcbear.github.io/playground/paper";
+  const ctx = cv.getContext("2d", { alpha:true });
 
-      btnRoll.addEventListener("pointerdown", e=>e.preventDefault());
-      btnP2.addEventListener("pointerdown", e=>e.preventDefault());
+  // 离屏：mask（白色=需要被抠掉的字母区域）
+  const maskCanvas = document.createElement("canvas");
+  const maskCtx = maskCanvas.getContext("2d");
 
-      async function waitReady(img){
-        if (!img.complete) {
-          await new Promise(res => img.addEventListener("load", res, {once:true}));
-        }
-        if (img.decode) {
-          try{ await img.decode(); }catch(e){}
-        }
-      }
+  // 手写P蒙版（白色笔画）——小一点
+  const P_MASK_SVG = `
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="transparent"/>
+  <path
+    d="
+      M 560 240
+      Q 540 360 560 520
+      Q 570 600 560 660
 
-      (async ()=>{
-        try{
-          await Promise.all([waitReady(img1), waitReady(img2)]);
-          btnRoll.disabled = false;
-        }catch(e){}
-      })();
+      M 560 260
+      Q 650 245 705 290
+      Q 755 330 740 395
+      Q 725 455 655 480
+      Q 600 498 560 485
+    "
+    fill="none"
+    stroke="white"
+    stroke-width="60"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>`.trim();
 
-      btnRoll.addEventListener("click", ()=>{
-        if (btnRoll.disabled) return;
-        stage.classList.add("revealed");
-      });
+  const maskImg = new Image();
+  maskImg.decoding = "async";
+  maskImg.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(P_MASK_SVG);
 
-      btnP2.addEventListener("click", ()=>{
-        location.href = NEXT_URL;
-      });
-    })();
-  </script>
+  // 设备像素比（保证清晰、触点对齐）
+  function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
+
+  // 根据 img 的显示尺寸重置 canvas（保持像素级对齐）
+  function resizeAll(){
+    const rect = img.getBoundingClientRect();
+    const scale = dpr();
+
+    // 可见层
+    cv.width  = Math.round(rect.width  * scale);
+    cv.height = Math.round(rect.height * scale);
+
+    // 以后按 CSS 像素作画
+    ctx.setTransform(scale,0,0,scale,0,0);
+
+    // mask 离屏层（与可见层同像素）
+    maskCanvas.width  = cv.width;
+    maskCanvas.height = cv.height;
+
+    // 把 mask 图缩放绘制到离屏层（覆盖全画面）
+    maskCtx.setTransform(1,0,0,1,0,0);
+    maskCtx.clearRect(0,0,maskCanvas.width, maskCanvas.height);
+    maskCtx.drawImage(maskImg, 0, 0, maskCanvas.width, maskCanvas.height);
+  }
+
+  // 抠洞：把“P 区域”从红色涂层里清除为透明
+  function punchOutP(){
+    const w = cv.width, h = cv.height;
+    ctx.save();
+    // 临时切到像素坐标系（因为 maskCanvas 是像素尺寸）
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.drawImage(maskCanvas, 0, 0, w, h);
+    ctx.restore();
+  }
+
+  // 在 (x,y) 画一个“纯红”圆（不透明，不叠加变深）
+  function dab(x, y){
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = BRUSH_COLOR; // ✅ 纯色，不透明
+    ctx.beginPath();
+    ctx.arc(x, y, BRUSH_RADIUS_CSSPX, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // 画完立刻抠洞：P 区域永远透明（显示底下黑白图）
+    punchOutP();
+  }
+
+  // 连续划线：在两点间插值打点，避免断裂
+  function strokeLine(x0,y0,x1,y1){
+    const dx = x1-x0, dy = y1-y0;
+    const dist = Math.hypot(dx,dy);
+    const step = Math.max(2, BRUSH_RADIUS_CSSPX * 0.5);
+    const n = Math.max(1, Math.ceil(dist / step));
+    for(let i=1;i<=n;i++){
+      const t = i/n;
+      dab(x0 + dx*t, y0 + dy*t);
+    }
+  }
+
+  // 坐标转换：事件 -> canvas CSS像素坐标
+  function getXY(e){
+    const r = cv.getBoundingClientRect();
+    const p = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+    return {
+      x: p.clientX - r.left,
+      y: p.clientY - r.top
+    };
+  }
+
+  let down = false;
+  let last = null;
+
+  function onDown(e){
+    e.preventDefault();
+    down = true;
+    const p = getXY(e);
+    last = p;
+    dab(p.x, p.y);
+  }
+  function onMove(e){
+    if(!down) return;
+    e.preventDefault();
+    const p = getXY(e);
+    if(last) strokeLine(last.x, last.y, p.x, p.y);
+    last = p;
+  }
+  function onUp(e){
+    if(!down) return;
+    e.preventDefault();
+    down = false;
+    last = null;
+  }
+
+  // 绑定（指针事件优先）
+  cv.addEventListener("pointerdown", onDown, { passive:false });
+  window.addEventListener("pointermove", onMove, { passive:false });
+  window.addEventListener("pointerup", onUp, { passive:false });
+  window.addEventListener("pointercancel", onUp, { passive:false });
+
+  // 兼容少数环境
+  cv.addEventListener("touchstart", onDown, { passive:false });
+  window.addEventListener("touchmove", onMove, { passive:false });
+  window.addEventListener("touchend", onUp, { passive:false });
+  window.addEventListener("touchcancel", onUp, { passive:false });
+
+  function ready(){
+    resizeAll();
+    loading.classList.add("hide");
+  }
+
+  let imgOK = false, maskOK = false;
+
+  img.addEventListener("load", () => { imgOK = true; if(maskOK) ready(); });
+  img.addEventListener("error", () => { loading.textContent = "底图 bw.jpg 加载失败"; });
+
+  maskImg.addEventListener("load", () => { maskOK = true; if(imgOK) ready(); });
+  maskImg.addEventListener("error", () => { loading.textContent = "P 蒙版加载失败"; });
+
+  // 窗口变化（旋转/缩放）会触发 canvas 重置（涂抹层会清空）
+  window.addEventListener("resize", () => {
+    if(imgOK && maskOK) resizeAll();
+  });
+})();
+</script>
 </body>
 </html>
