@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<!-- 禁止 iOS Safari 自动识别地址/电话/邮箱 -->
 <meta name="format-detection" content="telephone=no,address=no,email=no">
 
 <title>Square Puzzle</title>
@@ -28,7 +27,6 @@
   --c-ok:#0b6b2b;
   --c-danger:#b00020;
 
-  /* ✅ 为了严格对齐 Rotate：补齐 gap（Rotate 就是 18px） */
   --gap: 18px;
 }
 
@@ -42,23 +40,22 @@ html,body{
   color:var(--c-text);
 }
 
+/* ✅ 与 Rotate 完全一致 */
 .wrap{
   max-width:var(--maxw);
   margin:0 auto;
-  padding:24px 16px 40px;
+  padding:18px 14px 28px;
   box-sizing:border-box;
 }
 
-/* ✅ 标题：严格等同 Rotate 的 .titleLine 排版 */
+/* ✅ 与 Rotate 完全一致 */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
-  margin:4px 0 var(--gap);   /* Rotate: 上4px，下18px */
-  padding:0;
-
-  text-align:left;           /* Rotate: left */
-  white-space:pre-wrap;      /* Rotate: pre-wrap */
+  margin:4px 0 var(--gap);
+  text-align:left;
+  white-space:pre-wrap;
 }
 
 /* 图片 */
@@ -129,16 +126,8 @@ button{
   button:hover{ background:#000; color:#fff; }
 }
 
-/* JS 控制的点击反馈 */
-button.invert{
-  background:#000;
-  color:#fff;
-}
-
-button:disabled{
-  opacity:.45;
-  cursor:default;
-}
+button.invert{ background:#000; color:#fff; }
+button:disabled{ opacity:.45; cursor:default; }
 
 .msg{
   margin-top:12px;
@@ -159,19 +148,23 @@ button:disabled{
 <body>
 <div class="wrap">
 
-<div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div><div class="imgbox"><img src="puzzle.jpg" alt="square puzzle"></div>
+  <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div>
 
-<div class="qline">
-  <span><span class="qmark">? </span>对应的是什么数字：</span>
-  <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
-</div>
+  <div class="imgbox">
+    <img src="puzzle.jpg" alt="square puzzle">
+  </div>
 
-<div class="panel">
-  <button id="hintBtn">获得提示</button>
-  <button id="submitBtn">提交答案</button>
-</div>
+  <div class="qline">
+    <span><span class="qmark">? </span>对应的是什么数字：</span>
+    <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
+  </div>
 
-<div class="msg" id="msg"></div>
+  <div class="panel">
+    <button id="hintBtn">获得提示</button>
+    <button id="submitBtn">提交答案</button>
+  </div>
+
+  <div class="msg" id="msg"></div>
 
 </div>
 
@@ -190,7 +183,6 @@ let locked=false;
 let timer=null;
 let btnTimer=null;
 
-/* 公共：短暂黑底白字反馈 */
 function flashInvert(btn, ms=120){
   btn.classList.add("invert");
   setTimeout(()=>btn.classList.remove("invert"), ms);
@@ -203,7 +195,6 @@ function setLocked(v){
   input.disabled=v;
 }
 
-/* 错误提示用 */
 function setBtnText(text, ms=900){
   if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
 
@@ -219,7 +210,6 @@ function setBtnText(text, ms=900){
   }, ms);
 }
 
-/* 获得提示：先反馈，再跳转 */
 hintBtn.onclick = ()=>{
   if (locked) return;
   flashInvert(hintBtn, 120);
