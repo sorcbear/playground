@@ -13,7 +13,7 @@
       --lh-body: 1.6;
 
       --fs-hint: 18px;
-      --lh-hint: 1.4; /* ✅ 收紧标题行高，减少“视觉白边” */
+      --lh-hint: 1.4; /* 原样保留，不作为 title 的实际行高 */
 
       --fs-btn: 16px;
       --fw-btn: 600;
@@ -45,20 +45,21 @@
       -webkit-text-size-adjust:100%;
     }
 
+    /* ✅ 关键：wrap 完全使用 Rotate 的 padding */
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
-      padding:0 14px;     /* ✅ 只留左右，不要上下白边 */
+      padding:18px 14px 28px;  /* ✅ Rotate 同款 */
     }
 
-    /* ===== 标题：按 Rotate 规范（只改这里，其它不动） ===== */
+    /* ✅ 关键：title 完全使用 Rotate 的排版 */
     .title{
-      font-size: 18px;          /* Rotate: 18px */
-      line-height: 1.6;         /* Rotate: 1.6（不使用当前 --lh-hint=1.4） */
-      font-weight: 700;         /* Rotate: 700 */
-      margin: 4px 0 18px;       /* Rotate: 4px 上 + 18px 下 */
-      text-align: left;         /* Rotate: left */
-      white-space: pre-wrap;    /* Rotate: pre-wrap */
+      font-size:18px;          /* Rotate: 18px */
+      line-height:1.6;         /* Rotate: 1.6 */
+      font-weight:700;         /* Rotate: 700 */
+      margin:4px 0 var(--gap); /* Rotate: 4px 上，18px 下 */
+      text-align:left;         /* Rotate: left */
+      white-space:pre-wrap;    /* Rotate: pre-wrap */
     }
 
     .image-box{
@@ -133,6 +134,7 @@
 <body>
   <div class="wrap">
 
+    <!-- ✅ 关键：不以换行/空格开头（避免 pre-wrap 显示缩进） -->
     <div class="title">上一名玩家已经顺利找到了下一个解谜地点。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？（你可以用道具包里的自行车和痕迹图验证）</div>
 
     <div class="image-box">
