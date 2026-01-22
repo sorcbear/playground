@@ -3,15 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Scratch Reveal (Combined Mask)</title>
+  <title>Color Scratch (Palette + P reveal)</title>
   <style>
     :root{
       --maxw: 980px;
       --pad: 18px;
       --radius: 10px;
       --bg: #fff;
-      --text: #111;
+      --text:#111;
+      --border:#000;
+
+      --swatch: 44px;         /* 调色盘色块大小 */
+      --swatch-gap: 14px;     /* 色块间距 */
+      --swatch-ring: 3px;     /* 选中描边粗细 */
+
+      --hint-fs: 14px;
+      --hint-lh: 1.6;
     }
+
     *{ box-sizing:border-box; }
     body{
       margin:0;
@@ -19,111 +28,217 @@
       color:var(--text);
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
     }
-    .wrap{ max-width: var(--maxw); margin: 0 auto; padding: var(--pad); }
+
+    .wrap{
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: var(--pad);
+    }
+
     .stage{
       position: relative;
       width: 100%;
       border-radius: var(--radius);
       overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: none;
-      background: #eee;
+      user-select:none;
+      -webkit-user-select:none;
+      touch-action:none; /* 移动端拖动不滚屏 */
+      background:#eee;
     }
-    .stage img{ width: 100%; display:block; }
+
+    .stage img{ width:100%; display:block; }
+
     canvas.overlay{
-      position:absolute; inset:0;
-      width:100%; height:100%;
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
       display:block;
       pointer-events:auto;
     }
+
     .loading{
-      position:absolute; inset:0;
-      display:flex; align-items:center; justify-content:center;
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       font-size:14px;
       background: rgba(255,255,255,.78);
       backdrop-filter: blur(2px);
     }
     .loading.hide{ display:none; }
+
+    /* 调色盘 */
+    .paletteWrap{
+      margin-top: 14px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      align-items:center;
+    }
+
+    .palette{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap: var(--swatch-gap);
+    }
+
+    .swatch{
+      width: var(--swatch);
+      height: var(--swatch);
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,.25);
+      background: var(--c);
+      cursor: pointer;
+      position: relative;
+      padding:0;
+      outline:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 选中样式：黑色外圈 + 白色内圈（更像“被框住”） */
+    .swatch.selected{
+      border-color: var(--border);
+      box-shadow:
+        0 0 0 var(--swatch-ring) #000,
+        0 0 0 calc(var(--swatch-ring) + 3px) #fff;
+    }
+
+    /* 可选：选中小点提示 */
+    .swatch.selected::after{
+      content:"";
+      position:absolute;
+      right: 6px;
+      bottom: 6px;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background:#fff;
+      border:2px solid #000;
+    }
+
+    .hint{
+      font-size: var(--hint-fs);
+      line-height: var(--hint-lh);
+      opacity:.78;
+      text-align:center;
+    }
+
+    .hint strong{ opacity:1; }
+
+    @media (max-width: 420px){
+      :root{
+        --swatch: 40px;
+        --swatch-gap: 12px;
+      }
+    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="stage" id="stage">
-      <!-- 黑白底图 -->
       <img id="bw" src="bw.jpg" alt="bw" />
-
-      <!-- 红色涂抹层 -->
       <canvas id="paint" class="overlay"></canvas>
-
       <div id="loading" class="loading">资源加载中</div>
+    </div>
+
+    <div class="paletteWrap">
+      <div class="palette" id="palette"></div>
+      <div class="hint" id="hint">
+        请先选择一种颜色，然后在画面上涂抹。<br/>
+        <strong>只有选中正确的红色，才会显示隐藏的 P。</strong>
+      </div>
     </div>
   </div>
 
 <script>
 (() => {
   // ===== 可调参数 =====
-  const BRUSH_RADIUS_CSSPX = 18;      // 画笔半径（CSS像素）
-  const BRUSH_COLOR = "#ff0000";      // 100% 纯红
-  const BASE_MASK_URL = "mask_base.png"; // 你上传的“白框+文字”蒙版
+  const BRUSH_RADIUS_CSSPX = 18;         // 画笔半径（CSS像素）
+  const BASE_MASK_URL = "mask_base.png"; // 透明基础蒙版（avec toi 白框/文字）
+  const CORRECT_RED = "#ff0000";         // ✅ 只有选中这个红色才启用 P 挖洞
+
+  // 8 色调色盘（你可自行替换颜色）
+  const COLORS = [
+    "#000000", // 黑
+    "#00e5ff", // 青
+    CORRECT_RED, // 正确红（必须保留）
+    "#ffc000", // 橙黄
+    "#00b050", // 绿
+    "#7030a0", // 紫
+    "#ffffff", // 白
+    "#0070c0"  // 蓝
+  ];
   // ====================
 
   const img = document.getElementById("bw");
   const cv = document.getElementById("paint");
   const loading = document.getElementById("loading");
+  const paletteEl = document.getElementById("palette");
+  const hintEl = document.getElementById("hint");
+
   const ctx = cv.getContext("2d", { alpha:true });
 
-  // 离屏：合成 mask（基础蒙版 + 手写P）
-  const maskCanvas = document.createElement("canvas");
-  const maskCtx = maskCanvas.getContext("2d");
+  // 离屏：基础 mask（始终挖洞）
+  const baseMaskCanvas = document.createElement("canvas");
+  const baseMaskCtx = baseMaskCanvas.getContext("2d");
 
-  // 基础蒙版图片（你发的那张）
   const baseMaskImg = new Image();
   baseMaskImg.decoding = "async";
   baseMaskImg.src = BASE_MASK_URL;
 
-  // 手写P：用 Path2D 直接画进 maskCanvas（白色=需要被抠掉的区域）
-  function drawHandwrittenP_ontoMask() {
-    // 这里用“相对画面”的比例定位，保证不同尺寸下也相对稳定
-    const w = maskCanvas.width;
-    const h = maskCanvas.height;
+  // 离屏：P mask（仅在正确红色时挖洞）
+  const pMaskCanvas = document.createElement("canvas");
+  const pMaskCtx = pMaskCanvas.getContext("2d");
 
-    // 你可以通过调这些比例来移动/缩放 P
-    const cx = w * 0.58;   // 中心 x（越大越往右）
-    const cy = h * 0.58;   // 中心 y（越大越往下）
-    const scale = Math.min(w/1200, h/800) * 1.0; // 整体缩放因子（越大P越大）
+  // 当前选中颜色（必须先选）
+  let currentColor = null;
 
-    // 画笔粗细（像素）
-    const strokeW = Math.max(40, Math.round(60 * (w/1200))); // 根据画面宽度自适应
-
-    // 用 path 表达 P（与之前类似，但改成“局部定位”）
-    const p = new Path2D();
-    // 主竖
-    p.moveTo(cx + (-40)*scale, cy + (-220)*scale);
-    p.quadraticCurveTo(cx + (-60)*scale, cy + (-80)*scale,  cx + (-40)*scale, cy + (80)*scale);
-    p.quadraticCurveTo(cx + (-30)*scale, cy + (160)*scale,  cx + (-40)*scale, cy + (240)*scale);
-
-    // 上半圆肚
-    p.moveTo(cx + (-40)*scale, cy + (-200)*scale);
-    p.quadraticCurveTo(cx + (90)*scale,  cy + (-215)*scale, cx + (150)*scale, cy + (-160)*scale);
-    p.quadraticCurveTo(cx + (210)*scale, cy + (-120)*scale, cx + (195)*scale, cy + (-50)*scale);
-    p.quadraticCurveTo(cx + (175)*scale, cy + (25)*scale,   cx + (95)*scale,  cy + (55)*scale);
-    p.quadraticCurveTo(cx + (25)*scale,  cy + (80)*scale,   cx + (-40)*scale, cy + (65)*scale);
-
-    maskCtx.save();
-    maskCtx.strokeStyle = "white";
-    maskCtx.lineWidth = strokeW;
-    maskCtx.lineCap = "round";
-    maskCtx.lineJoin = "round";
-    maskCtx.stroke(p);
-    maskCtx.restore();
-  }
-
+  // 设备像素比（保证清晰、触点对齐）
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
-  // 重新对齐尺寸，并重建合成 mask
-  function rebuildMask(){
+  // ====== 画 P（白色笔画绘制在 pMaskCanvas 上）======
+  function rebuildPMask(){
+    const w = pMaskCanvas.width;
+    const h = pMaskCanvas.height;
+
+    pMaskCtx.setTransform(1,0,0,1,0,0);
+    pMaskCtx.clearRect(0,0,w,h);
+
+    // 你可以通过调这些比例改变 P 位置与大小
+    const cx = w * 0.58;
+    const cy = h * 0.58;
+    const s  = Math.min(w/1200, h/800) * 1.0; // 整体缩放
+    const strokeW = Math.max(36, Math.round(58 * (w/1200)));
+
+    const p = new Path2D();
+
+    // 主竖（带一点手写弧度）
+    p.moveTo(cx + (-40)*s, cy + (-220)*s);
+    p.quadraticCurveTo(cx + (-60)*s, cy + (-80)*s,  cx + (-40)*s, cy + (80)*s);
+    p.quadraticCurveTo(cx + (-30)*s, cy + (160)*s,  cx + (-40)*s, cy + (240)*s);
+
+    // 上半圆肚
+    p.moveTo(cx + (-40)*s, cy + (-200)*s);
+    p.quadraticCurveTo(cx + (90)*s,  cy + (-215)*s, cx + (150)*s, cy + (-160)*s);
+    p.quadraticCurveTo(cx + (210)*s, cy + (-120)*s, cx + (195)*s, cy + (-50)*s);
+    p.quadraticCurveTo(cx + (175)*s, cy + (25)*s,   cx + (95)*s,  cy + (55)*s);
+    p.quadraticCurveTo(cx + (25)*s,  cy + (80)*s,   cx + (-40)*s, cy + (65)*s);
+
+    pMaskCtx.save();
+    pMaskCtx.strokeStyle = "white";
+    pMaskCtx.lineWidth = strokeW;
+    pMaskCtx.lineCap = "round";
+    pMaskCtx.lineJoin = "round";
+    pMaskCtx.stroke(p);
+    pMaskCtx.restore();
+  }
+
+  // ====== 尺寸对齐：canvas + 两个离屏 mask ======
+  function resizeAll(){
     const rect = img.getBoundingClientRect();
     const scale = dpr();
 
@@ -132,44 +247,55 @@
     cv.height = Math.round(rect.height * scale);
     ctx.setTransform(scale,0,0,scale,0,0);
 
-    // 合成 mask：像素尺寸
-    maskCanvas.width  = cv.width;
-    maskCanvas.height = cv.height;
+    // 基础 mask：像素坐标
+    baseMaskCanvas.width  = cv.width;
+    baseMaskCanvas.height = cv.height;
 
-    // 1) 先画基础蒙版（你的 mask_base.png）
-    maskCtx.setTransform(1,0,0,1,0,0);
-    maskCtx.clearRect(0,0,maskCanvas.width, maskCanvas.height);
-    maskCtx.drawImage(baseMaskImg, 0, 0, maskCanvas.width, maskCanvas.height);
+    // P mask：像素坐标
+    pMaskCanvas.width  = cv.width;
+    pMaskCanvas.height = cv.height;
 
-    // 2) 再叠加手写 P（白色）
-    drawHandwrittenP_ontoMask();
+    // 重建两类 mask
+    baseMaskCtx.setTransform(1,0,0,1,0,0);
+    baseMaskCtx.clearRect(0,0,baseMaskCanvas.width, baseMaskCanvas.height);
+    baseMaskCtx.drawImage(baseMaskImg, 0, 0, baseMaskCanvas.width, baseMaskCanvas.height);
+
+    rebuildPMask();
   }
 
-  // 用合成 mask 抠洞：把 mask 白色区域从红色层里清除成透明
-  function punchOutCombinedMask(){
+  // ====== 挖洞：基础蒙版始终挖；P 仅在选中正确红时挖 ======
+  function punchOutMasks(){
     const w = cv.width, h = cv.height;
+
     ctx.save();
-    ctx.setTransform(1,0,0,1,0,0); // 切到像素坐标系
+    ctx.setTransform(1,0,0,1,0,0);
     ctx.globalCompositeOperation = "destination-out";
-    ctx.drawImage(maskCanvas, 0, 0, w, h);
+
+    // 1) 基础蒙版始终挖洞（白框/白字区域永远透出底图）
+    ctx.drawImage(baseMaskCanvas, 0, 0, w, h);
+
+    // 2) 只有选中正确红，才挖出 P
+    if (currentColor && currentColor.toLowerCase() === CORRECT_RED) {
+      ctx.drawImage(pMaskCanvas, 0, 0, w, h);
+    }
+
     ctx.restore();
   }
 
-  // 画纯红点
+  // ====== 绘制：纯色不透明 ======
   function dab(x, y){
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = BRUSH_COLOR; // 纯色不透明
+    ctx.fillStyle = currentColor; // 纯色
     ctx.beginPath();
     ctx.arc(x, y, BRUSH_RADIUS_CSSPX, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
 
-    // 每次画完立刻抠洞（基础蒙版 + P）
-    punchOutCombinedMask();
+    // 每次画完立即抠洞
+    punchOutMasks();
   }
 
-  // 连续划线：插值打点
   function strokeLine(x0,y0,x1,y1){
     const dx = x1-x0, dy = y1-y0;
     const dist = Math.hypot(dx,dy);
@@ -189,8 +315,15 @@
 
   let down = false, last = null;
 
+  function warnNeedColor(){
+    // 轻量提示：不弹窗，不打断
+    hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br/><strong>只有正确红色才会显示隐藏的 P。</strong>';
+  }
+
   function onDown(e){
     e.preventDefault();
+    if(!currentColor){ warnNeedColor(); return; }
+
     down = true;
     const p = getXY(e);
     last = p;
@@ -210,7 +343,7 @@
     last = null;
   }
 
-  // 绑定事件
+  // ====== 事件绑定 ======
   cv.addEventListener("pointerdown", onDown, { passive:false });
   window.addEventListener("pointermove", onMove, { passive:false });
   window.addEventListener("pointerup", onUp, { passive:false });
@@ -222,8 +355,41 @@
   window.addEventListener("touchend", onUp, { passive:false });
   window.addEventListener("touchcancel", onUp, { passive:false });
 
+  // ====== 调色盘 UI ======
+  function renderPalette(){
+    paletteEl.innerHTML = "";
+    COLORS.forEach((c, idx) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch";
+      b.style.setProperty("--c", c);
+      b.setAttribute("aria-label", "color " + c);
+
+      b.addEventListener("click", () => {
+        // 设为当前色
+        currentColor = c;
+
+        // 更新选中样式
+        [...paletteEl.querySelectorAll(".swatch")].forEach(x => x.classList.remove("selected"));
+        b.classList.add("selected");
+
+        // 文案（可选）
+        if (c.toLowerCase() === CORRECT_RED) {
+          hintEl.innerHTML = '已选中<strong>正确红色</strong>：现在涂抹将显示隐藏的 P。';
+        } else {
+          hintEl.innerHTML = '已选中颜色：可以涂抹。但<strong>只有正确红色</strong>才会显示隐藏的 P。';
+        }
+      });
+
+      // 默认不选中任何颜色（必须先点）
+      paletteEl.appendChild(b);
+    });
+  }
+
+  // ====== 资源加载 ======
   function ready(){
-    rebuildMask();
+    resizeAll();
+    renderPalette();
     loading.classList.add("hide");
   }
 
@@ -233,11 +399,11 @@
   img.addEventListener("error", () => { loading.textContent = "底图 bw.jpg 加载失败"; });
 
   baseMaskImg.addEventListener("load", () => { baseMaskOK = true; if(imgOK) ready(); });
-  baseMaskImg.addEventListener("error", () => { loading.textContent = "基础蒙版 mask_base.png 加载失败"; });
+  baseMaskImg.addEventListener("error", () => { loading.textContent = "蒙版 mask_base.png 加载失败"; });
 
+  // 旋转/缩放会重置 canvas（涂层会清空）
   window.addEventListener("resize", () => {
-    // resize 会清空涂层；如需保留涂抹进度，需要做缓存（可再加）
-    if(imgOK && baseMaskOK) rebuildMask();
+    if(imgOK && baseMaskOK) resizeAll();
   });
 })();
 </script>
