@@ -28,7 +28,6 @@
 
     body{
       margin:0;
-      padding:24px;
       background:#fff;
       color:var(--c-text);
       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",
@@ -37,27 +36,30 @@
       line-height:var(--lh-body);
     }
 
+    /* 与 Square 页面一致：整体只由这里控制上下留白 */
     .container{
       max-width:var(--maxw);
       margin:0 auto;
+      padding:24px 16px 40px;
+      box-sizing:border-box;
     }
 
-    /* ===== title 统一样式 ===== */
+    /* ===== title 样式（无多余上边距） ===== */
     .title{
       font-size:var(--fs-title);
       line-height:var(--lh-title);
       font-weight:700;
-      margin:0 0 18px;
+      margin:0 0 12px; /* 控制节奏，不制造大空白 */
     }
 
     /* 顶部故事文字 */
     .title.story{
-      margin-bottom:24px;
       white-space:pre-wrap;
     }
 
+    /* 图片：贴近标题，不要大段空白 */
     .image-box{
-      margin:0 0 32px;
+      margin:0 0 18px;
       text-align:center;
     }
     .image-box img{
@@ -67,19 +69,15 @@
       margin:0 auto;
     }
 
-    /* ===== 最后更新日期：文字 + 输入框同一行（title 样式） ===== */
-    .title-row{
+    /* ===== 输入区 ===== */
+    .answer{
       display:flex;
+      gap:8px;                 /* ★ 输入框之间更近 */
       align-items:center;
-      gap:14px;               /* 文字与 YYYY 之间的距离 */
-      font-size:var(--fs-title);
-      line-height:var(--lh-title);
-      font-weight:700;
-      margin:0 0 36px;        /* 与按钮之间多空一行 */
       flex-wrap:nowrap;
+      margin-bottom:36px;      /* ★ 与按钮之间多空一行 */
     }
 
-    /* 输入框 */
     .ansInput{
       height:40px;
       padding:0 8px;
@@ -155,6 +153,7 @@
 <body>
   <div class="container">
 
+    <!-- 顶部文字：无额外空白 -->
     <div class="title story">
 在刚刚路过的十字路口的一角好像看到个绿色大邮筒。这也是个老物件了，记得运营这个邮筒公众号的小编，也曾经是这个游戏的玩家。但她仿佛消失了一样，好久没有她的消息了，她上次更新公众号是什么日子？
     </div>
@@ -163,9 +162,11 @@
       <img src="post.png" alt="post" />
     </div>
 
-    <!-- 最后更新日期：与输入框同一行，不换行 -->
-    <div class="title-row">
-      <span>最后更新日期：</span>
+    <!-- 最后更新日期：单独一行 -->
+    <div class="title">最后更新日期：</div>
+
+    <!-- 输入框单独一行 -->
+    <div class="answer">
       <input id="year"  class="ansInput year"  placeholder="YYYY" inputmode="numeric" autocomplete="off" />
       <input id="month" class="ansInput short" placeholder="MM"   inputmode="numeric" autocomplete="off" />
       <input id="day"   class="ansInput short" placeholder="DD"   inputmode="numeric" autocomplete="off" />
