@@ -10,36 +10,50 @@
 
   <style>
     :root{
-      --maxw: 980px;
-      --pad: 18px;
+      /* ✅ 同源（Rotate） */
+      --maxw: 720px;
 
       --fs-hint: 18px;
       --lh-hint: 1.6;
+
+      /* ✅ 同源间距 */
+      --gap: 18px;
+
+      --bg:#fff;
+      --c-text:#111;
     }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
 
     html,body{
       margin:0;
-      background:#fff;
-      font-family:-apple-system,BlinkMacSystemFont,
-        "PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      background:var(--bg);
+      /* ✅ 同源字体栈 */
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      color:var(--c-text);
+      -webkit-text-size-adjust:100%;
     }
 
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
-      padding:var(--pad);
+      /* ✅ 同源 padding（保证“距离顶部”一致） */
+      padding:18px 14px 28px;
       box-sizing:border-box;
     }
 
-    /* ===== 标题 ===== */
+    /* ✅ 顶部文字：同源 titleLine 规范（严格对齐 Rotate） */
     .UI.title{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
       font-weight: 700;
-      margin: 0 0 12px 0;
+      margin: 4px 0 var(--gap);
+      text-align: left;
+      white-space: pre-wrap;
     }
 
-    /* ===== 顶部画板 ===== */
+    /* ===== 顶部画板（不动） ===== */
     .stage{
       position:relative;
       width:100%;
@@ -135,8 +149,7 @@
       transform: translateZ(0);
     }
 
-/* p2：只允许点击卷轴区域（新 p2.png 已重新定位） */
-/* p2：仅白色卷轴本体（收紧版） */
+    /* p2：仅白色卷轴本体（收紧版） */
     .p2btn{
       position:absolute;
       inset:auto;
@@ -154,7 +167,6 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-
     .p2btn:focus{ outline:none; }
   </style>
 </head>
@@ -162,9 +174,7 @@
 <body>
   <div class="wrap">
 
-    <p class="UI title">
-      翻看这幅画对面，原来藏了一张图纸，点击获取图纸，并查看图纸内容
-    </p>
+    <p class="UI title">翻看这幅画对面，原来藏了一张图纸，点击获取图纸，并查看图纸内容</p>
 
     <div class="stage" id="stage">
       <div class="layer imgA">
