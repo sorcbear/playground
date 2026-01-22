@@ -16,11 +16,13 @@
   --c-red:#ff0000;
   --c-purple:#7030a0;
 
-  --maxw:980px;
+  /* ✅ 同源：Rotate */
+  --maxw:720px;
 
   --fs-body:18px;
   --lh-body:1.6;
 
+  /* 这里保留你原变量名，但值同源 */
   --fs-title:18px;
   --lh-title:1.6;
 
@@ -28,34 +30,52 @@
   --fw-btn:600;
   --h-btn:52px;
 
+  /* ✅ 同源间距体系 */
+  --gap:18px;
+  --gap-tight:12px;
+
   --c-text:#111;
   --c-border:#000;
   --c-ok:#0b6b2b;
   --c-danger:#b00020;
+
+  --bg:#fff;
 }
 
-html,body{
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
+body{
   margin:0;
-  background:#fff;
-  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+  background:var(--bg);
+  color:var(--c-text);
+
+  /* ✅ 同源：Rotate 字体栈 */
+  font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+
   font-size:var(--fs-body);
   line-height:var(--lh-body);
-  color:var(--c-text);
+
+  /* ✅ 同源：Rotate */
+  -webkit-text-size-adjust:100%;
 }
 
 .wrap{
   max-width:var(--maxw);
   margin:0 auto;
-  padding:24px 16px 40px;
-  box-sizing:border-box;
+
+  /* ✅ 同源：Rotate padding */
+  padding:18px 14px 28px;
 }
 
-/* ===== title 样式 ===== */
+/* ===== title 样式：✅ 同源 titleLine 规范 ===== */
 .title{
-  margin:0 0 12px 0;
+  margin:4px 0 var(--gap);
   font-size:var(--fs-title);
   line-height:var(--lh-title);
   font-weight:700;
+  text-align:left;
+  white-space:pre-wrap;
 }
 
 /* 图片 */
@@ -66,35 +86,35 @@ img{
 }
 
 /* ===== 输入区 ===== */
-.code{ margin-top:18px; }
+.code{ margin-top:var(--gap); }
 
 .slots{
-  margin-top:12px;
+  margin-top:var(--gap-tight);
   display:flex;
   align-items:center;
   flex-wrap:wrap;
   gap:8px;
-  margin-bottom:36px; /* 与按钮之间多隔一行 */
+
+  /* ✅ 原 36px → 同源表达（两行） */
+  margin-bottom:calc(var(--gap) * 2);
 }
 
 /* ===== 单行 input：真正垂直居中 ===== */
 .slot{
   height:40px;
-  line-height:40px;          /* ✅ input 垂直居中关键 */
+  line-height:40px;
   border:2px solid var(--c-border);
   font-size:var(--fs-title);
   font-weight:700;
   font-family:inherit;
   text-align:center;
-  padding:0 6px;             /* 左右内边距，不影响垂直居中 */
-  box-sizing:border-box;
+  padding:0 6px;
   outline:none;
   caret-color:#000;
   border-radius:0;
   -webkit-appearance:none;
+  box-shadow:none;
 }
-
-/* 防止 iOS 乱加阴影/圆角 */
 .slot:focus{ outline:none; box-shadow:none; }
 
 /* 宽度 */
@@ -103,8 +123,8 @@ img{
 
 /* 固定字：路（与 title 完全一致） */
 .fixedWord{
-  height:46px;
-  line-height:46px;
+  height:40px;
+  line-height:40px;
   font-size:var(--fs-title);
   font-weight:700;
   font-family:inherit;
@@ -113,13 +133,12 @@ img{
   align-items:center;
   justify-content:center;
   padding:0 6px;
-  box-sizing:border-box;
   user-select:none;
 }
 
 /* ===== Square 风格按钮 ===== */
 .panel{
-  margin-top:36px;
+  margin-top:var(--gap);
   display:flex;
   gap:12px;
   justify-content:center;
@@ -139,6 +158,8 @@ button{
   cursor:pointer;
   border-radius:0;
   -webkit-tap-highlight-color:transparent;
+  font-family:inherit;
+  transition:none;
 }
 
 @media (hover:hover) and (pointer:fine){
@@ -157,7 +178,7 @@ button:disabled{
 
 /* msg */
 .msg{
-  margin-top:12px;
+  margin-top:var(--gap-tight);
   min-height:1.4em;
   font-size:14px;
   line-height:1.6;
@@ -176,19 +197,18 @@ button:disabled{
 <body>
 <div class="wrap">
 
-  <p class="title">
-    原来是那一天，记得参加完签售会后，我去了衡山公园约会，那里有一个名人雕塑，或许有下一个谜题的线索。
-  </p>
+  <!-- ✅ 保持一行，避免缩进空白 -->
+  <div class="title">原来是那一天，记得参加完签售会后，我去了衡山公园约会，那里有一个名人雕塑，或许有下一个谜题的线索。</div>
 
   <img src="puzzle.png" alt="puzzle">
 
   <div class="code">
-    <div class="title">请在彩色方框内输入暗号：</div>
+    <div class="title" style="margin:0 0 var(--gap-tight);">请在彩色方框内输入暗号：</div>
 
     <div class="slots">
-      <input id="s1" class="slot w1" style="background:var(--c-blue)"  inputmode="text" autocomplete="off" />
-      <input id="s2" class="slot w2" style="background:var(--c-cyan)"  inputmode="text" autocomplete="off" />
-      <input id="s3" class="slot w1" style="background:var(--c-green)" inputmode="text" autocomplete="off" />
+      <input id="s1" class="slot w1" style="background:var(--c-blue)"   inputmode="text" autocomplete="off" />
+      <input id="s2" class="slot w2" style="background:var(--c-cyan)"   inputmode="text" autocomplete="off" />
+      <input id="s3" class="slot w1" style="background:var(--c-green)"  inputmode="text" autocomplete="off" />
       <input id="s4" class="slot w2" style="background:var(--c-lgreen)" inputmode="text" autocomplete="off" />
 
       <div class="fixedWord">路</div>
