@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>paper pickup</title>
 
+  <!-- 预加载，避免慢网不顺 -->
   <link rel="preload" as="image" href="p1.png">
   <link rel="preload" as="image" href="p2.png">
 
@@ -12,16 +13,15 @@
     :root{
       --maxw: 980px;
       --pad: 18px;
-      --bg:#fff;
-      --text:#111;
     }
+
     html,body{
       margin:0;
-      background:var(--bg);
-      color:var(--text);
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
-                   "PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      background:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,
+        "PingFang SC","Microsoft YaHei",Arial,sans-serif;
     }
+
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
@@ -29,24 +29,26 @@
       box-sizing:border-box;
     }
 
-    /* ===== 顶部板子（p0/p1）===== */
+    /* ===== 顶部画板 ===== */
     .stage{
       position:relative;
-      width:100%;
       max-width:1024px;
       margin:0 auto;
       user-select:none;
-      -webkit-tap-highlight-color: transparent;
     }
+
+    /* 固定比例：765 / 1024 */
     .stage::before{
       content:"";
       display:block;
-      padding-top:74.70703125%; /* 765/1024 */
+      padding-top:74.70703125%;
     }
+
     .layer{
       position:absolute;
       inset:0;
     }
+
     .layer img{
       width:100%;
       height:100%;
@@ -55,155 +57,122 @@
       pointer-events:none;
     }
 
-    /* 瞬间切换 */
-    .imgA{ display:block; }
-    .imgB{ display:none; }
-    .revealed .imgA{ display:none; }
-    .revealed .imgB{ display:block; }
+    /* ===== 关键：用 opacity，不用 display ===== */
+    .imgA, .imgB{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      transition:none;
+    }
 
-    /* p0 的纸卷热点 */
+    .imgA{ opacity:1; }
+
+    .revealed .imgA{ opacity:0; }
+    .revealed .imgB{ opacity:1; }
+
+    /* ===== p0 纸卷热点（按新图校准） ===== */
     .hotspot{
       position:absolute;
-      left:22.8%;
-      top:66.3%;
-      width:15.5%;
-      height:5.8%;
+      left:12.79%;
+      top:71.24%;
+      width:21.48%;
+      height:12.42%;
       border:0;
       background:transparent;
       cursor:pointer;
       padding:0;
-      margin:0;
     }
+
     .hotspot:disabled{
-      opacity:1;
-      cursor:default;
-      pointer-events:none;
-    }
-    .revealed .hotspot{
       pointer-events:none;
       cursor:default;
     }
 
-    /* ===== 下方 p2：初始不显示，revealed 后才显示 ===== */
+    /* ===== p2：初始隐藏 ===== */
     .pickup{
+      display:none;
       max-width:1024px;
       margin:18px auto 0;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-      display:none;                 /* 关键：初始隐藏 */
     }
-    .revealed + .pickup,
-    .stage.revealed ~ .pickup{      /* 兼容不同 DOM 结构，这里用 ~ */
-      display:block;                /* 点击后立刻显示 */
+
+    .revealed ~ .pickup{
+      display:block;
     }
 
     .p2box{
       position:relative;
-      width:100%;
-      max-width:1024px;
-      margin:0 auto;
     }
+
     .p2box img{
       width:100%;
       height:auto;
       display:block;
     }
 
-    /* p2 点击区：默认整张可点（更稳），你也可改热点 */
     .p2btn{
       position:absolute;
       inset:0;
       border:0;
       background:transparent;
       cursor:pointer;
-      padding:0;
-      margin:0;
     }
-    .p2btn:disabled{
-      opacity:1;
-      cursor:default;
-      pointer-events:none;
-    }
-
-    /* 若只想点画卷本体才跳转，启用下面并调百分比 */
-    /*
-    .p2btn{
-      inset:auto;
-      left:37%;
-      top:5%;
-      width:26%;
-      height:88%;
-    }
-    */
   </style>
 </head>
 
 <body>
   <div class="wrap">
+
     <div class="stage" id="stage">
       <div class="layer imgA">
-        <img src="p0.png" alt="board with roll" />
+        <img src="p0.png" alt="">
       </div>
       <div class="layer imgB">
-        <img src="p1.png" alt="board without roll" />
+        <img src="p1.png" alt="">
       </div>
-      <button class="hotspot" id="hotspot" aria-label="点击纸卷" title="点击纸卷" disabled></button>
+
+      <button class="hotspot" id="hotspot" disabled></button>
     </div>
 
-    <!-- p2：初始隐藏，点击 p0 后与 p1 同时出现 -->
-    <div class="pickup" id="pickup">
+    <div class="pickup">
       <div class="p2box">
-        <img src="p2.png" alt="scroll" />
-        <button class="p2btn" id="p2btn" aria-label="打开画卷" title="打开画卷" disabled></button>
+        <img src="p2.png" alt="">
+        <button class="p2btn" id="p2btn"></button>
       </div>
     </div>
+
   </div>
 
   <script>
     (function(){
       const stage = document.getElementById("stage");
-      const btnRoll = document.getElementById("hotspot");
-      const btnP2 = document.getElementById("p2btn");
+      const rollBtn = document.getElementById("hotspot");
+      const p2Btn = document.getElementById("p2btn");
 
-      const NEXT_URL = "https://sorcbear.github.io/playground/paper";
+      const NEXT = "https://sorcbear.github.io/playground/paper";
 
-      let p1Ready = false;
-      let p2Ready = false;
-      let revealed = false;
+      let ready1 = false;
+      let ready2 = false;
 
       function sync(){
-        // 只有当 p1/p2 都已加载完，才允许点 p0 纸卷
-        btnRoll.disabled = !(p1Ready && p2Ready) || revealed;
-
-        // p2：必须先 revealed，且 p2Ready
-        btnP2.disabled = !(revealed && p2Ready);
+        rollBtn.disabled = !(ready1 && ready2);
       }
 
-      function preload(src, ok, fail){
-        const im = new Image();
-        im.onload = ok;
-        im.onerror = fail;
-        im.src = src;
+      function preload(src, cb){
+        const i = new Image();
+        i.onload = cb;
+        i.src = src;
       }
 
-      preload("p1.png", () => { p1Ready = true; sync(); }, () => { p1Ready = false; sync(); });
-      preload("p2.png", () => { p2Ready = true; sync(); }, () => { p2Ready = false; sync(); });
+      preload("p1.png", ()=>{ ready1=true; sync(); });
+      preload("p2.png", ()=>{ ready2=true; sync(); });
 
-      sync();
-
-      // 点击 p0 纸卷：同一瞬间切 p1 + 显示 p2
-      btnRoll.addEventListener("click", () => {
-        if (btnRoll.disabled) return;
-        revealed = true;
+      rollBtn.addEventListener("click", ()=>{
         stage.classList.add("revealed");
-        sync();
-      }, { passive:true });
+      });
 
-      // 点击 p2：跳转下一页
-      btnP2.addEventListener("click", () => {
-        if (btnP2.disabled) return;
-        location.href = NEXT_URL;
-      }, { passive:true });
+      p2Btn.addEventListener("click", ()=>{
+        location.href = NEXT;
+      });
     })();
   </script>
 </body>
