@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Hint</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      --fs-body: 16px;
+      --fs-text: 18px;
+      --lh-text: 1.7;
+
+      --ctl-h: 48px;
+
+      --c-border:#000;
+      --c-text:#111;
+      --bg:#fff;
+
+      /* 两按钮之间的间距 */
+      --gap: 18px;
+    }
+
+    html, body{
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
+      background:var(--bg);
+      color:var(--c-text);
+      font-family:-apple-system,BlinkMacSystemFont,
+        "Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      font-size:var(--fs-body);
+    }
+
+    .container{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      box-sizing: border-box;
+    }
+
+    .panel{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:28px;
+      text-align:center;
+    }
+
+    .btn-row{
+      display:flex;
+      gap:var(--gap);
+      justify-content:center;
+      align-items:center;
+    }
+
+    /* ===== 按钮：去掉 iOS 默认外观 + 宽度自适应 ===== */
+    button{
+      -webkit-appearance: none;
+      appearance: none;
+
+      width: auto;                 /* 关键：不再固定宽度 */
+      min-width: 140px;            /* 不至于太窄 */
+      max-width: 44vw;             /* 手机上避免太宽 */
+      height: var(--ctl-h);
+
+      padding: 0 18px;
+      box-sizing: border-box;
+
+      font-size: var(--fs-body);
+      font-weight: 600;
+      line-height: 1;
+
+      background: #fff;
+      color: #000;
+      border: 2px solid var(--c-border);
+      border-radius: 0;
+
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent; /* 去掉 iOS 点击灰块 */
+      touch-action: manipulation;
+      white-space: nowrap;
+    }
+
+    /* 反馈：桌面 hover 反色 */
+    button:hover{
+      background:#000;
+      color:#fff;
+    }
+
+    /* 反馈：手机按下也反色（无位移/无缩放） */
+    button:active{
+      background:#000;
+      color:#fff;
+      transform: none;
+    }
+
+    button:disabled{
+      opacity:.45;
+      cursor:default;
+    }
+
+    .hint-text{
+      display:none;
+      font-size:var(--fs-text);
+      line-height:var(--lh-text);
+      white-space:pre-wrap;
+      text-align:left;             /* 关键：提示文字左对齐 */
+    }
+
+    /* 新增：提示下面的返回按钮行（默认隐藏） */
+    .return-row{
+      display:none;
+    }
+
+    /* 超小屏时，按钮略微缩紧一点 */
+    @media (max-width: 360px){
+      button{
+        min-width: 128px;
+        padding: 0 14px;
+      }
+      .btn-row{ gap: 14px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="panel">
+
+      <div class="btn-row" id="buttons">
+        <button id="cancelBtn">再想想</button>
+        <button id="hintBtn">看提示</button>
+      </div>
+
+      <div class="hint-text" id="hintText">邮筒上面有2个二维码，扫描左边的二维码可以进入公众号，翻看公众号文章列表 </div>
+
+      <!-- 新增：提示文字下面的“返回游戏”按钮（同样式） -->
+      <div class="btn-row return-row" id="returnRow">
+        <button id="returnBtn">返回游戏</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const cancelBtn = document.getElementById('cancelBtn');
+    const hintBtn   = document.getElementById('hintBtn');
+    const buttons   = document.getElementById('buttons');
+    const hintText  = document.getElementById('hintText');
+
+    const returnRow = document.getElementById('returnRow');
+    const returnBtn = document.getElementById('returnBtn');
+
+    const BACK_URL = 'https://sorcbear.github.io/playground/post/';
+
+    cancelBtn.addEventListener('click', () => {
+      location.href = BACK_URL;
+    });
+
+    returnBtn.addEventListener('click', () => {
+      location.href = BACK_URL;
+    });
+
+    hintBtn.addEventListener('click', () => {
+      buttons.style.display = 'none';
+      hintText.style.display = 'block';
+      returnRow.style.display = 'flex';
+    });
+  </script>
+</body>
+</html>
