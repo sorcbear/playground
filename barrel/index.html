@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="format-detection" content="telephone=no,address=no,email=no">
-
 <title>Barrel Puzzle</title>
 
 <style>
@@ -24,23 +23,21 @@
   --bg:#ffffff;
   --c-text:#111;
 
-  /* ===== Barrel 本题专用（保留你的设定） ===== */
+  /* ===== Barrel 本题专用 ===== */
   --outerLine:4px;
   --midLine:4px;
   --lineColor:#000;
   --radius:18px;
 
-  /* 数字大小（你想再调就改这里） */
   --digitSize:220px;
   --digitColor:#243B8F;
   --digitStroke:#0B0F2E;
   --digitStrokeW:6px;
-  --digitShadow:none; /* ✅ 取消所有阴影 */
+  --digitShadow:none;
 
   --btnSize:76px;
   --btnGap:44px;
 
-  /* 成功提示绿色 */
   --ok:#0b6b2b;
 }
 
@@ -55,24 +52,24 @@ body{
   /* ✅ Rotate 同款字体栈 */
   font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
 
+  /* ✅ Rotate 同款基准字号/行高 */
   font-size:var(--fs-body);
   line-height:var(--lh-body);
 
   /* ✅ Rotate 同款 */
   -webkit-text-size-adjust:100%;
 
-  /* 防止手机点击闪影 */
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ✅ Rotate 同源：页面容器上下左右间距完全一致 */
+/* ✅ Rotate 同源：外层间距 */
 .wrap{
   max-width:var(--maxw);
   margin:0 auto;
   padding:18px 14px 28px;
 }
 
-/* ✅ 顶部提示文字：严格等同 Rotate 的 titleLine */
+/* ✅ 顶部提示：字号/行高/字重与 Rotate 标题一致（18 / 1.6 / 700） */
 .topHint{
   margin:4px 0 var(--gap);
   font-size:var(--fs-hint);
@@ -130,19 +127,17 @@ body{
   color:var(--digitColor);
   -webkit-text-stroke:var(--digitStrokeW) var(--digitStroke);
   paint-order:stroke fill;
-  text-shadow:var(--digitShadow); /* ✅ 始终 none */
+  text-shadow:var(--digitShadow);
   user-select:none;
-
-  /* ✅ 避免默认滤镜差异 */
   filter:none;
 }
 
-/* 按钮区：用同源间距体系 */
+/* 按钮 */
 .buttons{
   display:flex;
   justify-content:center;
   gap:var(--btnGap);
-  margin-top:var(--gap);          /* ✅ 原 26px → 同源 gap=18px */
+  margin-top:var(--gap); /* 同源间距 */
 }
 
 .coinBtn{
@@ -168,10 +163,10 @@ body{
   user-select:none;
 }
 
-/* 倒计时提示：同源间距 + 14px 字号保留 */
+/* 倒计时提示：同源间距 */
 .msg{
   text-align:left;
-  margin-top:var(--gap-tight);    /* ✅ 原 14px → 同源 gap-tight=12px */
+  margin-top:var(--gap-tight);
   min-height:22px;
   font-size:14px;
   font-weight:700;
@@ -179,7 +174,7 @@ body{
 }
 .msg.ok{ color:var(--ok); }
 
-/* 手机适配：只动题目内部，不动同源容器间距 */
+/* 手机适配：只动图形尺寸，不动文字字号（保持与 Rotate 一致） */
 @media (max-width:900px){
   :root{
     --digitSize:min(30vw,210px);
@@ -188,7 +183,6 @@ body{
     --outerLine:3px;
     --midLine:3px;
   }
-  .topHint{ font-size:16px; }
 }
 </style>
 </head>
@@ -275,22 +269,18 @@ function setButtonsLocked(locked){
 function incDigit(x){ return (x + 1) % DIGIT_MOD; }
 function incPattern(x){ return (x + 1) % patterns.length; }
 
-/* ===== 新规则（纠缠版）=====
-按钮1：控制 位置1的数字 + 位置2的图案
-按钮2：控制 位置1的图案 + 位置2的数字 + 位置3的数字
-按钮3：控制 位置3的数字 + 位置3的图案
-*/
+/* ===== 新规则（纠缠版）===== */
 function applyRule(k){
   if(k === 1){
-    D[0] = incDigit(D[0]);       // D1
-    P[1] = incPattern(P[1]);     // P2
+    D[0] = incDigit(D[0]);
+    P[1] = incPattern(P[1]);
   }else if(k === 2){
-    P[0] = incPattern(P[0]);     // P1
-    D[1] = incDigit(D[1]);       // D2
-    D[2] = incDigit(D[2]);       // D3
+    P[0] = incPattern(P[0]);
+    D[1] = incDigit(D[1]);
+    D[2] = incDigit(D[2]);
   }else if(k === 3){
-    D[2] = incDigit(D[2]);       // D3
-    P[2] = incPattern(P[2]);     // P3
+    D[2] = incDigit(D[2]);
+    P[2] = incPattern(P[2]);
   }
 }
 
@@ -308,7 +298,6 @@ function render(){
     patEls[i].src = patterns[P[i]];
   }
 
-  // 不再显示 success；只有进入倒计时才显示提示
   if(!isCountingDown){
     msgEl.textContent = "";
     msgEl.classList.remove("ok");
@@ -319,7 +308,6 @@ function render(){
   }
 }
 
-/* ===== 成功后倒计时 + 跳转（3/2/1）===== */
 function startCountdownOnce(){
   if(isCountingDown) return;
   isCountingDown = true;
@@ -341,12 +329,10 @@ function startCountdownOnce(){
   }, 1000);
 }
 
-/* 绑定按钮 */
 btn1.onclick = () => { if(isCountingDown) return; applyRule(1); render(); };
 btn2.onclick = () => { if(isCountingDown) return; applyRule(2); render(); };
 btn3.onclick = () => { if(isCountingDown) return; applyRule(3); render(); };
 
-/* 初始化 */
 render();
 </script>
 </body>
