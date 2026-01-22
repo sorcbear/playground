@@ -36,7 +36,7 @@
       line-height:var(--lh-body);
     }
 
-    /* 与 Square 页面一致：整体只由这里控制上下留白 */
+    /* 与 Square 一致：整体留白只由这里控制 */
     .container{
       max-width:var(--maxw);
       margin:0 auto;
@@ -44,22 +44,22 @@
       box-sizing:border-box;
     }
 
-    /* ===== title 样式（无多余上边距） ===== */
+    /* title 样式 */
     .title{
       font-size:var(--fs-title);
       line-height:var(--lh-title);
       font-weight:700;
-      margin:0 0 12px; /* 控制节奏，不制造大空白 */
+      margin:0 0 12px;
     }
 
-    /* 顶部故事文字 */
+    /* ★ 关键：不要 pre-wrap，否则会把 HTML 缩进/换行渲染成空白行 */
     .title.story{
-      white-space:pre-wrap;
+      white-space: normal;
+      margin-bottom:12px;  /* 文字与图片之间不要大空白 */
     }
 
-    /* 图片：贴近标题，不要大段空白 */
     .image-box{
-      margin:0 0 18px;
+      margin:0 0 18px;     /* 图片下方节奏 */
       text-align:center;
     }
     .image-box img{
@@ -69,13 +69,13 @@
       margin:0 auto;
     }
 
-    /* ===== 输入区 ===== */
+    /* 输入区：三个输入框更紧凑 */
     .answer{
       display:flex;
-      gap:8px;                 /* ★ 输入框之间更近 */
+      gap:8px;
       align-items:center;
       flex-wrap:nowrap;
-      margin-bottom:36px;      /* ★ 与按钮之间多空一行 */
+      margin-bottom:36px;  /* 与按钮之间多空一行 */
     }
 
     .ansInput{
@@ -95,7 +95,7 @@
     .ansInput.year{ width:90px; }
     .ansInput.short{ width:60px; }
 
-    /* ===== 按钮区（Square Puzzle 规格） ===== */
+    /* 按钮区（Square 规格） */
     .panel{
       display:flex;
       gap:12px;
@@ -153,19 +153,15 @@
 <body>
   <div class="container">
 
-    <!-- 顶部文字：无额外空白 -->
-    <div class="title story">
-在刚刚路过的十字路口的一角好像看到个绿色大邮筒。这也是个老物件了，记得运营这个邮筒公众号的小编，也曾经是这个游戏的玩家。但她仿佛消失了一样，好久没有她的消息了，她上次更新公众号是什么日子？
-    </div>
+    <!-- ★ 关键：div 内不要前后换行/缩进，否则会被当作空白渲染 -->
+    <div class="title story">在刚刚路过的十字路口的一角好像看到个绿色大邮筒。这也是个老物件了，记得运营这个邮筒公众号的小编，也曾经是这个游戏的玩家。但她仿佛消失了一样，好久没有她的消息了，她上次更新公众号是什么日子？</div>
 
     <div class="image-box">
       <img src="post.png" alt="post" />
     </div>
 
-    <!-- 最后更新日期：单独一行 -->
     <div class="title">最后更新日期：</div>
 
-    <!-- 输入框单独一行 -->
     <div class="answer">
       <input id="year"  class="ansInput year"  placeholder="YYYY" inputmode="numeric" autocomplete="off" />
       <input id="month" class="ansInput short" placeholder="MM"   inputmode="numeric" autocomplete="off" />
