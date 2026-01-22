@@ -13,7 +13,7 @@
       --lh-body: 1.6;
 
       --fs-hint: 18px;
-      --lh-hint: 1.6;
+      --lh-hint: 1.4; /* ✅ 收紧标题行高，减少“视觉白边” */
 
       --fs-btn: 16px;
       --fw-btn: 600;
@@ -30,10 +30,13 @@
     }
 
     *{ box-sizing:border-box; }
-    html,body{ height:100%; }
+    html,body{
+      height:100%;
+      margin:0;       /* ✅ 清除默认外边距 */
+      padding:0;      /* ✅ 清除默认内边距 */
+    }
 
     body{
-      margin:0;
       background:#fff;
       color:var(--c-text);
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
@@ -45,20 +48,20 @@
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
-      padding:18px 14px 28px;
+      padding:0 14px;     /* ✅ 只留左右，不要上下白边 */
     }
 
-    /* ===== 标题：无首行空隙（关键） ===== */
+    /* 标题：无任何上边距 */
     .title{
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
       font-weight:700;
-      margin:0;                 /* ← 彻底清零 */
+      margin:0;                 /* ✅ 清零 */
       white-space:pre-wrap;
     }
 
     .image-box{
-      margin-top:var(--gap);    /* 只在这里控制与标题的距离 */
+      margin-top:var(--gap);
       width:100%;
       border-radius:10px;
       overflow:hidden;
@@ -72,10 +75,9 @@
       -webkit-user-drag:none;
     }
 
-    /* ===== 红字提示：无首行空隙（关键） ===== */
     .hint{
-      margin:0;                 /* ← 彻底清零 */
-      margin-top:var(--gap-tight); /* 与图片的唯一距离来源 */
+      margin:0;
+      margin-top:var(--gap-tight);
       font-size:12px;
       line-height:1.4;
       color:var(--c-danger);
@@ -98,13 +100,13 @@
       font-weight:700;
     }
 
-    /* ===== 按钮：同一行 ===== */
     .actions{
       margin-top:var(--gap);
       display:flex;
       justify-content:center;
       gap:12px;
       flex-wrap:nowrap;
+      padding-bottom: 18px; /* ✅ 给底部一点点“触底缓冲”，避免手机误触到浏览器底栏 */
     }
 
     button{
@@ -130,19 +132,13 @@
 <body>
   <div class="wrap">
 
-    <!-- 标题：无任何上边距 -->
-    <div class="title">
-上一名玩家已经顺利找到了下一个解谜地点。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？（你可以用道具包里的自行车和痕迹图验证）
-    </div>
+    <div class="title">上一名玩家已经顺利找到了下一个解谜地点。现在你面向马路，发现它留下的自行车痕迹，你需要判断出它是往哪个方向前进的：向左还是向右？（你可以用道具包里的自行车和痕迹图验证）</div>
 
     <div class="image-box">
       <img src="track.png" alt="bike trace">
     </div>
 
-    <!-- 红字：无任何上边距 -->
-    <div class="hint">
-如果选错，本页面将冻结 5 分钟无法再次提交获取线索。
-    </div>
+    <div class="hint">如果选错，本页面将冻结 5 分钟无法再次提交获取线索。</div>
 
     <div class="msg" id="msg"></div>
 
@@ -244,6 +240,7 @@
       if (getLockUntil() > now()) return;
       lock();
     };
+
     btnRight.onclick = () => {
       if (getLockUntil() > now()) return;
       success();
