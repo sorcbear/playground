@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-
 <meta name="format-detection" content="telephone=no,address=no,email=no">
 
 <title>Square Puzzle</title>
 
 <style>
 :root{
-  --maxw: 900px;
+  /* ✅ Rotate 同款 */
+  --maxw: 720px;
 
   --fs-body: 18px;
   --lh-body: 1.6;
@@ -27,28 +27,36 @@
   --c-ok:#0b6b2b;
   --c-danger:#b00020;
 
+  /* ✅ Rotate 同款间距基准 */
   --gap: 18px;
 }
 
-html,body{
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
+body{
   margin:0;
   background:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
-               "PingFang SC","Microsoft YaHei",Arial,sans-serif;
+  color:var(--c-text);
+
+  /* ✅ Rotate 同款字体栈 */
+  font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+
   font-size:var(--fs-body);
   line-height:var(--lh-body);
-  color:var(--c-text);
+
+  /* ✅ Rotate 同款 */
+  -webkit-text-size-adjust:100%;
 }
 
-/* ✅ 与 Rotate 完全一致 */
+/* ✅ Rotate 同款 wrap */
 .wrap{
   max-width:var(--maxw);
   margin:0 auto;
   padding:18px 14px 28px;
-  box-sizing:border-box;
 }
 
-/* ✅ 与 Rotate 完全一致 */
+/* ✅ Rotate 同款 titleLine 排版 */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
@@ -126,8 +134,16 @@ button{
   button:hover{ background:#000; color:#fff; }
 }
 
-button.invert{ background:#000; color:#fff; }
-button:disabled{ opacity:.45; cursor:default; }
+/* JS 控制的点击反馈 */
+button.invert{
+  background:#000;
+  color:#fff;
+}
+
+button:disabled{
+  opacity:.45;
+  cursor:default;
+}
 
 .msg{
   margin-top:12px;
@@ -139,6 +155,7 @@ button:disabled{ opacity:.45; cursor:default; }
   font-weight:700;
 }
 
+/* ✅ 这里保留你原来的移动端按钮宽度策略，不影响标题对齐 */
 @media (max-width:520px){
   button{ width:46vw; }
 }
@@ -148,6 +165,7 @@ button:disabled{ opacity:.45; cursor:default; }
 <body>
 <div class="wrap">
 
+  <!-- ✅ 关键：不要在文本前加换行/空格 -->
   <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div>
 
   <div class="imgbox">
@@ -183,6 +201,7 @@ let locked=false;
 let timer=null;
 let btnTimer=null;
 
+/* 公共：短暂黑底白字反馈 */
 function flashInvert(btn, ms=120){
   btn.classList.add("invert");
   setTimeout(()=>btn.classList.remove("invert"), ms);
@@ -195,6 +214,7 @@ function setLocked(v){
   input.disabled=v;
 }
 
+/* 错误提示用 */
 function setBtnText(text, ms=900){
   if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
 
@@ -210,6 +230,7 @@ function setBtnText(text, ms=900){
   }, ms);
 }
 
+/* 获得提示：先反馈，再跳转 */
 hintBtn.onclick = ()=>{
   if (locked) return;
   flashInvert(hintBtn, 120);
