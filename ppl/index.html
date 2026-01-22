@@ -16,42 +16,70 @@
   --c-red:#ff0000;
   --c-purple:#7030a0;
 
-  --ok:#0b6b2b; /* ✅ 成功文字颜色（绿色系） */
+  --maxw:980px;
+
+  --fs-body:16px;
+  --lh-body:1.7;
+
+  --fs-title:18px;
+  --lh-title:1.6;
+
+  --fs-btn:16px;
+  --fw-btn:600;
+  --h-btn:52px;
+
+  --c-text:#111;
+  --c-border:#000;
+  --c-ok:#0b6b2b;
+  --c-danger:#b00020;
 }
 
-body{
+html,body{
   margin:0;
   background:#fff;
   font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+  color:var(--c-text);
 }
 
 .wrap{
-  max-width:980px;
+  max-width:var(--maxw);
   margin:0 auto;
-  padding:20px;
+  padding:24px 16px 40px;
+  box-sizing:border-box;
 }
 
-.intro{
-  font-size:18px;
-  line-height:1.7;
-  color:#111;
+/* title 样式（你要求 intro & 提示语都用这个） */
+.title{
   margin:0 0 12px 0;
+  font-size:var(--fs-title);
+  line-height:var(--lh-title);
+  font-weight:700;
 }
 
+/* 图片 */
 img{
   width:100%;
   display:block;
+  margin:0;
 }
 
+/* 输入区：提示行与输入框分行 */
 .code{
   margin-top:18px;
+}
+
+/* 输入框行 */
+.slots{
+  margin-top:12px;
   display:flex;
   align-items:center;
   flex-wrap:wrap;
   gap:8px;
-  font-size:18px;
 }
 
+/* 彩色输入框 */
 .slot{
   height:46px;
   line-height:44px;
@@ -63,89 +91,120 @@ img{
   outline:none;
   padding:0 6px;
   box-sizing:border-box;
-
-  /* ✅ 光标改为黑色（更明显） */
   caret-color:#000;
 }
+textarea{ overflow:hidden; }
 
 .w1{ width:50px; }
 .w2{ width:84px; }
 
-textarea{ overflow:hidden; }
-
-.rd{
+/* 位置固定字：路（替换原 RD） */
+.fixedWord{
   height:46px;
-  width:60px;
-  border:3px solid #c00000;
-  color:#c00000;
+  line-height:46px;
+  font-size:22px;
   font-weight:900;
+  color:#111;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:22px;
+  padding:0 6px;
+  box-sizing:border-box;
+  user-select:none;
 }
 
-.buttons{
-  margin-top:20px;
+/* ====== 按钮：改成 Square 风格 + Square 交互 ====== */
+.panel{
+  margin-top:18px;
   display:flex;
-  gap:18px;
+  gap:12px;
+  justify-content:center;
+  flex-wrap:nowrap;
 }
 
 button{
-  flex:1;
-  height:64px;
-  border-radius:32px;
-  border:none;
-  background:#111;
-  color:#fff;
-  font-size:22px;
-  font-weight:700;
+  width:240px;
+  height:var(--h-btn);
+  padding:0 18px;
+  box-sizing:border-box;
+  font-size:var(--fs-btn);
+  font-weight:var(--fw-btn);
+  background:#fff;
+  color:#000;
+  border:2px solid var(--c-border);
   cursor:pointer;
+  border-radius:0;
+  -webkit-tap-highlight-color:transparent;
 }
 
-button:active{
-  transform:scale(0.98);
+/* PC hover */
+@media (hover:hover) and (pointer:fine){
+  button:hover{ background:#000; color:#fff; }
 }
 
-/* ✅ 倒计时文字：14px，仍在 .msg 内显示 */
+/* JS 控制的点击反馈 */
+button.invert{
+  background:#000;
+  color:#fff;
+}
+
+button:disabled{
+  opacity:.45;
+  cursor:default;
+}
+
+/* msg：14px，成功绿色 */
 .msg{
-  margin-top:14px;
+  margin-top:12px;
+  min-height:1.4em;
   font-size:14px;
+  line-height:1.6;
+}
+.msg.ok{
+  color:var(--c-ok);
   font-weight:700;
 }
-.ok{ color:var(--ok); }
-.fail{ color:#b00020; }
+
+@media (max-width:520px){
+  button{ width:46vw; }
+}
 </style>
 </head>
 
 <body>
 <div class="wrap">
 
-  <p class="intro">
+  <!-- 顶部文字：title 样式 -->
+  <p class="title">
     原来是那一天，记得参加完签售会后，我去了衡山公园约会，那里有一个名人雕塑，或许有下一个谜题的线索。
   </p>
 
   <img src="puzzle.png" alt="puzzle">
 
   <div class="code">
-    <div>请在方框内输入暗号：</div>
+    <!-- 提示语：title 样式，且与输入框换行 -->
+    <div class="title">请在彩色方框内输入暗号：</div>
 
-    <textarea id="s1" class="slot w1" style="background:var(--c-blue)"></textarea>
-    <textarea id="s2" class="slot w2" style="background:var(--c-cyan)"></textarea>
-    <textarea id="s3" class="slot w1" style="background:var(--c-green)"></textarea>
-    <textarea id="s4" class="slot w2" style="background:var(--c-lgreen)"></textarea>
+    <div class="slots">
+      <textarea id="s1" class="slot w1" style="background:var(--c-blue)"></textarea>
+      <textarea id="s2" class="slot w2" style="background:var(--c-cyan)"></textarea>
+      <textarea id="s3" class="slot w1" style="background:var(--c-green)"></textarea>
+      <textarea id="s4" class="slot w2" style="background:var(--c-lgreen)"></textarea>
 
-    <div class="rd">RD</div>
+      <!-- 原 RD 取消，换成固定“路”字 -->
+      <div class="fixedWord">路</div>
 
-    <textarea id="s5" class="slot w1" style="background:var(--c-yellow)"></textarea>
-    <textarea id="s6" class="slot w1" style="background:var(--c-orange)"></textarea>
-    <textarea id="s7" class="slot w1" style="background:var(--c-red)"></textarea>
-    <textarea id="s8" class="slot w1" style="background:var(--c-purple)"></textarea>
+      <textarea id="s5" class="slot w1" style="background:var(--c-yellow)"></textarea>
+      <textarea id="s6" class="slot w1" style="background:var(--c-orange)"></textarea>
+      <textarea id="s7" class="slot w1" style="background:var(--c-red)"></textarea>
+      <textarea id="s8" class="slot w1" style="background:var(--c-purple)"></textarea>
+    </div>
   </div>
 
-  <div class="buttons">
-    <button id="btnReset" onclick="resetAll()">Reset</button>
-    <button id="btnSubmit" onclick="check()">Submit</button>
+  <!-- 两个按钮：获得提示 / 提交答案（Square 交互） -->
+  <div class="panel">
+    <button id="hintBtn">获得提示</button>
+    <button id="submitBtn">提交答案</button>
   </div>
 
   <div id="msg" class="msg"></div>
@@ -155,64 +214,93 @@ button:active{
 const ANSWER = ["四","君子","在","衡山","五","四","三","号"];
 const ids = ["s1","s2","s3","s4","s5","s6","s7","s8"];
 
+const HINT_URL = "https://sorcbear.github.io/playground/ppl/hint"; // 按你实际路径改
 const NEXT_URL = "https://sorcbear.github.io/playground/riddle/";
+const COUNTDOWN_START = 3;
 
-let redirectTimer = null;
-let ticking = false;
+const hintBtn = document.getElementById("hintBtn");
+const submitBtn = document.getElementById("submitBtn");
+const msg = document.getElementById("msg");
+
+let locked = false;
+let timer = null;
+let btnTimer = null;
 
 function clean(v){
-  return v.replace(/\s/g,"");
+  return (v || "").replace(/\s/g,"");
 }
 
-function lockUI(locked){
-  const btnReset = document.getElementById("btnReset");
-  const btnSubmit = document.getElementById("btnSubmit");
-  btnReset.disabled = locked;
-  btnSubmit.disabled = locked;
+/* Square：短暂黑底白字反馈 */
+function flashInvert(btn, ms=120){
+  btn.classList.add("invert");
+  setTimeout(()=>btn.classList.remove("invert"), ms);
 }
 
-function startCountdownAndGo(){
-  const msg = document.getElementById("msg");
-  ticking = true;
-  lockUI(true);
-
-  let n = 3;
-  msg.textContent = `答案正确，即将进入下一题（${n}）`;
-  msg.className = "msg ok"; // ✅ 使用 .msg.ok 绿色
-
-  redirectTimer = setInterval(() => {
-    n -= 1;
-    if(n >= 1){
-      msg.textContent = `答案正确，即将进入下一题（${n}）`;
-    }else{
-      clearInterval(redirectTimer);
-      redirectTimer = null;
-      location.href = NEXT_URL;
-    }
-  }, 1000);
+function setLocked(v){
+  locked = v;
+  hintBtn.disabled = v;
+  submitBtn.disabled = v;
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = v;
+  });
 }
 
-function check(){
-  if(ticking) return; // ✅ 防重复触发
-  const ok = ids.every((id,i)=> clean(document.getElementById(id).value) === ANSWER[i]);
-  const msg = document.getElementById("msg");
+/* Square：错误提示在按钮本身（不在 msg 显示 try again） */
+function setBtnText(text, ms=900){
+  if (btnTimer){ clearTimeout(btnTimer); btnTimer = null; }
 
-  if(ok){
-    // ✅ 不再显示 "success"，改为倒计时流程并锁定交互
-    startCountdownAndGo();
+  submitBtn.textContent = text;
+  submitBtn.classList.add("invert");
+  submitBtn.disabled = true;
+
+  btnTimer = setTimeout(()=>{
+    submitBtn.textContent = "提交答案";
+    submitBtn.classList.remove("invert");
+    submitBtn.disabled = false;
+    btnTimer = null;
+  }, ms);
+}
+
+/* 获得提示：先反馈，再跳转（Square 同款） */
+hintBtn.onclick = ()=>{
+  if (locked) return;
+  flashInvert(hintBtn, 120);
+  setTimeout(()=>location.href = HINT_URL, 120);
+};
+
+function isCorrect(){
+  return ids.every((id,i)=> clean(document.getElementById(id).value) === ANSWER[i]);
+}
+
+submitBtn.onclick = ()=>{
+  if (locked) return;
+
+  if (isCorrect()){
+    setLocked(true);
+
+    let t = COUNTDOWN_START;
+    msg.textContent = `答案正确，即将进入下一题（${t}）`;
+    msg.classList.add("ok");
+
+    if (timer) clearInterval(timer);
+    timer = setInterval(()=>{
+      t--;
+      if (t > 0){
+        msg.textContent = `答案正确，即将进入下一题（${t}）`;
+      }else{
+        clearInterval(timer);
+        timer = null;
+        location.href = NEXT_URL;
+      }
+    }, 1000);
+
   }else{
-    msg.textContent = "try again";
-    msg.className = "msg fail";
+    msg.textContent = "";
+    msg.classList.remove("ok");
+    setBtnText("不正确，再试一次", 900);
   }
-}
-
-function resetAll(){
-  if(ticking) return; // ✅ 倒计时期间锁定 Reset
-  ids.forEach(id=>document.getElementById(id).value="");
-  const msg = document.getElementById("msg");
-  msg.textContent="";
-  msg.className="msg";
-}
+};
 </script>
 </body>
 </html>
