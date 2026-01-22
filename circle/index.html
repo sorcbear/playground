@@ -14,6 +14,7 @@
 
       --fs-hint: 18px;
       --lh-hint: 1.6;
+      --fw-hint: 700; /* ✅ 新增：与规范一致 */
 
       --fs-btn: 18px;
       --fw-btn: 600;
@@ -44,12 +45,16 @@
       box-sizing:border-box;
     }
 
-    /* ===== 标题 ===== */
+    /* ===== 顶部说明文字（按 Rotate 的 titleLine 规范） ===== */
     .title{
-      margin:0 0 calc(var(--gap) * 1.2) 0;
-      font-size:var(--fs-hint);
-      line-height:var(--lh-hint);
-      font-weight:700;
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: var(--fw-hint);
+
+      margin: 4px 0 var(--gap);
+
+      text-align: left;
+      white-space: pre-wrap;
     }
 
     .stage{
@@ -298,5 +303,3 @@ render();
 </script>
 </body>
 </html>
-
-
