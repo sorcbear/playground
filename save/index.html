@@ -12,8 +12,7 @@
       --fs-body: 18px;
       --lh-body: 1.7;
 
-      --ctl-h: 52px;
-      --w-mainbtn: 240px;
+      --btn-h: 52px;
 
       --gap: 18px;
 
@@ -21,7 +20,7 @@
       --c-border:#000;
       --bg:#fff;
 
-      /* 目录“轨道” */
+      /* 轨道参数 */
       --rail-w: 4px;
       --dot: 12px;
       --rail-left: 22px; /* 轨道相对卡片左侧位置 */
@@ -55,13 +54,13 @@
       background:#fff;
     }
 
-    /* 轨道容器 */
+    /* 轨道容器 NOTICE：左侧给轨道留空间 */
     .rail{
       position:relative;
-      padding-left:56px; /* 给左侧轨道+圆点留空间 */
+      padding-left:56px;
     }
 
-    /* 主竖线（覆盖全部可见 step 高度） */
+    /* 主竖线 */
     .rail::before{
       content:"";
       position:absolute;
@@ -72,7 +71,7 @@
       background:var(--c-border);
     }
 
-    /* 单个 step */
+    /* 单个 step：圆点 + 按钮 */
     .step{
       position:relative;
       display:flex;
@@ -81,7 +80,7 @@
       padding:14px 0;
     }
 
-    /* 圆点 */
+    /* 圆点：路线节点（独立于按钮） */
     .dot{
       position:absolute;
       left:calc(var(--rail-left) - (var(--dot) / 2) + (var(--rail-w) / 2));
@@ -92,20 +91,19 @@
       border-radius:999px;
     }
 
-    /* 按钮：沿用你统一 UI 风格 */
+    /* 按钮：自适应宽度，视觉更接近你图里的“长条但不夸张” */
     .btn{
-      width:var(--w-mainbtn);
-      height:var(--ctl-h);
+      height:var(--btn-h);
       padding:0 18px;
-      box-sizing:border-box;
 
       display:inline-flex;
       align-items:center;
-      justify-content:center;
-      gap:10px;
+      justify-content:flex-start;
+      gap:12px;
 
       font-size:var(--fs-body);
       font-weight:600;
+
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
@@ -114,27 +112,26 @@
 
       -webkit-tap-highlight-color: transparent;
       user-select:none;
+      white-space:nowrap; /* 保证不换行 */
     }
     .btn:hover{ background:#000; color:#fff; }
     .btn:disabled{ opacity:.45; cursor:default; }
 
-    /* 图标容器 */
+    /* 图标 */
     .ico{
       width:28px;
       height:28px;
       display:inline-flex;
       align-items:center;
       justify-content:center;
+      flex:0 0 auto;
     }
     .ico svg{ width:100%; height:100%; display:block; }
 
-    /* 你要“按钮里只有矢量图”，所以把按钮文字彻底去掉 */
-    .btn .label{ display:none; }
-
-    /* 小提示：可选隐藏（你没要求显示文字） */
-    .hint{
-      margin:0 0 12px;
-      font-weight:700;
+    /* 文字 */
+    .label{
+      display:inline-block;
+      line-height:1;
     }
   </style>
 </head>
@@ -142,37 +139,34 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <!-- 如果你不想要任何文字，可以把这一行删掉 -->
-      <div class="hint">目录</div>
-
       <div class="rail" id="rail"></div>
     </div>
   </div>
 
   <script>
-    // ====== 存档 key（只要写入一次，就永远保留）======
+    // ====== 存档 key（写入一次后永久显示）======
     const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1"; // rotate 正确后解锁：天平路（circle）
     const K_UNLOCK_SQUARE = "pg_unlock_square_v1"; // address 正确后解锁：康平路（square）
     const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";    // post 正确后解锁：衡山路（ppl）
 
-    const STEP = {
-      start:  { id:"start",  url:"https://sorcbear.github.io/playground/rotate",  needKey:null },
-      circle: { id:"circle", url:"https://sorcbear.github.io/playground/circle",  needKey:K_UNLOCK_CIRCLE },
-      square: { id:"square", url:"https://sorcbear.github.io/playground/square",  needKey:K_UNLOCK_SQUARE },
-      ppl:    { id:"ppl",    url:"https://sorcbear.github.io/playground/ppl",     needKey:K_UNLOCK_PPL },
-    };
+    const STEP = [
+      { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate",  needKey:null,            icon: svgStart },
+      { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle",  needKey:K_UNLOCK_CIRCLE, icon: svgBlueSquare },
+      { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square",  needKey:K_UNLOCK_SQUARE, icon: svgGreenCircle },
+      { id:"ppl",    text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",     needKey:K_UNLOCK_PPL,    icon: svgRedDiamond },
+    ];
 
     function safeGet(key){
       try { return window.localStorage.getItem(key); } catch(e){ return null; }
     }
 
     function isUnlocked(needKey){
-      if (!needKey) return true;                 // 起点永远显示
-      return !!safeGet(needKey);                 // 只要写过就显示
+      if (!needKey) return true;      // 起点永远显示
+      return !!safeGet(needKey);      // 写过就显示
     }
 
-    // ====== 4 个彩色矢量图标（按钮内只放图标）======
-    // 起点：黄色（你给的“吃豆人”语义）
+    // ====== 4 个彩色矢量图标 ======
+    // 起点：黄色（“吃豆人”）
     function svgStart(){
       return `
         <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -182,8 +176,8 @@
       `;
     }
 
-    // 天平路：蓝色（方块）
-    function svgCircleBlueSquare(){
+    // 天平路：蓝色方块
+    function svgBlueSquare(){
       return `
         <svg viewBox="0 0 64 64" aria-hidden="true">
           <rect x="10" y="10" width="44" height="44" fill="#1E73D8"/>
@@ -191,7 +185,7 @@
       `;
     }
 
-    // 康平路：绿色（圆形）
+    // 康平路：绿色圆形
     function svgGreenCircle(){
       return `
         <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -200,7 +194,7 @@
       `;
     }
 
-    // 衡山路：红色（给你一个红色菱形/标记感更强；如果你有固定红色图标也可以替换这里）
+    // 衡山路：红色菱形（如需换成你指定红色矢量，替换此函数即可）
     function svgRedDiamond(){
       return `
         <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -209,25 +203,27 @@
       `;
     }
 
-    function makeBtn(iconSVG, url){
+    function makeBtn(iconSVG, text, url){
       const btn = document.createElement("button");
       btn.className = "btn";
       btn.type = "button";
       btn.innerHTML = `
         <span class="ico">${iconSVG}</span>
-        <span class="label">.</span>
+        <span class="label">${text}</span>
       `;
       btn.onclick = () => { location.href = url; };
       return btn;
     }
 
-    function addStep(railEl, iconSVG, url){
+    function addStep(railEl, iconSVG, text, url){
       const row = document.createElement("div");
       row.className = "step";
+
       const dot = document.createElement("span");
       dot.className = "dot";
       row.appendChild(dot);
-      row.appendChild(makeBtn(iconSVG, url));
+
+      row.appendChild(makeBtn(iconSVG, text, url));
       railEl.appendChild(row);
     }
 
@@ -235,12 +231,11 @@
       const rail = document.getElementById("rail");
       rail.innerHTML = "";
 
-      // 按你的解锁顺序：起点 -> 天平路 -> 康平路 -> 衡山路
-      addStep(rail, svgStart(), STEP.start.url);
-
-      if (isUnlocked(STEP.circle.needKey)) addStep(rail, svgCircleBlueSquare(), STEP.circle.url);
-      if (isUnlocked(STEP.square.needKey)) addStep(rail, svgGreenCircle(), STEP.square.url);
-      if (isUnlocked(STEP.ppl.needKey))    addStep(rail, svgRedDiamond(), STEP.ppl.url);
+      for (const s of STEP){
+        if (isUnlocked(s.needKey)){
+          addStep(rail, s.icon(), s.text, s.url);
+        }
+      }
     }
 
     render();
