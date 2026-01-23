@@ -8,7 +8,7 @@
 
   <style>
     :root{
-      /* ===== 同源（Rotate 系） ===== */
+      /* ===== Rotate 同源规范 ===== */
       --maxw: 720px;
 
       --fs-body: 18px;
@@ -22,17 +22,10 @@
       --h-btn: 52px;
 
       --gap: 18px;
-      --gap-tight: 12px;
 
       --c-text:#111;
       --c-border:#000;
-
       --bg:#fff;
-
-      /* ✅ 地图缩放到当前的 60% */
-      --map-scale: .6;
-      /* ✅ 地图基础最大宽度（再乘以 scale） */
-      --map-max: 520px;
     }
 
     *{ box-sizing:border-box; }
@@ -42,10 +35,10 @@
       margin:0;
       background:var(--bg);
       color:var(--c-text);
-      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-family: system-ui, -apple-system,
+        "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size:var(--fs-body);
       line-height:var(--lh-body);
-      -webkit-text-size-adjust:100%;
     }
 
     .wrap{
@@ -54,29 +47,17 @@
       padding:18px 14px 28px;
     }
 
-    /* ===== 顶部文字（同源 titleLine）===== */
+    /* ===== 顶部说明文字 ===== */
     .titleLine{
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
       font-weight:700;
-      margin:4px 0 var(--gap);
-      text-align:left;
-
-      /* ✅ 默认允许换行（手机必须） */
-      white-space: normal;
-      overflow-wrap: anywhere;
-      word-break: break-word;
+      margin:0 0 var(--gap);
+      white-space:normal;
+      word-break:break-word;
     }
 
-    /* ✅ 大屏尽量不换行；不够宽也允许换行（wrap-reverse 逻辑太麻烦，直接靠正常换行） */
-    @media (min-width: 900px){
-      .titleLine{
-        white-space: nowrap; /* 桌面尽量一行 */
-        overflow: hidden;    /* 防止极端溢出 */
-        text-overflow: clip;
-      }
-    }
-
+    /* 红色三角 inline */
     .tri{
       display:inline-block;
       width:1em;
@@ -85,46 +66,22 @@
       margin:0 .15em;
     }
 
-    /* ===== 地图（缩到 60%）===== */
+    /* ===== 地图 ===== */
     .mapWrap{
-      margin:0 auto var(--gap);
+      margin:0 0 var(--gap);
       display:flex;
       justify-content:center;
     }
 
-    .mapScale{
-      /* 先按 max-width 限制，再整体缩放到 60% */
-      width:min(100%, var(--map-max));
-      transform: scale(var(--map-scale));
-      transform-origin: top center;
-
-      /* 缩放后容器本身不会变高，下面用 padding-bottom 补偿空间 */
-    }
-
-    /* 补偿缩放后的占位高度，避免按钮被“盖住/上移” */
-    .mapWrap{
-      /* 经验值：按缩放比例补齐空间（scale=0.6 => 多留 40% 高度） */
-      padding-bottom: calc((1 - var(--map-scale)) * 520px);
-    }
-
-    .mapScale img{
-      width:100%;
+    .mapWrap img{
+      width:60%;              /* ✅ 关键：直接 60% */
+      max-width:420px;        /* 防止桌面过大 */
       height:auto;
       display:block;
-      user-select:none;
-      -webkit-user-drag:none;
     }
 
-    /* ✅ 手机端不要用固定 520px 补偿，改成更安全的相对补偿 */
-    @media (max-width: 520px){
-      .mapWrap{
-        padding-bottom: calc((1 - var(--map-scale)) * 60vw);
-      }
-    }
-
-    /* ===== 按钮（同源）===== */
+    /* ===== 按钮 ===== */
     .panel{
-      margin-top:var(--gap);
       display:flex;
       justify-content:center;
     }
@@ -133,7 +90,6 @@
       width:240px;
       height:var(--h-btn);
       padding:0 18px;
-      box-sizing:border-box;
       font-size:var(--fs-btn);
       font-weight:var(--fw-btn);
       background:#fff;
@@ -141,10 +97,8 @@
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
-      -webkit-tap-highlight-color:transparent;
       font-family:inherit;
-      user-select:none;
-      transition:none;
+      -webkit-tap-highlight-color:transparent;
     }
 
     @media (hover:hover) and (pointer:fine){
@@ -156,13 +110,9 @@
       color:#fff;
     }
 
-    button:disabled{
-      opacity:.45;
-      cursor:default;
-    }
-
     @media (max-width:520px){
       button{ width:46vw; }
+      .mapWrap img{ width:70%; } /* 手机稍微放大一点 */
     }
   </style>
 </head>
@@ -171,38 +121,33 @@
   <div class="wrap">
 
     <div class="titleLine">
-      穿过这条弄当，到达“<svg class="tri" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+      穿过这条弄当，到达“<svg class="tri" viewBox="0 0 100 100" aria-hidden="true">
         <polygon points="10,10 90,50 10,90" fill="#ff0000"></polygon>
       </svg>”标注的地点后，点击确定
     </div>
 
     <div class="mapWrap">
-      <div class="mapScale">
-        <img src="map.png" alt="map">
-      </div>
+      <img src="map.png" alt="map">
     </div>
 
     <div class="panel">
-      <button id="btnArrived" type="button">已到达</button>
+      <button id="btnArrived">已到达</button>
     </div>
 
   </div>
 
   <script>
-    (function(){
-      const btn = document.getElementById("btnArrived");
+    const btn = document.getElementById("btnArrived");
 
-      function flashInvert(el, ms=120){
-        el.classList.add("invert");
-        setTimeout(()=>el.classList.remove("invert"), ms);
-      }
+    function flashInvert(el, ms=120){
+      el.classList.add("invert");
+      setTimeout(()=>el.classList.remove("invert"), ms);
+    }
 
-      btn.addEventListener("click", ()=>{
-        flashInvert(btn, 120);
-        // 需要跳转就放开这一行：
-        // location.href = "NEXT_URL";
-      });
-    })();
+    btn.onclick = ()=>{
+      flashInvert(btn,120);
+      // location.href = "NEXT_URL";
+    };
   </script>
 </body>
 </html>
