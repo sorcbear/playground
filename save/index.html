@@ -13,15 +13,10 @@
       --c-border:#000;
       --bg:#fff;
 
-      /* 地图尺寸 */
       --map-w: 780px;
       --map-h: 520px;
 
-      /* 节点坐标（固定地图） */
-      --x1:140px; --y1:110px;
-      --x2:140px; --y2:230px;
-      --x3:520px; --y3:230px;
-      --x4:520px; --y4:360px;
+      --line-w: 4px;
     }
 
     *{ box-sizing:border-box; }
@@ -29,7 +24,7 @@
     html,body{
       margin:0;
       padding:0;
-      background:#fff;                 /* ✅ 纯白背景 */
+      background:#fff;
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size:var(--fs-body);
       color:#111;
@@ -59,7 +54,6 @@
       transform:translate(-50%, -50%);
     }
 
-    /* ===== 按钮（已彻底去默认样式） ===== */
     .btn{
       height:var(--btn-h);
       padding:0 24px;
@@ -71,7 +65,7 @@
       font-size:var(--fs-body);
       font-weight:600;
 
-      background:#fff;                 /* ✅ 未选中纯白 */
+      background:#fff;         /* ✅ 未选中纯白 */
       color:#000;
       border:2px solid #000;
       cursor:pointer;
@@ -84,13 +78,10 @@
 
       white-space:nowrap;
       -webkit-tap-highlight-color: transparent;
+      user-select:none;
     }
-    .btn:hover{
-      background:#000;
-      color:#fff;
-    }
+    .btn:hover{ background:#000; color:#fff; }
 
-    /* ===== 图标 ===== */
     .ico{
       width:28px;
       height:28px;
@@ -101,9 +92,23 @@
     }
     .ico svg{ width:100%; height:100%; display:block; }
 
-    /* 起点三角：默认白，hover 变黑 */
+    /* 起点三角：白底白三角，hover 黑底黑三角 */
     .start-tri{ fill:#fff; }
     .btn:hover .start-tri{ fill:#000; }
+
+    /* debug 面板 */
+    .debug{
+      position:fixed;
+      left:12px;
+      bottom:12px;
+      padding:10px 12px;
+      border:2px solid #000;
+      background:#fff;
+      font-size:14px;
+      line-height:1.5;
+      max-width: calc(100vw - 24px);
+      word-break:break-all;
+    }
   </style>
 </head>
 
@@ -120,7 +125,7 @@
   const K_UNLOCK_SQUARE = "pg_unlock_square_v1";
   const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";
 
-  // ===== 地图节点 =====
+  // ===== 节点（按你图的折线布局）=====
   const NODES = [
     { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:140, y:110, icon:svgStart },
     { text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:140, y:230, icon:svgBlue },
@@ -128,11 +133,19 @@
     { text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:520, y:360, icon:svgRed },
   ];
 
-  function unlocked(key){
-    if (!key) return true;
-    try{ return !!localStorage.getItem(key); }catch(e){ return false; }
+  function safeGet(storage, key){
+    try{ return storage.getItem(key); }catch(e){ return null; }
   }
 
+  // ✅ 同时读 localStorage + sessionStorage
+  function unlocked(key){
+    if (!key) return true;
+    const a = safeGet(localStorage, key);
+    const b = safeGet(sessionStorage, key);
+    return !!(a || b);
+  }
+
+  // 顺序推进：没解锁就停
   function visible(){
     const out=[];
     for (const n of NODES){
@@ -150,7 +163,7 @@
 
     const v = visible();
 
-    // 画按钮
+    // 按钮
     for (const n of v){
       const wrap=document.createElement("div");
       wrap.className="node";
@@ -166,14 +179,13 @@
       map.appendChild(wrap);
     }
 
-    // 画线（只画已解锁段）
-    const L=4;
+    // 线段
     const add=(x1,y1,x2,y2)=>{
       const l=document.createElementNS("http://www.w3.org/2000/svg","line");
-      l.setAttribute("x1",x1);l.setAttribute("y1",y1);
-      l.setAttribute("x2",x2);l.setAttribute("y2",y2);
+      l.setAttribute("x1",x1); l.setAttribute("y1",y1);
+      l.setAttribute("x2",x2); l.setAttribute("y2",y2);
       l.setAttribute("stroke","#000");
-      l.setAttribute("stroke-width",L);
+      l.setAttribute("stroke-width", getComputedStyle(document.documentElement).getPropertyValue("--line-w").trim() || "4");
       l.setAttribute("stroke-linecap","square");
       wires.appendChild(l);
     };
@@ -181,12 +193,28 @@
     if (v.length>=2) add(NODES[0].x,NODES[0].y,NODES[1].x,NODES[1].y);
     if (v.length>=3) add(NODES[1].x,NODES[1].y,NODES[2].x,NODES[2].y);
     if (v.length>=4) add(NODES[2].x,NODES[2].y,NODES[3].x,NODES[3].y);
+
+    // debug 面板（?debug=1）
+    const params = new URLSearchParams(location.search);
+    if (params.get("debug") === "1"){
+      const box = document.createElement("div");
+      box.className="debug";
+      box.innerHTML =
+        `<div><b>unlock check</b></div>` +
+        `<div>local circle: ${safeGet(localStorage,K_UNLOCK_CIRCLE)}</div>` +
+        `<div>sess  circle: ${safeGet(sessionStorage,K_UNLOCK_CIRCLE)}</div>` +
+        `<div>local square: ${safeGet(localStorage,K_UNLOCK_SQUARE)}</div>` +
+        `<div>sess  square: ${safeGet(sessionStorage,K_UNLOCK_SQUARE)}</div>` +
+        `<div>local ppl: ${safeGet(localStorage,K_UNLOCK_PPL)}</div>` +
+        `<div>sess  ppl: ${safeGet(sessionStorage,K_UNLOCK_PPL)}</div>`;
+      document.body.appendChild(box);
+    }
   }
 
-  // ===== 图标 =====
+  // 图标
   function svgStart(){
     return `
-      <svg viewBox="0 0 64 64">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
         <circle cx="32" cy="32" r="26" fill="#F6B300"/>
         <path class="start-tri" d="M32 32L58 18v28L32 32Z"/>
       </svg>`;
