@@ -3,11 +3,16 @@
   const COLS = 7;
   const TILE_COUNT = ROWS * COLS;
 
-  const NEXT_URL = "../circle/";
+  // ✅ 成功后不再直接进 circle，而是回存档/目录页
+  const NEXT_URL = "../save/";
+
   const COUNTDOWN_SECONDS = 3;
 
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "alpha";
+
+  // ✅ 解锁“天平路（circle）”按钮的存档 key（save 页会读这个）
+  const UNLOCK_CIRCLE_KEY = "pg_unlock_circle_v1";
 
   // 仅用于“从下一页返回时恢复正确样子”
   const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
@@ -164,8 +169,15 @@
     }
   }
 
-  // 成功：绿色 msg 倒计时，不改按钮
+  // ✅ 成功：写入解锁 key + 倒计时回存档页
   function startCountdownAndRedirect() {
+    // 这个 key 是给 save 页用的：显示“天平路”按钮
+    try {
+      localStorage.setItem(UNLOCK_CIRCLE_KEY, "1");
+      sessionStorage.setItem(UNLOCK_CIRCLE_KEY, "1");
+    } catch {}
+
+    // 这个 key 仅用于 rotate 自己“返回恢复 UI”
     sessionStorage.setItem(SOLVED_KEY, "1");
 
     setLocked(true);
@@ -173,14 +185,14 @@
     btnSubmit.classList.remove("invert");
 
     let left = COUNTDOWN_SECONDS;
-    msg.textContent = `答案正确，即将进入下一题（${left}）`;
+    msg.textContent = `答案正确，即将返回目录（${left}）`;
     msg.classList.add("ok");
 
     clearCountdown();
     countdownTimer = setInterval(() => {
       left -= 1;
       if (left > 0) {
-        msg.textContent = `答案正确，即将进入下一题（${left}）`;
+        msg.textContent = `答案正确，即将返回目录（${left}）`;
       } else {
         clearCountdown();
         location.href = NEXT_URL;
