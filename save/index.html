@@ -7,29 +7,24 @@
 
   <style>
     :root{
-      --maxw: 720px;
-
       --fs-body: 18px;
-      --lh-body: 1.7;
+      --btn-h: 56px;
 
-      --btn-h: 52px;
-      --gap: 18px;
-
-      --c-text:#111;
       --c-border:#000;
       --bg:#fff;
 
-      /* 左侧路线区域宽度（包含竖线+圆点） */
-      --rail-area: 56px;
+      /* “地图画布”尺寸（桌面/手机都能撑住） */
+      --map-w: 780px;
+      --map-h: 520px;
 
-      /* SVG 中竖线 x 坐标（在 rail-area 内） */
-      --rail-x: 22px;
+      /* 四个按钮位置（按你图：左上、左中、右中、右下） */
+      --x1: 140px;  --y1: 110px;  /* 起点 */
+      --x2: 140px;  --y2: 230px;  /* 天平路 */
+      --x3: 520px;  --y3: 230px;  /* 康平路（右拐点） */
+      --x4: 520px;  --y4: 360px;  /* 衡山路 */
 
-      /* 圆点大小（SVG用） */
-      --dot-r: 6px;
-
-      /* 每个 step 的垂直节距（影响圆点间距） */
-      --step-pad-y: 14px;
+      /* 连线粗细 */
+      --line-w: 4px;
     }
 
     *{ box-sizing:border-box; }
@@ -37,72 +32,53 @@
     html,body{
       margin:0;
       padding:0;
-      width:100%;
-      min-height:100%;
       background:var(--bg);
-      color:var(--c-text);
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size:var(--fs-body);
-      line-height:var(--lh-body);
+      color:#111;
     }
 
+    /* 页面整体：居中，不要外框 */
     .wrap{
-      max-width:var(--maxw);
-      margin:0 auto;
-      padding:24px 16px 40px;
+      min-height:100svh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:28px 14px;
     }
 
-    .card{
-      width:100%;
-      margin:0 auto;
-      padding:18px 14px;
-      border:2px solid var(--c-border);
-      background:#fff;
-    }
-
-    /* 关键：一列是“路线SVG”，一列是“按钮列表” */
-    .layout{
-      display:grid;
-      grid-template-columns: var(--rail-area) 1fr;
-      column-gap: 14px;
-      align-items:start;
-    }
-
-    /* 左侧路线容器 */
-    .railBox{
+    /* 地图画布：固定最大宽度，手机上缩放适配 */
+    .map{
       position:relative;
-      width:var(--rail-area);
-      /* 高度由 JS 按步骤数动态设置 */
+      width:min(var(--map-w), 100%);
+      aspect-ratio: calc(var(--map-w) / var(--map-h));
+      /* 让高度随宽度缩放 */
+      height:auto;
     }
 
-    .railSvg{
-      display:block;
+    /* 画线层：覆盖整个 map */
+    .wires{
+      position:absolute;
+      inset:0;
       width:100%;
       height:100%;
+      pointer-events:none;
     }
 
-    /* 右侧按钮列表 */
-    .steps{
-      display:flex;
-      flex-direction:column;
+    /* 节点按钮：绝对定位到 map 内 */
+    .node{
+      position:absolute;
+      transform: translate(-50%, -50%);
     }
 
-    .stepRow{
-      /* 与 SVG 圆点保持同样的垂直节距 */
-      padding: var(--step-pad-y) 0;
-      display:flex;
-      align-items:center;
-    }
-
-    /* 按钮：自适应宽度 */
+    /* 按钮 UI（与你之前一致） */
     .btn{
       height:var(--btn-h);
-      padding:0 18px;
+      padding:0 24px;
 
       display:inline-flex;
       align-items:center;
-      justify-content:flex-start;
-      gap:12px;
+      gap:14px;
 
       font-size:var(--fs-body);
       font-weight:600;
@@ -112,202 +88,139 @@
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
+      white-space:nowrap;
 
       -webkit-tap-highlight-color: transparent;
       user-select:none;
-      white-space:nowrap;
     }
-    .btn:hover{ background:#000; color:#fff; }
-    .btn:disabled{ opacity:.45; cursor:default; }
+    .btn:hover{
+      background:#000;
+      color:#fff;
+    }
 
-    /* 图标 */
     .ico{
       width:28px;
       height:28px;
-      display:inline-flex;
+      display:flex;
       align-items:center;
       justify-content:center;
       flex:0 0 auto;
     }
     .ico svg{ width:100%; height:100%; display:block; }
-
-    .label{
-      display:inline-block;
-      line-height:1;
-    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="card">
-      <div class="layout">
-        <!-- 左：路线 SVG（由 JS 画竖线+圆点；不会出现在按钮旁边） -->
-        <div class="railBox" id="railBox">
-          <svg class="railSvg" id="railSvg" viewBox="0 0 56 10" preserveAspectRatio="none" aria-hidden="true"></svg>
-        </div>
-
-        <!-- 右：按钮列表 -->
-        <div class="steps" id="steps"></div>
-      </div>
+    <div class="map" id="map">
+      <svg class="wires" id="wires" viewBox="0 0 780 520" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <!-- 节点按钮由 JS 动态插入 -->
     </div>
   </div>
 
   <script>
-    // ====== 存档 key（写入一次后永久显示）======
+    // ====== 存档 key ======
     const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1"; // rotate 正确后解锁：天平路（circle）
     const K_UNLOCK_SQUARE = "pg_unlock_square_v1"; // address 正确后解锁：康平路（square）
     const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";    // post 正确后解锁：衡山路（ppl）
 
-    const STEP_ALL = [
-      { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate",  needKey:null,            icon: svgStart },
-      { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle",  needKey:K_UNLOCK_CIRCLE, icon: svgBlueSquare },
-      { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square",  needKey:K_UNLOCK_SQUARE, icon: svgGreenCircle },
-      { id:"ppl",    text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",     needKey:K_UNLOCK_PPL,    icon: svgRedDiamond },
+    // ====== 固定四节点的“地图坐标”（与 CSS 变量一致）======
+    // 这里用固定 viewBox 坐标（780x520），手机会缩放，不会变形
+    const NODES = [
+      { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:140, y:110, icon: svgStart },
+      { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:140, y:230, icon: svgBlue },
+      { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x:520, y:230, icon: svgGreen },
+      { id:"ppl",    text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:520, y:360, icon: svgRed },
     ];
 
-    function safeGet(key){
-      try { return window.localStorage.getItem(key); } catch(e){ return null; }
-    }
-    function isUnlocked(needKey){
-      if (!needKey) return true;
-      return !!safeGet(needKey);
+    function ok(key){
+      if (!key) return true;
+      try{ return !!localStorage.getItem(key); }catch(e){ return false; }
     }
 
-    // ====== 4 个彩色矢量图标 ======
-    function svgStart(){
-      return `
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M32 6a26 26 0 1 0 0 52a26 26 0 0 0 0-52Z" fill="#F6B300"/>
-          <path d="M32 32L58 18v28L32 32Z" fill="#fff"/>
-        </svg>
-      `;
-    }
-    function svgBlueSquare(){
-      return `
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          <rect x="10" y="10" width="44" height="44" fill="#1E73D8"/>
-        </svg>
-      `;
-    }
-    function svgGreenCircle(){
-      return `
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          <circle cx="32" cy="32" r="22" fill="#2E7D32"/>
-        </svg>
-      `;
-    }
-    function svgRedDiamond(){
-      return `
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M32 8L56 32 32 56 8 32 32 8Z" fill="#D32F2F"/>
-        </svg>
-      `;
+    function visibleNodes(){
+      // 你的逻辑是“顺序推进”：没解锁就停
+      const out = [];
+      for (const n of NODES){
+        if (!ok(n.need)) break;
+        out.push(n);
+      }
+      return out;
     }
 
-    // ====== 生成按钮行 ======
-    function makeBtn(iconSVG, text, url){
+    function makeBtn(n){
       const btn = document.createElement("button");
       btn.className = "btn";
       btn.type = "button";
       btn.innerHTML = `
-        <span class="ico">${iconSVG}</span>
-        <span class="label">${text}</span>
+        <span class="ico">${n.icon()}</span>
+        <span>${n.text}</span>
       `;
-      btn.onclick = () => { location.href = url; };
+      btn.onclick = () => location.href = n.url;
       return btn;
     }
 
-    function renderSteps(unlockedSteps){
-      const stepsEl = document.getElementById("steps");
-      stepsEl.innerHTML = "";
-
-      for (const s of unlockedSteps){
-        const row = document.createElement("div");
-        row.className = "stepRow";
-        row.appendChild(makeBtn(s.icon(), s.text, s.url));
-        stepsEl.appendChild(row);
-      }
-    }
-
-    // ====== 画路线 SVG：竖线 + 圆点节点（只在左侧，不进入按钮） ======
-    function drawRail(unlockedCount){
-      const railBox = document.getElementById("railBox");
-      const svg = document.getElementById("railSvg");
-
-      const styles = getComputedStyle(document.documentElement);
-      const railArea = parseFloat(styles.getPropertyValue("--rail-area")) || 56;
-      const railX = parseFloat(styles.getPropertyValue("--rail-x")) || 22;
-      const dotR = parseFloat(styles.getPropertyValue("--dot-r")) || 6;
-      const stepPadY = parseFloat(styles.getPropertyValue("--step-pad-y")) || 14;
-      const btnH = parseFloat(styles.getPropertyValue("--btn-h")) || 52;
-
-      // 每个 stepRow 的总高度 = 上下 padding + 按钮高度
-      const stepH = stepPadY * 2 + btnH;
-
-      // 顶部/底部留一点呼吸
-      const topMargin = 10;
-      const bottomMargin = 10;
-
-      // SVG 真实高度
-      const h = topMargin + unlockedCount * stepH + bottomMargin;
-
-      railBox.style.height = h + "px";
-
-      // 设置 viewBox 与尺寸
-      svg.setAttribute("viewBox", `0 0 ${railArea} ${h}`);
-      svg.setAttribute("width", railArea);
-      svg.setAttribute("height", h);
-
-      // 清空
-      svg.innerHTML = "";
-
-      // 竖线：从第一个圆点到最后一个圆点
-      if (unlockedCount >= 1){
-        const yFirst = topMargin + stepPadY + btnH / 2;
-        const yLast  = topMargin + (unlockedCount - 1) * stepH + stepPadY + btnH / 2;
-
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", railX);
-        line.setAttribute("x2", railX);
-        line.setAttribute("y1", yFirst);
-        line.setAttribute("y2", yLast);
-        line.setAttribute("stroke", "#000");
-        line.setAttribute("stroke-width", "4");
-        line.setAttribute("stroke-linecap", "square");
-        svg.appendChild(line);
-
-        // 圆点节点
-        for (let i = 0; i < unlockedCount; i++){
-          const cy = topMargin + i * stepH + stepPadY + btnH / 2;
-
-          const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          c.setAttribute("cx", railX);
-          c.setAttribute("cy", cy);
-          c.setAttribute("r", dotR);
-          c.setAttribute("fill", "#fff");
-          c.setAttribute("stroke", "#000");
-          c.setAttribute("stroke-width", "2");
-          svg.appendChild(c);
-        }
-      }
-    }
-
     function render(){
-      const unlockedSteps = STEP_ALL.filter(s => isUnlocked(s.needKey));
-      renderSteps(unlockedSteps);
-      drawRail(unlockedSteps.length);
+      const map = document.getElementById("map");
+      const wires = document.getElementById("wires");
+      // 清掉旧节点
+      map.querySelectorAll(".node").forEach(el => el.remove());
+      wires.innerHTML = "";
+
+      const vis = visibleNodes();
+
+      // 画按钮
+      for (const n of vis){
+        const wrap = document.createElement("div");
+        wrap.className = "node";
+        wrap.style.left = n.x + "px";
+        wrap.style.top  = n.y + "px";
+        wrap.appendChild(makeBtn(n));
+        map.appendChild(wrap);
+      }
+
+      // 画连线（只连“已显示的相邻节点”）
+      // 连接规则：1-2 竖线；2-3 横线；3-4 竖线
+      // 线连接按钮中心点（即节点坐标点）
+      const lineW = 4;
+
+      function addLine(x1,y1,x2,y2){
+        const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        ln.setAttribute("x1", x1);
+        ln.setAttribute("y1", y1);
+        ln.setAttribute("x2", x2);
+        ln.setAttribute("y2", y2);
+        ln.setAttribute("stroke", "#000");
+        ln.setAttribute("stroke-width", lineW);
+        ln.setAttribute("stroke-linecap", "square");
+        wires.appendChild(ln);
+      }
+
+      // vis.length 决定画到哪一段
+      if (vis.length >= 2) addLine(NODES[0].x, NODES[0].y, NODES[1].x, NODES[1].y);
+      if (vis.length >= 3) addLine(NODES[1].x, NODES[1].y, NODES[2].x, NODES[2].y);
+      if (vis.length >= 4) addLine(NODES[2].x, NODES[2].y, NODES[3].x, NODES[3].y);
+    }
+
+    // ===== 图标 =====
+    function svgStart(){
+      return `
+        <svg viewBox="0 0 64 64">
+          <path d="M32 6a26 26 0 1 0 0 52a26 26 0 0 0 0-52Z" fill="#F6B300"/>
+          <path d="M32 32L58 18v28L32 32Z" fill="#fff"/>
+        </svg>`;
+    }
+    function svgBlue(){
+      return `<svg viewBox="0 0 64 64"><rect x="10" y="10" width="44" height="44" fill="#1E73D8"/></svg>`;
+    }
+    function svgGreen(){
+      return `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="#2E7D32"/></svg>`;
+    }
+    function svgRed(){
+      return `<svg viewBox="0 0 64 64"><path d="M32 8L56 32 32 56 8 32Z" fill="#D32F2F"/></svg>`;
     }
 
     render();
-
-    // ======（可选）调试：加 ?reset=1 清空存档 ======
-    // if (new URLSearchParams(location.search).get("reset") === "1") {
-    //   localStorage.removeItem(K_UNLOCK_CIRCLE);
-    //   localStorage.removeItem(K_UNLOCK_SQUARE);
-    //   localStorage.removeItem(K_UNLOCK_PPL);
-    //   location.replace(location.pathname);
-    // }
   </script>
 </body>
 </html>
