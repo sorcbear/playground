@@ -14,11 +14,9 @@
       --bg:#fff;
       --c-border:#000;
 
-      /* 画布宽高仅用于 aspect-ratio */
       --map-w: 780;
       --map-h: 520;
 
-      /* 线条粗细（像素） */
       --line-w: 8px;
     }
 
@@ -36,8 +34,19 @@
     .wrap{
       min-height:100svh;
       display:flex;
-      justify-content:center;
-      padding:32px 16px;
+      flex-direction:column;
+      align-items:center;
+      padding:16px 16px 32px;
+    }
+
+    /* ===== 顶部提示 ===== */
+    .notice{
+      width:100%;
+      text-align:center;
+      font-size:13px;
+      font-weight:700;
+      color:#000;
+      margin: 4px 0 14px;
     }
 
     .map{
@@ -54,7 +63,6 @@
       pointer-events:none;
     }
 
-    /* ✅ 节点使用百分比坐标：永远与 svg 同坐标系 */
     .node{
       position:absolute;
       transform:translate(-50%,-50%);
@@ -63,12 +71,11 @@
     .btn{
       width:var(--btn-w);
       height:var(--btn-h);
-      padding:0;
 
       display:flex;
       align-items:center;
-      justify-content:center;   /* ✅ 图标+文字整体居中 */
-      gap:8px;                  /* ✅ 更小间距 */
+      justify-content:center;
+      gap:8px;
 
       font-size:var(--fs-body);
       font-weight:600;
@@ -88,7 +95,11 @@
       -webkit-tap-highlight-color: transparent;
       user-select:none;
     }
-    .btn:hover{ background:#000; color:#fff; }
+
+    .btn:hover{
+      background:#000;
+      color:#fff;
+    }
 
     .ico{
       width:24px;
@@ -98,9 +109,13 @@
       justify-content:center;
       flex:0 0 auto;
     }
-    .ico svg{ width:100%; height:100%; display:block; }
 
-    /* 起点三角：白底白三角，hover 黑底黑三角 */
+    .ico svg{
+      width:100%;
+      height:100%;
+      display:block;
+    }
+
     .start-tri{ fill:#fff; }
     .btn:hover .start-tri{ fill:#000; }
   </style>
@@ -108,14 +123,20 @@
 
 <body>
   <div class="wrap">
+    <!-- ✅ 新增提示 -->
+    <div class="notice">
+      为保留进度，请勿使用浏览器无痕模式。
+    </div>
+
     <div class="map" id="map">
-      <!-- ✅ 统一成 0~100 坐标系 -->
-      <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <svg class="wires" id="wires"
+           viewBox="0 0 100 100"
+           preserveAspectRatio="none"
+           aria-hidden="true"></svg>
     </div>
   </div>
 
   <script>
-    // ===== 存档 key =====
     const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1";
     const K_UNLOCK_SQUARE = "pg_unlock_square_v1";
     const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";
@@ -128,14 +149,11 @@
       return !!(safeGet(localStorage, key) || safeGet(sessionStorage, key));
     }
 
-    // ===== 节点坐标（百分比 0~100）=====
-    // 这些值来自你之前的像素坐标换算：
-    // x% = x/780*100, y% = y/520*100
     const NODES = [
-      { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x: 28.205, y: 23.077, icon: svgStart },
-      { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x: 28.205, y: 50.000, icon: svgBlue  },
-      { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x: 66.667, y: 50.000, icon: svgGreen },
-      { id:"ppl",    text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x: 66.667, y: 76.923, icon: svgRed   },
+      { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:28.205, y:23.077, icon:svgStart },
+      { text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:28.205, y:50.000, icon:svgBlue  },
+      { text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x:66.667, y:50.000, icon:svgGreen },
+      { text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:66.667, y:76.923, icon:svgRed   }
     ];
 
     function visibleNodes(){
@@ -165,7 +183,6 @@
 
       const vis = visibleNodes();
 
-      // 节点（百分比定位）
       for (const n of vis){
         const wrap = document.createElement("div");
         wrap.className = "node";
@@ -175,47 +192,42 @@
         map.appendChild(wrap);
       }
 
-      // 线（百分比坐标，完全同坐标系）
-      const lineWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--line-w")) || 8;
+      const lw = getComputedStyle(document.documentElement)
+        .getPropertyValue("--line-w") || 8;
 
       function addLine(x1,y1,x2,y2){
         const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
-        ln.setAttribute("x1", x1);
-        ln.setAttribute("y1", y1);
-        ln.setAttribute("x2", x2);
-        ln.setAttribute("y2", y2);
-        ln.setAttribute("stroke", "#000");
-        ln.setAttribute("stroke-linecap", "square");
-
-        // ✅ 让线宽用“像素”稳定，不随缩放变粗变细
-        ln.setAttribute("vector-effect", "non-scaling-stroke");
-        ln.setAttribute("stroke-width", lineWpx);
-
+        ln.setAttribute("x1",x1);
+        ln.setAttribute("y1",y1);
+        ln.setAttribute("x2",x2);
+        ln.setAttribute("y2",y2);
+        ln.setAttribute("stroke","#000");
+        ln.setAttribute("stroke-width",lw);
+        ln.setAttribute("vector-effect","non-scaling-stroke");
+        ln.setAttribute("stroke-linecap","square");
         wires.appendChild(ln);
       }
 
-      // 连接：1-2 竖，2-3 横，3-4 竖
-      if (vis.length>=2) addLine(NODES[0].x, NODES[0].y, NODES[1].x, NODES[1].y);
-      if (vis.length>=3) addLine(NODES[1].x, NODES[1].y, NODES[2].x, NODES[2].y);
-      if (vis.length>=4) addLine(NODES[2].x, NODES[2].y, NODES[3].x, NODES[3].y);
+      if (vis.length>=2) addLine(NODES[0].x,NODES[0].y,NODES[1].x,NODES[1].y);
+      if (vis.length>=3) addLine(NODES[1].x,NODES[1].y,NODES[2].x,NODES[2].y);
+      if (vis.length>=4) addLine(NODES[2].x,NODES[2].y,NODES[3].x,NODES[3].y);
     }
 
-    // ===== 图标 =====
     function svgStart(){
       return `
-        <svg viewBox="0 0 64 64" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
           <circle cx="32" cy="32" r="26" fill="#F6B300"/>
           <path class="start-tri" d="M32 32L58 18v28L32 32Z"/>
         </svg>`;
     }
     function svgBlue(){
-      return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="12" width="40" height="40" fill="#1E73D8"/></svg>`;
+      return `<svg viewBox="0 0 64 64"><rect x="12" y="12" width="40" height="40" fill="#1E73D8"/></svg>`;
     }
     function svgGreen(){
-      return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="20" fill="#2E7D32"/></svg>`;
+      return `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="20" fill="#2E7D32"/></svg>`;
     }
     function svgRed(){
-      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 10L54 32 32 54 10 32Z" fill="#D32F2F"/></svg>`;
+      return `<svg viewBox="0 0 64 64"><path d="M32 10L54 32 32 54 10 32Z" fill="#D32F2F"/></svg>`;
     }
 
     render();
