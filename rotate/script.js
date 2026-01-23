@@ -3,19 +3,18 @@
   const COLS = 7;
   const TILE_COUNT = ROWS * COLS;
 
-  // ✅ 成功后不再直接进 circle，而是回存档/目录页
-  const NEXT_URL = "../save/";
-
+  // ✅ 你想“通关后去哪里”，只改这一行
+  const NEXT_URL = "../circle/";
   const COUNTDOWN_SECONDS = 3;
 
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
   const DEFAULT_K = "alpha";
 
-  // ✅ 解锁“天平路（circle）”按钮的存档 key（save 页会读这个）
-  const UNLOCK_CIRCLE_KEY = "pg_unlock_circle_v1";
-
   // 仅用于“从下一页返回时恢复正确样子”
   const SOLVED_KEY = "rotate_find_origin_solved_back_only_v1";
+
+  // ✅ 存档解锁 key：rotate 成功后解锁“天平路（circle）”
+  const UNLOCK_KEY_CIRCLE = "pg_unlock_circle_v1";
 
   const params = new URLSearchParams(location.search);
   const k = (params.get("k") || DEFAULT_K).trim();
@@ -169,15 +168,18 @@
     }
   }
 
-  // ✅ 成功：写入解锁 key + 倒计时回存档页
-  function startCountdownAndRedirect() {
-    // 这个 key 是给 save 页用的：显示“天平路”按钮
-    try {
-      localStorage.setItem(UNLOCK_CIRCLE_KEY, "1");
-      sessionStorage.setItem(UNLOCK_CIRCLE_KEY, "1");
-    } catch {}
+  // ✅ 写入解锁（local + session 双写，防无痕/策略差异）
+  function unlockCircle() {
+    try { localStorage.setItem(UNLOCK_KEY_CIRCLE, "1"); } catch(e) {}
+    try { sessionStorage.setItem(UNLOCK_KEY_CIRCLE, "1"); } catch(e) {}
+  }
 
-    // 这个 key 仅用于 rotate 自己“返回恢复 UI”
+  // 成功：绿色 msg 倒计时，不改按钮
+  function startCountdownAndRedirect() {
+    // ✅ 通关即解锁“天平路（circle）”，与跳转页面无关
+    unlockCircle();
+
+    // 你原本的“返回恢复用”标记
     sessionStorage.setItem(SOLVED_KEY, "1");
 
     setLocked(true);
@@ -185,14 +187,14 @@
     btnSubmit.classList.remove("invert");
 
     let left = COUNTDOWN_SECONDS;
-    msg.textContent = `答案正确，即将返回目录（${left}）`;
+    msg.textContent = `答案正确，即将进入下一题（${left}）`;
     msg.classList.add("ok");
 
     clearCountdown();
     countdownTimer = setInterval(() => {
       left -= 1;
       if (left > 0) {
-        msg.textContent = `答案正确，即将返回目录（${left}）`;
+        msg.textContent = `答案正确，即将进入下一题（${left}）`;
       } else {
         clearCountdown();
         location.href = NEXT_URL;
