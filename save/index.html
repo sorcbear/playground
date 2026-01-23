@@ -13,17 +13,23 @@
       --lh-body: 1.7;
 
       --btn-h: 52px;
-
       --gap: 18px;
 
       --c-text:#111;
       --c-border:#000;
       --bg:#fff;
 
-      /* 轨道参数 */
-      --rail-w: 4px;
-      --dot: 12px;
-      --rail-left: 22px; /* 轨道相对卡片左侧位置 */
+      /* 左侧路线区域宽度（包含竖线+圆点） */
+      --rail-area: 56px;
+
+      /* SVG 中竖线 x 坐标（在 rail-area 内） */
+      --rail-x: 22px;
+
+      /* 圆点大小（SVG用） */
+      --dot-r: 6px;
+
+      /* 每个 step 的垂直节距（影响圆点间距） */
+      --step-pad-y: 14px;
     }
 
     *{ box-sizing:border-box; }
@@ -54,44 +60,41 @@
       background:#fff;
     }
 
-    /* 轨道容器 NOTICE：左侧给轨道留空间 */
-    .rail{
-      position:relative;
-      padding-left:56px;
+    /* 关键：一列是“路线SVG”，一列是“按钮列表” */
+    .layout{
+      display:grid;
+      grid-template-columns: var(--rail-area) 1fr;
+      column-gap: 14px;
+      align-items:start;
     }
 
-    /* 主竖线 */
-    .rail::before{
-      content:"";
-      position:absolute;
-      left:var(--rail-left);
-      top:10px;
-      bottom:10px;
-      width:var(--rail-w);
-      background:var(--c-border);
+    /* 左侧路线容器 */
+    .railBox{
+      position:relative;
+      width:var(--rail-area);
+      /* 高度由 JS 按步骤数动态设置 */
     }
 
-    /* 单个 step：圆点 + 按钮 */
-    .step{
-      position:relative;
+    .railSvg{
+      display:block;
+      width:100%;
+      height:100%;
+    }
+
+    /* 右侧按钮列表 */
+    .steps{
+      display:flex;
+      flex-direction:column;
+    }
+
+    .stepRow{
+      /* 与 SVG 圆点保持同样的垂直节距 */
+      padding: var(--step-pad-y) 0;
       display:flex;
       align-items:center;
-      gap:14px;
-      padding:14px 0;
     }
 
-    /* 圆点：路线节点（独立于按钮） */
-    .dot{
-      position:absolute;
-      left:calc(var(--rail-left) - (var(--dot) / 2) + (var(--rail-w) / 2));
-      width:var(--dot);
-      height:var(--dot);
-      border:2px solid var(--c-border);
-      background:#fff;
-      border-radius:999px;
-    }
-
-    /* 按钮：自适应宽度，视觉更接近你图里的“长条但不夸张” */
+    /* 按钮：自适应宽度 */
     .btn{
       height:var(--btn-h);
       padding:0 18px;
@@ -112,7 +115,7 @@
 
       -webkit-tap-highlight-color: transparent;
       user-select:none;
-      white-space:nowrap; /* 保证不换行 */
+      white-space:nowrap;
     }
     .btn:hover{ background:#000; color:#fff; }
     .btn:disabled{ opacity:.45; cursor:default; }
@@ -128,7 +131,6 @@
     }
     .ico svg{ width:100%; height:100%; display:block; }
 
-    /* 文字 */
     .label{
       display:inline-block;
       line-height:1;
@@ -139,7 +141,15 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="rail" id="rail"></div>
+      <div class="layout">
+        <!-- 左：路线 SVG（由 JS 画竖线+圆点；不会出现在按钮旁边） -->
+        <div class="railBox" id="railBox">
+          <svg class="railSvg" id="railSvg" viewBox="0 0 56 10" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+
+        <!-- 右：按钮列表 -->
+        <div class="steps" id="steps"></div>
+      </div>
     </div>
   </div>
 
@@ -149,7 +159,7 @@
     const K_UNLOCK_SQUARE = "pg_unlock_square_v1"; // address 正确后解锁：康平路（square）
     const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";    // post 正确后解锁：衡山路（ppl）
 
-    const STEP = [
+    const STEP_ALL = [
       { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate",  needKey:null,            icon: svgStart },
       { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle",  needKey:K_UNLOCK_CIRCLE, icon: svgBlueSquare },
       { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square",  needKey:K_UNLOCK_SQUARE, icon: svgGreenCircle },
@@ -159,14 +169,12 @@
     function safeGet(key){
       try { return window.localStorage.getItem(key); } catch(e){ return null; }
     }
-
     function isUnlocked(needKey){
-      if (!needKey) return true;      // 起点永远显示
-      return !!safeGet(needKey);      // 写过就显示
+      if (!needKey) return true;
+      return !!safeGet(needKey);
     }
 
     // ====== 4 个彩色矢量图标 ======
-    // 起点：黄色（“吃豆人”）
     function svgStart(){
       return `
         <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -175,8 +183,6 @@
         </svg>
       `;
     }
-
-    // 天平路：蓝色方块
     function svgBlueSquare(){
       return `
         <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -184,8 +190,6 @@
         </svg>
       `;
     }
-
-    // 康平路：绿色圆形
     function svgGreenCircle(){
       return `
         <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -193,8 +197,6 @@
         </svg>
       `;
     }
-
-    // 衡山路：红色菱形（如需换成你指定红色矢量，替换此函数即可）
     function svgRedDiamond(){
       return `
         <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -203,6 +205,7 @@
       `;
     }
 
+    // ====== 生成按钮行 ======
     function makeBtn(iconSVG, text, url){
       const btn = document.createElement("button");
       btn.className = "btn";
@@ -215,27 +218,85 @@
       return btn;
     }
 
-    function addStep(railEl, iconSVG, text, url){
-      const row = document.createElement("div");
-      row.className = "step";
+    function renderSteps(unlockedSteps){
+      const stepsEl = document.getElementById("steps");
+      stepsEl.innerHTML = "";
 
-      const dot = document.createElement("span");
-      dot.className = "dot";
-      row.appendChild(dot);
+      for (const s of unlockedSteps){
+        const row = document.createElement("div");
+        row.className = "stepRow";
+        row.appendChild(makeBtn(s.icon(), s.text, s.url));
+        stepsEl.appendChild(row);
+      }
+    }
 
-      row.appendChild(makeBtn(iconSVG, text, url));
-      railEl.appendChild(row);
+    // ====== 画路线 SVG：竖线 + 圆点节点（只在左侧，不进入按钮） ======
+    function drawRail(unlockedCount){
+      const railBox = document.getElementById("railBox");
+      const svg = document.getElementById("railSvg");
+
+      const styles = getComputedStyle(document.documentElement);
+      const railArea = parseFloat(styles.getPropertyValue("--rail-area")) || 56;
+      const railX = parseFloat(styles.getPropertyValue("--rail-x")) || 22;
+      const dotR = parseFloat(styles.getPropertyValue("--dot-r")) || 6;
+      const stepPadY = parseFloat(styles.getPropertyValue("--step-pad-y")) || 14;
+      const btnH = parseFloat(styles.getPropertyValue("--btn-h")) || 52;
+
+      // 每个 stepRow 的总高度 = 上下 padding + 按钮高度
+      const stepH = stepPadY * 2 + btnH;
+
+      // 顶部/底部留一点呼吸
+      const topMargin = 10;
+      const bottomMargin = 10;
+
+      // SVG 真实高度
+      const h = topMargin + unlockedCount * stepH + bottomMargin;
+
+      railBox.style.height = h + "px";
+
+      // 设置 viewBox 与尺寸
+      svg.setAttribute("viewBox", `0 0 ${railArea} ${h}`);
+      svg.setAttribute("width", railArea);
+      svg.setAttribute("height", h);
+
+      // 清空
+      svg.innerHTML = "";
+
+      // 竖线：从第一个圆点到最后一个圆点
+      if (unlockedCount >= 1){
+        const yFirst = topMargin + stepPadY + btnH / 2;
+        const yLast  = topMargin + (unlockedCount - 1) * stepH + stepPadY + btnH / 2;
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", railX);
+        line.setAttribute("x2", railX);
+        line.setAttribute("y1", yFirst);
+        line.setAttribute("y2", yLast);
+        line.setAttribute("stroke", "#000");
+        line.setAttribute("stroke-width", "4");
+        line.setAttribute("stroke-linecap", "square");
+        svg.appendChild(line);
+
+        // 圆点节点
+        for (let i = 0; i < unlockedCount; i++){
+          const cy = topMargin + i * stepH + stepPadY + btnH / 2;
+
+          const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          c.setAttribute("cx", railX);
+          c.setAttribute("cy", cy);
+          c.setAttribute("r", dotR);
+          c.setAttribute("fill", "#fff");
+          c.setAttribute("stroke", "#000");
+          c.setAttribute("stroke-width", "2");
+          svg.appendChild(c);
+        }
+      }
     }
 
     function render(){
-      const rail = document.getElementById("rail");
-      rail.innerHTML = "";
-
-      for (const s of STEP){
-        if (isUnlocked(s.needKey)){
-          addStep(rail, s.icon(), s.text, s.url);
-        }
-      }
+      const unlockedSteps = STEP_ALL.filter(s => isUnlocked(s.needKey));
+      renderSteps(unlockedSteps);
+      drawRail(unlockedSteps.length);
     }
 
     render();
