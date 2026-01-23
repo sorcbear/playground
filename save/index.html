@@ -32,7 +32,7 @@
     html,body{
       margin:0;
       padding:0;
-      background:var(--bg);
+      background:#fff;
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size:var(--fs-body);
       color:#111;
@@ -79,24 +79,30 @@
       display:inline-flex;
       align-items:center;
       gap:14px;
-
+  
       font-size:var(--fs-body);
       font-weight:600;
 
-      background:#fff;
+      background:#fff;               /* ✅ 永远纯白 */
       color:#000;
-      border:2px solid var(--c-border);
+      border:2px solid #000;
       cursor:pointer;
       border-radius:0;
-      white-space:nowrap;
 
+      white-space:nowrap;
       -webkit-tap-highlight-color: transparent;
-      user-select:none;
+
+  /* ✅ 去掉浏览器默认按钮外观 */
+      appearance:none;
+      -webkit-appearance:none;
+      background-image:none;
+      box-shadow:none;
     }
     .btn:hover{
       background:#000;
       color:#fff;
     }
+
 
     .ico{
       width:28px;
