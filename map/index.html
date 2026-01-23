@@ -8,7 +8,7 @@
 
   <style>
     :root{
-      /* ===== Rotate 同源规范 ===== */
+      /* ===== Rotate 同源参数 ===== */
       --maxw: 720px;
 
       --fs-body: 18px;
@@ -21,11 +21,15 @@
       --fw-btn: 600;
       --h-btn: 52px;
 
-      --gap: 18px;
-
       --c-text:#111;
       --c-border:#000;
       --bg:#fff;
+
+      /* 你要求：图到按钮 48px */
+      --gap-map-btn: 48px;
+
+      /* 你之前同源常用 gap（标题到内容） */
+      --gap: 18px;
     }
 
     *{ box-sizing:border-box; }
@@ -35,61 +39,62 @@
       margin:0;
       background:var(--bg);
       color:var(--c-text);
-      font-family: system-ui, -apple-system,
-        "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-      font-size:var(--fs-body);
-      line-height:var(--lh-body);
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
     }
 
+    /* ✅ 与 rotate 完全一致 */
     .wrap{
-      max-width:var(--maxw);
-      margin:0 auto;
-      padding:18px 14px 28px;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 18px 14px 28px; /* rotate：18px 14px 28px */
     }
 
-    /* ===== 顶部说明文字 ===== */
+    /* ✅ 顶部文字：rotate 的 titleLine 规范 */
     .titleLine{
-      font-size:var(--fs-hint);
-      line-height:var(--lh-hint);
-      font-weight:700;
-      margin:0 0 var(--gap);
-      white-space:normal;
-      word-break:break-word;
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
+      margin: 4px 0 var(--gap);  /* rotate：4px 上，18px 下 */
+      text-align: left;
+      white-space: normal;        /* 手机可自动换行 */
+      word-break: break-word;
     }
 
-    /* 红色三角 inline */
+    /* 行内红三角（大小≈字高） */
     .tri{
       display:inline-block;
-      width:1em;
-      height:1em;
-      vertical-align:-0.12em;
-      margin:0 .15em;
+      width: 1em;
+      height: 1em;
+      vertical-align: -0.12em;
+      margin: 0 .15em;
     }
 
-    /* ===== 地图 ===== */
-    .mapWrap{
-      margin:0 0 var(--gap);
+    /* 地图区块：控制显示比例（60%）+ 居中 */
+    .mapBox{
       display:flex;
       justify-content:center;
+      margin: 0 0 var(--gap-map-btn);  /* ✅ 图到按钮固定 48px */
     }
-
-    .mapWrap img{
-      width:60%;              /* ✅ 关键：直接 60% */
-      max-width:420px;        /* 防止桌面过大 */
-      height:auto;
+    .mapBox img{
+      width: 60%;
+      max-width: 420px;
+      height: auto;
       display:block;
     }
 
-    /* ===== 按钮 ===== */
+    /* 按钮区（同源） */
     .panel{
       display:flex;
       justify-content:center;
     }
-
     button{
       width:240px;
       height:var(--h-btn);
       padding:0 18px;
+      box-sizing:border-box;
       font-size:var(--fs-btn);
       font-weight:var(--fw-btn);
       background:#fff;
@@ -97,22 +102,24 @@
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
-      font-family:inherit;
       -webkit-tap-highlight-color:transparent;
+      font-family:inherit;
+      transition:none; /* 同源：瞬切 */
+      user-select:none;
     }
-
     @media (hover:hover) and (pointer:fine){
       button:hover{ background:#000; color:#fff; }
     }
-
     button.invert{
       background:#000;
       color:#fff;
     }
+    button:disabled{ opacity:.45; cursor:default; }
 
+    /* 手机下：图略大一点以免太小 */
     @media (max-width:520px){
+      .mapBox img{ width: 70%; }
       button{ width:46vw; }
-      .mapWrap img{ width:70%; } /* 手机稍微放大一点 */
     }
   </style>
 </head>
@@ -126,12 +133,12 @@
       </svg>”标注的地点后，点击确定
     </div>
 
-    <div class="mapWrap">
+    <div class="mapBox">
       <img src="map.png" alt="map">
     </div>
 
     <div class="panel">
-      <button id="btnArrived">已到达</button>
+      <button id="btnArrived" type="button">已到达</button>
     </div>
 
   </div>
@@ -145,7 +152,8 @@
     }
 
     btn.onclick = ()=>{
-      flashInvert(btn,120);
+      flashInvert(btn, 120);
+      // TODO: 需要跳转的话在这里填
       // location.href = "NEXT_URL";
     };
   </script>
