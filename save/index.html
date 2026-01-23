@@ -8,6 +8,7 @@
   <style>
     :root{
       --fs-body: 18px;
+
       --btn-h: 56px;
       --btn-w: 140px;
 
@@ -17,7 +18,11 @@
       --map-w: 780;
       --map-h: 520;
 
+      /* 线条粗细（像素） */
       --line-w: 8px;
+
+      /* 顶部方块尺寸 */
+      --cap-sz: 34px;
     }
 
     *{ box-sizing:border-box; }
@@ -39,7 +44,7 @@
       padding:16px 16px 32px;
     }
 
-    /* ===== 顶部提示 ===== */
+    /* 顶部提示 */
     .notice{
       width:100%;
       text-align:center;
@@ -63,18 +68,30 @@
       pointer-events:none;
     }
 
+    /* 节点用百分比定位，与 svg 同坐标系 */
     .node{
       position:absolute;
       transform:translate(-50%,-50%);
     }
 
+    /* 顶部“方块节点”（非按钮） */
+    .cap{
+      width: var(--cap-sz);
+      height: var(--cap-sz);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .cap svg{ width:100%; height:100%; display:block; }
+
+    /* 按钮 */
     .btn{
       width:var(--btn-w);
       height:var(--btn-h);
 
       display:flex;
       align-items:center;
-      justify-content:center;
+      justify-content:center;   /* 图标+文字整体居中 */
       gap:8px;
 
       font-size:var(--fs-body);
@@ -116,6 +133,7 @@
       display:block;
     }
 
+    /* 起点三角：白底白三角，hover 黑底黑三角 */
     .start-tri{ fill:#fff; }
     .btn:hover .start-tri{ fill:#000; }
   </style>
@@ -123,12 +141,10 @@
 
 <body>
   <div class="wrap">
-    <!-- ✅ 新增提示 -->
-    <div class="notice">
-      为保留进度，请勿使用浏览器无痕模式。
-    </div>
+    <div class="notice">为保留进度，请勿使用浏览器无痕模式。</div>
 
     <div class="map" id="map">
+      <!-- 统一 0~100 坐标系 -->
       <svg class="wires" id="wires"
            viewBox="0 0 100 100"
            preserveAspectRatio="none"
@@ -137,6 +153,7 @@
   </div>
 
   <script>
+    // ===== 存档 key =====
     const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1";
     const K_UNLOCK_SQUARE = "pg_unlock_square_v1";
     const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";
@@ -149,6 +166,11 @@
       return !!(safeGet(localStorage, key) || safeGet(sessionStorage, key));
     }
 
+    // ===== 坐标（百分比 0~100）=====
+    // 顶部方块（始终显示）
+    const CAP = { x: 28.205, y: 8.000 };  // 你可以微调 y（越小越靠上）
+
+    // 节点按钮（按解锁逐个显示）
     const NODES = [
       { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:28.205, y:23.077, icon:svgStart },
       { text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:28.205, y:50.000, icon:svgBlue  },
@@ -174,6 +196,13 @@
       return btn;
     }
 
+    function makeCap(){
+      const d = document.createElement("div");
+      d.className = "cap";
+      d.innerHTML = svgCap();
+      return d;
+    }
+
     function render(){
       const map = document.getElementById("map");
       const wires = document.getElementById("wires");
@@ -181,19 +210,9 @@
       map.querySelectorAll(".node").forEach(el=>el.remove());
       wires.innerHTML = "";
 
-      const vis = visibleNodes();
-
-      for (const n of vis){
-        const wrap = document.createElement("div");
-        wrap.className = "node";
-        wrap.style.left = n.x + "%";
-        wrap.style.top  = n.y + "%";
-        wrap.appendChild(makeBtn(n));
-        map.appendChild(wrap);
-      }
-
-      const lw = getComputedStyle(document.documentElement)
-        .getPropertyValue("--line-w") || 8;
+      // 线条参数（像素宽，且不随缩放变粗细）
+      const lw = parseFloat(getComputedStyle(document.documentElement)
+        .getPropertyValue("--line-w")) || 8;
 
       function addLine(x1,y1,x2,y2){
         const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
@@ -208,26 +227,54 @@
         wires.appendChild(ln);
       }
 
+      // ✅ 先放顶部方块节点（始终显示）
+      const capNode = document.createElement("div");
+      capNode.className = "node";
+      capNode.style.left = CAP.x + "%";
+      capNode.style.top  = CAP.y + "%";
+      capNode.appendChild(makeCap());
+      map.appendChild(capNode);
+
+      // ✅ 再放按钮节点（按解锁逐个显示）
+      const vis = visibleNodes();
+      for (const n of vis){
+        const wrap = document.createElement("div");
+        wrap.className = "node";
+        wrap.style.left = n.x + "%";
+        wrap.style.top  = n.y + "%";
+        wrap.appendChild(makeBtn(n));
+        map.appendChild(wrap);
+      }
+
+      // ✅ 画线：方块 -> 起点（始终显示）
+      // 起点一定在 vis[0]，因为起点 need=null
+      addLine(CAP.x, CAP.y, NODES[0].x, NODES[0].y);
+
+      // 后续线段按解锁逐段显示
       if (vis.length>=2) addLine(NODES[0].x,NODES[0].y,NODES[1].x,NODES[1].y);
       if (vis.length>=3) addLine(NODES[1].x,NODES[1].y,NODES[2].x,NODES[2].y);
       if (vis.length>=4) addLine(NODES[2].x,NODES[2].y,NODES[3].x,NODES[3].y);
     }
 
+    // ===== 图标 =====
+    function svgCap(){
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="8" width="48" height="48" fill="#000"/></svg>`;
+    }
     function svgStart(){
       return `
-        <svg viewBox="0 0 64 64">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
           <circle cx="32" cy="32" r="26" fill="#F6B300"/>
           <path class="start-tri" d="M32 32L58 18v28L32 32Z"/>
         </svg>`;
     }
     function svgBlue(){
-      return `<svg viewBox="0 0 64 64"><rect x="12" y="12" width="40" height="40" fill="#1E73D8"/></svg>`;
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="12" width="40" height="40" fill="#1E73D8"/></svg>`;
     }
     function svgGreen(){
-      return `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="20" fill="#2E7D32"/></svg>`;
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="20" fill="#2E7D32"/></svg>`;
     }
     function svgRed(){
-      return `<svg viewBox="0 0 64 64"><path d="M32 10L54 32 32 54 10 32Z" fill="#D32F2F"/></svg>`;
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 10L54 32 32 54 10 32Z" fill="#D32F2F"/></svg>`;
     }
 
     render();
