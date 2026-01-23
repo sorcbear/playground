@@ -10,13 +10,18 @@
       --fs-body: 18px;
       --btn-h: 56px;
 
-      --c-border:#000;
       --bg:#fff;
+      --c-border:#000;
 
+      /* 地图画布尺寸 */
       --map-w: 780px;
       --map-h: 520px;
 
-      --line-w: 4px;
+      /* ✅ 统一按钮宽度 */
+      --btn-w: 140px;
+
+      /* ✅ 线条粗细 */
+      --line-w: 6px;
     }
 
     *{ box-sizing:border-box; }
@@ -41,36 +46,39 @@
       position:relative;
       width:min(var(--map-w), 100%);
       aspect-ratio: calc(var(--map-w) / var(--map-h));
+      height:auto;
     }
 
     .wires{
       position:absolute;
       inset:0;
       pointer-events:none;
+      width:100%;
+      height:100%;
     }
 
+    /* ✅ 节点坐标就是“按钮盒子的几何中心” */
     .node{
       position:absolute;
-      transform:translate(-50%, -50%);
+      transform: translate(-50%, -50%);
     }
 
+    /* ===== 按钮（等宽 + 内容整体居中） ===== */
     .btn{
-      width: 140px; 
+      width:var(--btn-w);
       height:var(--btn-h);
-      padding:0 24px;
-      justify-content: center;
-
-
-      display:inline-flex;
+      padding:0;                       /* ✅ 不要 padding，避免视觉偏 */
+      display:flex;                    /* ✅ 用 flex，整体居中 */
       align-items:center;
-      gap:14px;
+      justify-content:center;
+      gap:8px;                         /* ✅ 图标和文字更近一点 */
 
       font-size:var(--fs-body);
       font-weight:600;
 
-      background:#fff;         /* ✅ 未选中纯白 */
+      background:#fff;
       color:#000;
-      border:2px solid #000;
+      border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
 
@@ -86,8 +94,8 @@
     .btn:hover{ background:#000; color:#fff; }
 
     .ico{
-      width:28px;
-      height:28px;
+      width:24px;
+      height:24px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -98,141 +106,119 @@
     /* 起点三角：白底白三角，hover 黑底黑三角 */
     .start-tri{ fill:#fff; }
     .btn:hover .start-tri{ fill:#000; }
-
-    /* debug 面板 */
-    .debug{
-      position:fixed;
-      left:12px;
-      bottom:12px;
-      padding:10px 12px;
-      border:2px solid #000;
-      background:#fff;
-      font-size:14px;
-      line-height:1.5;
-      max-width: calc(100vw - 24px);
-      word-break:break-all;
-    }
   </style>
 </head>
 
 <body>
-<div class="wrap">
-  <div class="map" id="map">
-    <svg class="wires" id="wires" viewBox="0 0 780 520" preserveAspectRatio="none"></svg>
+  <div class="wrap">
+    <div class="map" id="map">
+      <!-- viewBox 固定 780x520，节点坐标与之对应 -->
+      <svg class="wires" id="wires" viewBox="0 0 780 520" preserveAspectRatio="none" aria-hidden="true"></svg>
+    </div>
   </div>
-</div>
 
-<script>
-  // ===== 存档 key =====
-  const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1";
-  const K_UNLOCK_SQUARE = "pg_unlock_square_v1";
-  const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";
+  <script>
+    // ===== 存档 key =====
+    const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1";
+    const K_UNLOCK_SQUARE = "pg_unlock_square_v1";
+    const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";
 
-  // ===== 节点（按你图的折线布局）=====
-  const NODES = [
-    { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:140, y:110, icon:svgStart },
-    { text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:140, y:230, icon:svgBlue },
-    { text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x:520, y:230, icon:svgGreen },
-    { text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:520, y:360, icon:svgRed },
-  ];
-
-  function safeGet(storage, key){
-    try{ return storage.getItem(key); }catch(e){ return null; }
-  }
-
-  // ✅ 同时读 localStorage + sessionStorage
-  function unlocked(key){
-    if (!key) return true;
-    const a = safeGet(localStorage, key);
-    const b = safeGet(sessionStorage, key);
-    return !!(a || b);
-  }
-
-  // 顺序推进：没解锁就停
-  function visible(){
-    const out=[];
-    for (const n of NODES){
-      if (!unlocked(n.need)) break;
-      out.push(n);
+    function safeGet(storage, key){
+      try{ return storage.getItem(key); }catch(e){ return null; }
     }
-    return out;
-  }
-
-  function render(){
-    const map = document.getElementById("map");
-    const wires = document.getElementById("wires");
-    map.querySelectorAll(".node").forEach(n=>n.remove());
-    wires.innerHTML = "";
-
-    const v = visible();
-
-    // 按钮
-    for (const n of v){
-      const wrap=document.createElement("div");
-      wrap.className="node";
-      wrap.style.left=n.x+"px";
-      wrap.style.top=n.y+"px";
-
-      const btn=document.createElement("button");
-      btn.className="btn";
-      btn.innerHTML=`<span class="ico">${n.icon()}</span><span>${n.text}</span>`;
-      btn.onclick=()=>location.href=n.url;
-
-      wrap.appendChild(btn);
-      map.appendChild(wrap);
+    // ✅ 同时读 localStorage + sessionStorage（无痕/策略更稳）
+    function unlocked(key){
+      if (!key) return true;
+      return !!(safeGet(localStorage, key) || safeGet(sessionStorage, key));
     }
 
-    // 线段
-    const add=(x1,y1,x2,y2)=>{
-      const l=document.createElementNS("http://www.w3.org/2000/svg","line");
-      l.setAttribute("x1",x1); l.setAttribute("y1",y1);
-      l.setAttribute("x2",x2); l.setAttribute("y2",y2);
-      l.setAttribute("stroke","#000");
-      l.setAttribute("stroke-width", getComputedStyle(document.documentElement).getPropertyValue("--line-w").trim() || "4");
-      l.setAttribute("stroke-linecap","square");
-      wires.appendChild(l);
-    };
+    // ===== 折线路径布局：左上、左中、右中、右下 =====
+    const NODES = [
+      { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:220, y:120, icon: svgStart },
+      { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:220, y:260, icon: svgBlue  },
+      { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x:520, y:260, icon: svgGreen },
+      { id:"ppl",    text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:520, y:400, icon: svgRed   },
+    ];
 
-    if (v.length>=2) add(NODES[0].x,NODES[0].y,NODES[1].x,NODES[1].y);
-    if (v.length>=3) add(NODES[1].x,NODES[1].y,NODES[2].x,NODES[2].y);
-    if (v.length>=4) add(NODES[2].x,NODES[2].y,NODES[3].x,NODES[3].y);
-
-    // debug 面板（?debug=1）
-    const params = new URLSearchParams(location.search);
-    if (params.get("debug") === "1"){
-      const box = document.createElement("div");
-      box.className="debug";
-      box.innerHTML =
-        `<div><b>unlock check</b></div>` +
-        `<div>local circle: ${safeGet(localStorage,K_UNLOCK_CIRCLE)}</div>` +
-        `<div>sess  circle: ${safeGet(sessionStorage,K_UNLOCK_CIRCLE)}</div>` +
-        `<div>local square: ${safeGet(localStorage,K_UNLOCK_SQUARE)}</div>` +
-        `<div>sess  square: ${safeGet(sessionStorage,K_UNLOCK_SQUARE)}</div>` +
-        `<div>local ppl: ${safeGet(localStorage,K_UNLOCK_PPL)}</div>` +
-        `<div>sess  ppl: ${safeGet(sessionStorage,K_UNLOCK_PPL)}</div>`;
-      document.body.appendChild(box);
+    // 顺序推进：没解锁就停止显示
+    function visibleNodes(){
+      const out = [];
+      for (const n of NODES){
+        if (!unlocked(n.need)) break;
+        out.push(n);
+      }
+      return out;
     }
-  }
 
-  // 图标
-  function svgStart(){
-    return `
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="32" r="26" fill="#F6B300"/>
-        <path class="start-tri" d="M32 32L58 18v28L32 32Z"/>
-      </svg>`;
-  }
-  function svgBlue(){
-    return `<svg viewBox="0 0 64 64"><rect x="10" y="10" width="44" height="44" fill="#1E73D8"/></svg>`;
-  }
-  function svgGreen(){
-    return `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="#2E7D32"/></svg>`;
-  }
-  function svgRed(){
-    return `<svg viewBox="0 0 64 64"><path d="M32 8L56 32 32 56 8 32Z" fill="#D32F2F"/></svg>`;
-  }
+    function makeBtn(n){
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.type = "button";
+      btn.innerHTML = `<span class="ico">${n.icon()}</span><span>${n.text}</span>`;
+      btn.onclick = () => location.href = n.url;
+      return btn;
+    }
 
-  render();
-</script>
+    function render(){
+      const map = document.getElementById("map");
+      const wires = document.getElementById("wires");
+
+      // 清空
+      map.querySelectorAll(".node").forEach(el => el.remove());
+      wires.innerHTML = "";
+
+      const vis = visibleNodes();
+
+      // 节点按钮
+      for (const n of vis){
+        const wrap = document.createElement("div");
+        wrap.className = "node";
+        wrap.style.left = n.x + "px";
+        wrap.style.top  = n.y + "px";
+        wrap.appendChild(makeBtn(n));
+        map.appendChild(wrap);
+      }
+
+      // 线条（关键：线只连“节点中心坐标”，保证在按钮正中）
+      const lineW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--line-w")) || 6;
+
+      function addLine(x1,y1,x2,y2){
+        const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        ln.setAttribute("x1", x1);
+        ln.setAttribute("y1", y1);
+        ln.setAttribute("x2", x2);
+        ln.setAttribute("y2", y2);
+        ln.setAttribute("stroke", "#000");
+        ln.setAttribute("stroke-width", lineW);
+        ln.setAttribute("stroke-linecap", "square");
+        wires.appendChild(ln);
+      }
+
+      // 连接规则：1-2 竖线；2-3 横线；3-4 竖线
+      if (vis.length >= 2) addLine(NODES[0].x, NODES[0].y, NODES[1].x, NODES[1].y);
+      if (vis.length >= 3) addLine(NODES[1].x, NODES[1].y, NODES[2].x, NODES[2].y);
+      if (vis.length >= 4) addLine(NODES[2].x, NODES[2].y, NODES[3].x, NODES[3].y);
+    }
+
+    // ===== 图标 =====
+    function svgStart(){
+      return `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="26" fill="#F6B300"/>
+          <path class="start-tri" d="M32 32L58 18v28L32 32Z"/>
+        </svg>`;
+    }
+    function svgBlue(){
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="12" width="40" height="40" fill="#1E73D8"/></svg>`;
+    }
+    function svgGreen(){
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="20" fill="#2E7D32"/></svg>`;
+    }
+    function svgRed(){
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 10L54 32 32 54 10 32Z" fill="#D32F2F"/></svg>`;
+    }
+
+    render();
+  </script>
 </body>
 </html>
