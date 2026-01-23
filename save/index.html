@@ -9,19 +9,17 @@
     :root{
       --fs-body: 18px;
       --btn-h: 56px;
+      --btn-w: 140px;
 
       --bg:#fff;
       --c-border:#000;
 
-      /* 地图画布尺寸 */
-      --map-w: 780px;
-      --map-h: 520px;
+      /* 画布宽高仅用于 aspect-ratio */
+      --map-w: 780;
+      --map-h: 520;
 
-      /* ✅ 统一按钮宽度 */
-      --btn-w: 140px;
-
-      /* ✅ 线条粗细 */
-      --line-w: 6px;
+      /* 线条粗细（像素） */
+      --line-w: 8px;
     }
 
     *{ box-sizing:border-box; }
@@ -44,34 +42,33 @@
 
     .map{
       position:relative;
-      width:min(var(--map-w), 100%);
+      width:min(780px, 100%);
       aspect-ratio: calc(var(--map-w) / var(--map-h));
-      height:auto;
     }
 
     .wires{
       position:absolute;
       inset:0;
-      pointer-events:none;
       width:100%;
       height:100%;
+      pointer-events:none;
     }
 
-    /* ✅ 节点坐标就是“按钮盒子的几何中心” */
+    /* ✅ 节点使用百分比坐标：永远与 svg 同坐标系 */
     .node{
       position:absolute;
-      transform: translate(-50%, -50%);
+      transform:translate(-50%,-50%);
     }
 
-    /* ===== 按钮（等宽 + 内容整体居中） ===== */
     .btn{
       width:var(--btn-w);
       height:var(--btn-h);
-      padding:0;                       /* ✅ 不要 padding，避免视觉偏 */
-      display:flex;                    /* ✅ 用 flex，整体居中 */
+      padding:0;
+
+      display:flex;
       align-items:center;
-      justify-content:center;
-      gap:8px;                         /* ✅ 图标和文字更近一点 */
+      justify-content:center;   /* ✅ 图标+文字整体居中 */
+      gap:8px;                  /* ✅ 更小间距 */
 
       font-size:var(--fs-body);
       font-weight:600;
@@ -112,8 +109,8 @@
 <body>
   <div class="wrap">
     <div class="map" id="map">
-      <!-- viewBox 固定 780x520，节点坐标与之对应 -->
-      <svg class="wires" id="wires" viewBox="0 0 780 520" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <!-- ✅ 统一成 0~100 坐标系 -->
+      <svg class="wires" id="wires" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
     </div>
   </div>
 
@@ -126,23 +123,23 @@
     function safeGet(storage, key){
       try{ return storage.getItem(key); }catch(e){ return null; }
     }
-    // ✅ 同时读 localStorage + sessionStorage（无痕/策略更稳）
     function unlocked(key){
       if (!key) return true;
       return !!(safeGet(localStorage, key) || safeGet(sessionStorage, key));
     }
 
-    // ===== 折线路径布局：左上、左中、右中、右下 =====
+    // ===== 节点坐标（百分比 0~100）=====
+    // 这些值来自你之前的像素坐标换算：
+    // x% = x/780*100, y% = y/520*100
     const NODES = [
-      { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:220, y:120, icon: svgStart },
-      { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:220, y:260, icon: svgBlue  },
-      { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x:520, y:260, icon: svgGreen },
-      { id:"ppl",    text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:520, y:400, icon: svgRed   },
+      { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x: 28.205, y: 23.077, icon: svgStart },
+      { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x: 28.205, y: 50.000, icon: svgBlue  },
+      { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x: 66.667, y: 50.000, icon: svgGreen },
+      { id:"ppl",    text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x: 66.667, y: 76.923, icon: svgRed   },
     ];
 
-    // 顺序推进：没解锁就停止显示
     function visibleNodes(){
-      const out = [];
+      const out=[];
       for (const n of NODES){
         if (!unlocked(n.need)) break;
         out.push(n);
@@ -163,41 +160,44 @@
       const map = document.getElementById("map");
       const wires = document.getElementById("wires");
 
-      // 清空
-      map.querySelectorAll(".node").forEach(el => el.remove());
+      map.querySelectorAll(".node").forEach(el=>el.remove());
       wires.innerHTML = "";
 
       const vis = visibleNodes();
 
-      // 节点按钮
+      // 节点（百分比定位）
       for (const n of vis){
         const wrap = document.createElement("div");
         wrap.className = "node";
-        wrap.style.left = n.x + "px";
-        wrap.style.top  = n.y + "px";
+        wrap.style.left = n.x + "%";
+        wrap.style.top  = n.y + "%";
         wrap.appendChild(makeBtn(n));
         map.appendChild(wrap);
       }
 
-      // 线条（关键：线只连“节点中心坐标”，保证在按钮正中）
-      const lineW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--line-w")) || 6;
+      // 线（百分比坐标，完全同坐标系）
+      const lineWpx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--line-w")) || 8;
 
       function addLine(x1,y1,x2,y2){
-        const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
         ln.setAttribute("x1", x1);
         ln.setAttribute("y1", y1);
         ln.setAttribute("x2", x2);
         ln.setAttribute("y2", y2);
         ln.setAttribute("stroke", "#000");
-        ln.setAttribute("stroke-width", lineW);
         ln.setAttribute("stroke-linecap", "square");
+
+        // ✅ 让线宽用“像素”稳定，不随缩放变粗变细
+        ln.setAttribute("vector-effect", "non-scaling-stroke");
+        ln.setAttribute("stroke-width", lineWpx);
+
         wires.appendChild(ln);
       }
 
-      // 连接规则：1-2 竖线；2-3 横线；3-4 竖线
-      if (vis.length >= 2) addLine(NODES[0].x, NODES[0].y, NODES[1].x, NODES[1].y);
-      if (vis.length >= 3) addLine(NODES[1].x, NODES[1].y, NODES[2].x, NODES[2].y);
-      if (vis.length >= 4) addLine(NODES[2].x, NODES[2].y, NODES[3].x, NODES[3].y);
+      // 连接：1-2 竖，2-3 横，3-4 竖
+      if (vis.length>=2) addLine(NODES[0].x, NODES[0].y, NODES[1].x, NODES[1].y);
+      if (vis.length>=3) addLine(NODES[1].x, NODES[1].y, NODES[2].x, NODES[2].y);
+      if (vis.length>=4) addLine(NODES[2].x, NODES[2].y, NODES[3].x, NODES[3].y);
     }
 
     // ===== 图标 =====
