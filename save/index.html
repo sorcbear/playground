@@ -13,18 +13,15 @@
       --c-border:#000;
       --bg:#fff;
 
-      /* “地图画布”尺寸（桌面/手机都能撑住） */
+      /* 地图尺寸 */
       --map-w: 780px;
       --map-h: 520px;
 
-      /* 四个按钮位置（按你图：左上、左中、右中、右下） */
-      --x1: 140px;  --y1: 110px;  /* 起点 */
-      --x2: 140px;  --y2: 230px;  /* 天平路 */
-      --x3: 520px;  --y3: 230px;  /* 康平路（右拐点） */
-      --x4: 520px;  --y4: 360px;  /* 衡山路 */
-
-      /* 连线粗细 */
-      --line-w: 4px;
+      /* 节点坐标（固定地图） */
+      --x1:140px; --y1:110px;
+      --x2:140px; --y2:230px;
+      --x3:520px; --y3:230px;
+      --x4:520px; --y4:360px;
     }
 
     *{ box-sizing:border-box; }
@@ -32,46 +29,37 @@
     html,body{
       margin:0;
       padding:0;
-      background:#fff;
+      background:#fff;                 /* ✅ 纯白背景 */
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size:var(--fs-body);
       color:#111;
     }
 
-    /* 页面整体：居中，不要外框 */
     .wrap{
       min-height:100svh;
       display:flex;
-      align-items:flex-start;
       justify-content:center;
-      padding:28px 14px;
+      padding:32px 16px;
     }
 
-    /* 地图画布：固定最大宽度，手机上缩放适配 */
     .map{
       position:relative;
       width:min(var(--map-w), 100%);
       aspect-ratio: calc(var(--map-w) / var(--map-h));
-      /* 让高度随宽度缩放 */
-      height:auto;
     }
 
-    /* 画线层：覆盖整个 map */
     .wires{
       position:absolute;
       inset:0;
-      width:100%;
-      height:100%;
       pointer-events:none;
     }
 
-    /* 节点按钮：绝对定位到 map 内 */
     .node{
       position:absolute;
-      transform: translate(-50%, -50%);
+      transform:translate(-50%, -50%);
     }
 
-    /* 按钮 UI（与你之前一致） */
+    /* ===== 按钮（已彻底去默认样式） ===== */
     .btn{
       height:var(--btn-h);
       padding:0 24px;
@@ -79,31 +67,30 @@
       display:inline-flex;
       align-items:center;
       gap:14px;
-  
+
       font-size:var(--fs-body);
       font-weight:600;
 
-      background:#fff;               /* ✅ 永远纯白 */
+      background:#fff;                 /* ✅ 未选中纯白 */
       color:#000;
       border:2px solid #000;
       cursor:pointer;
       border-radius:0;
 
-      white-space:nowrap;
-      -webkit-tap-highlight-color: transparent;
-
-  /* ✅ 去掉浏览器默认按钮外观 */
       appearance:none;
       -webkit-appearance:none;
       background-image:none;
       box-shadow:none;
+
+      white-space:nowrap;
+      -webkit-tap-highlight-color: transparent;
     }
     .btn:hover{
       background:#000;
       color:#fff;
     }
 
-
+    /* ===== 图标 ===== */
     .ico{
       width:28px;
       height:28px;
@@ -113,120 +100,108 @@
       flex:0 0 auto;
     }
     .ico svg{ width:100%; height:100%; display:block; }
+
+    /* 起点三角：默认白，hover 变黑 */
+    .start-tri{ fill:#fff; }
+    .btn:hover .start-tri{ fill:#000; }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="map" id="map">
-      <svg class="wires" id="wires" viewBox="0 0 780 520" preserveAspectRatio="none" aria-hidden="true"></svg>
-      <!-- 节点按钮由 JS 动态插入 -->
-    </div>
+<div class="wrap">
+  <div class="map" id="map">
+    <svg class="wires" id="wires" viewBox="0 0 780 520" preserveAspectRatio="none"></svg>
   </div>
+</div>
 
-  <script>
-    // ====== 存档 key ======
-    const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1"; // rotate 正确后解锁：天平路（circle）
-    const K_UNLOCK_SQUARE = "pg_unlock_square_v1"; // address 正确后解锁：康平路（square）
-    const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";    // post 正确后解锁：衡山路（ppl）
+<script>
+  // ===== 存档 key =====
+  const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1";
+  const K_UNLOCK_SQUARE = "pg_unlock_square_v1";
+  const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";
 
-    // ====== 固定四节点的“地图坐标”（与 CSS 变量一致）======
-    // 这里用固定 viewBox 坐标（780x520），手机会缩放，不会变形
-    const NODES = [
-      { id:"start",  text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:140, y:110, icon: svgStart },
-      { id:"circle", text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:140, y:230, icon: svgBlue },
-      { id:"square", text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x:520, y:230, icon: svgGreen },
-      { id:"ppl",    text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:520, y:360, icon: svgRed },
-    ];
+  // ===== 地图节点 =====
+  const NODES = [
+    { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:140, y:110, icon:svgStart },
+    { text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:140, y:230, icon:svgBlue },
+    { text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x:520, y:230, icon:svgGreen },
+    { text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:520, y:360, icon:svgRed },
+  ];
 
-    function ok(key){
-      if (!key) return true;
-      try{ return !!localStorage.getItem(key); }catch(e){ return false; }
+  function unlocked(key){
+    if (!key) return true;
+    try{ return !!localStorage.getItem(key); }catch(e){ return false; }
+  }
+
+  function visible(){
+    const out=[];
+    for (const n of NODES){
+      if (!unlocked(n.need)) break;
+      out.push(n);
+    }
+    return out;
+  }
+
+  function render(){
+    const map = document.getElementById("map");
+    const wires = document.getElementById("wires");
+    map.querySelectorAll(".node").forEach(n=>n.remove());
+    wires.innerHTML = "";
+
+    const v = visible();
+
+    // 画按钮
+    for (const n of v){
+      const wrap=document.createElement("div");
+      wrap.className="node";
+      wrap.style.left=n.x+"px";
+      wrap.style.top=n.y+"px";
+
+      const btn=document.createElement("button");
+      btn.className="btn";
+      btn.innerHTML=`<span class="ico">${n.icon()}</span><span>${n.text}</span>`;
+      btn.onclick=()=>location.href=n.url;
+
+      wrap.appendChild(btn);
+      map.appendChild(wrap);
     }
 
-    function visibleNodes(){
-      // 你的逻辑是“顺序推进”：没解锁就停
-      const out = [];
-      for (const n of NODES){
-        if (!ok(n.need)) break;
-        out.push(n);
-      }
-      return out;
-    }
+    // 画线（只画已解锁段）
+    const L=4;
+    const add=(x1,y1,x2,y2)=>{
+      const l=document.createElementNS("http://www.w3.org/2000/svg","line");
+      l.setAttribute("x1",x1);l.setAttribute("y1",y1);
+      l.setAttribute("x2",x2);l.setAttribute("y2",y2);
+      l.setAttribute("stroke","#000");
+      l.setAttribute("stroke-width",L);
+      l.setAttribute("stroke-linecap","square");
+      wires.appendChild(l);
+    };
 
-    function makeBtn(n){
-      const btn = document.createElement("button");
-      btn.className = "btn";
-      btn.type = "button";
-      btn.innerHTML = `
-        <span class="ico">${n.icon()}</span>
-        <span>${n.text}</span>
-      `;
-      btn.onclick = () => location.href = n.url;
-      return btn;
-    }
+    if (v.length>=2) add(NODES[0].x,NODES[0].y,NODES[1].x,NODES[1].y);
+    if (v.length>=3) add(NODES[1].x,NODES[1].y,NODES[2].x,NODES[2].y);
+    if (v.length>=4) add(NODES[2].x,NODES[2].y,NODES[3].x,NODES[3].y);
+  }
 
-    function render(){
-      const map = document.getElementById("map");
-      const wires = document.getElementById("wires");
-      // 清掉旧节点
-      map.querySelectorAll(".node").forEach(el => el.remove());
-      wires.innerHTML = "";
+  // ===== 图标 =====
+  function svgStart(){
+    return `
+      <svg viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="26" fill="#F6B300"/>
+        <path class="start-tri" d="M32 32L58 18v28L32 32Z"/>
+      </svg>`;
+  }
+  function svgBlue(){
+    return `<svg viewBox="0 0 64 64"><rect x="10" y="10" width="44" height="44" fill="#1E73D8"/></svg>`;
+  }
+  function svgGreen(){
+    return `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="#2E7D32"/></svg>`;
+  }
+  function svgRed(){
+    return `<svg viewBox="0 0 64 64"><path d="M32 8L56 32 32 56 8 32Z" fill="#D32F2F"/></svg>`;
+  }
 
-      const vis = visibleNodes();
-
-      // 画按钮
-      for (const n of vis){
-        const wrap = document.createElement("div");
-        wrap.className = "node";
-        wrap.style.left = n.x + "px";
-        wrap.style.top  = n.y + "px";
-        wrap.appendChild(makeBtn(n));
-        map.appendChild(wrap);
-      }
-
-      // 画连线（只连“已显示的相邻节点”）
-      // 连接规则：1-2 竖线；2-3 横线；3-4 竖线
-      // 线连接按钮中心点（即节点坐标点）
-      const lineW = 4;
-
-      function addLine(x1,y1,x2,y2){
-        const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        ln.setAttribute("x1", x1);
-        ln.setAttribute("y1", y1);
-        ln.setAttribute("x2", x2);
-        ln.setAttribute("y2", y2);
-        ln.setAttribute("stroke", "#000");
-        ln.setAttribute("stroke-width", lineW);
-        ln.setAttribute("stroke-linecap", "square");
-        wires.appendChild(ln);
-      }
-
-      // vis.length 决定画到哪一段
-      if (vis.length >= 2) addLine(NODES[0].x, NODES[0].y, NODES[1].x, NODES[1].y);
-      if (vis.length >= 3) addLine(NODES[1].x, NODES[1].y, NODES[2].x, NODES[2].y);
-      if (vis.length >= 4) addLine(NODES[2].x, NODES[2].y, NODES[3].x, NODES[3].y);
-    }
-
-    // ===== 图标 =====
-    function svgStart(){
-      return `
-        <svg viewBox="0 0 64 64">
-          <path d="M32 6a26 26 0 1 0 0 52a26 26 0 0 0 0-52Z" fill="#F6B300"/>
-          <path d="M32 32L58 18v28L32 32Z" fill="#000"/>
-        </svg>`;
-    }
-    function svgBlue(){
-      return `<svg viewBox="0 0 64 64"><rect x="10" y="10" width="44" height="44" fill="#1E73D8"/></svg>`;
-    }
-    function svgGreen(){
-      return `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="#2E7D32"/></svg>`;
-    }
-    function svgRed(){
-      return `<svg viewBox="0 0 64 64"><path d="M32 8L56 32 32 56 8 32Z" fill="#D32F2F"/></svg>`;
-    }
-
-    render();
-  </script>
+  render();
+</script>
 </body>
 </html>
