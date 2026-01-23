@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Save</title>
+
+  <style>
+    :root{
+      --maxw: 720px;
+
+      --fs-body: 18px;
+      --lh-body: 1.7;
+
+      --ctl-h: 52px;
+      --w-mainbtn: 240px;
+
+      --gap: 18px;
+
+      --c-text:#111;
+      --c-border:#000;
+      --bg:#fff;
+
+      /* 目录“轨道” */
+      --rail-w: 4px;
+      --dot: 12px;
+      --rail-left: 22px; /* 轨道相对卡片左侧位置 */
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      padding:0;
+      width:100%;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--c-text);
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+    }
+
+    .wrap{
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:24px 16px 40px;
+    }
+
+    .card{
+      width:100%;
+      margin:0 auto;
+      padding:18px 14px;
+      border:2px solid var(--c-border);
+      background:#fff;
+    }
+
+    /* 轨道容器 */
+    .rail{
+      position:relative;
+      padding-left:56px; /* 给左侧轨道+圆点留空间 */
+    }
+
+    /* 主竖线（覆盖全部可见 step 高度） */
+    .rail::before{
+      content:"";
+      position:absolute;
+      left:var(--rail-left);
+      top:10px;
+      bottom:10px;
+      width:var(--rail-w);
+      background:var(--c-border);
+    }
+
+    /* 单个 step */
+    .step{
+      position:relative;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      padding:14px 0;
+    }
+
+    /* 圆点 */
+    .dot{
+      position:absolute;
+      left:calc(var(--rail-left) - (var(--dot) / 2) + (var(--rail-w) / 2));
+      width:var(--dot);
+      height:var(--dot);
+      border:2px solid var(--c-border);
+      background:#fff;
+      border-radius:999px;
+    }
+
+    /* 按钮：沿用你统一 UI 风格 */
+    .btn{
+      width:var(--w-mainbtn);
+      height:var(--ctl-h);
+      padding:0 18px;
+      box-sizing:border-box;
+
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+
+      font-size:var(--fs-body);
+      font-weight:600;
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+    }
+    .btn:hover{ background:#000; color:#fff; }
+    .btn:disabled{ opacity:.45; cursor:default; }
+
+    /* 图标容器 */
+    .ico{
+      width:28px;
+      height:28px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .ico svg{ width:100%; height:100%; display:block; }
+
+    /* 你要“按钮里只有矢量图”，所以把按钮文字彻底去掉 */
+    .btn .label{ display:none; }
+
+    /* 小提示：可选隐藏（你没要求显示文字） */
+    .hint{
+      margin:0 0 12px;
+      font-weight:700;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <!-- 如果你不想要任何文字，可以把这一行删掉 -->
+      <div class="hint">目录</div>
+
+      <div class="rail" id="rail"></div>
+    </div>
+  </div>
+
+  <script>
+    // ====== 存档 key（只要写入一次，就永远保留）======
+    const K_UNLOCK_CIRCLE = "pg_unlock_circle_v1"; // rotate 正确后解锁：天平路（circle）
+    const K_UNLOCK_SQUARE = "pg_unlock_square_v1"; // address 正确后解锁：康平路（square）
+    const K_UNLOCK_PPL    = "pg_unlock_ppl_v1";    // post 正确后解锁：衡山路（ppl）
+
+    const STEP = {
+      start:  { id:"start",  url:"https://sorcbear.github.io/playground/rotate",  needKey:null },
+      circle: { id:"circle", url:"https://sorcbear.github.io/playground/circle",  needKey:K_UNLOCK_CIRCLE },
+      square: { id:"square", url:"https://sorcbear.github.io/playground/square",  needKey:K_UNLOCK_SQUARE },
+      ppl:    { id:"ppl",    url:"https://sorcbear.github.io/playground/ppl",     needKey:K_UNLOCK_PPL },
+    };
+
+    function safeGet(key){
+      try { return window.localStorage.getItem(key); } catch(e){ return null; }
+    }
+
+    function isUnlocked(needKey){
+      if (!needKey) return true;                 // 起点永远显示
+      return !!safeGet(needKey);                 // 只要写过就显示
+    }
+
+    // ====== 4 个彩色矢量图标（按钮内只放图标）======
+    // 起点：黄色（你给的“吃豆人”语义）
+    function svgStart(){
+      return `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M32 6a26 26 0 1 0 0 52a26 26 0 0 0 0-52Z" fill="#F6B300"/>
+          <path d="M32 32L58 18v28L32 32Z" fill="#fff"/>
+        </svg>
+      `;
+    }
+
+    // 天平路：蓝色（方块）
+    function svgCircleBlueSquare(){
+      return `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <rect x="10" y="10" width="44" height="44" fill="#1E73D8"/>
+        </svg>
+      `;
+    }
+
+    // 康平路：绿色（圆形）
+    function svgGreenCircle(){
+      return `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="22" fill="#2E7D32"/>
+        </svg>
+      `;
+    }
+
+    // 衡山路：红色（给你一个红色菱形/标记感更强；如果你有固定红色图标也可以替换这里）
+    function svgRedDiamond(){
+      return `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M32 8L56 32 32 56 8 32 32 8Z" fill="#D32F2F"/>
+        </svg>
+      `;
+    }
+
+    function makeBtn(iconSVG, url){
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.type = "button";
+      btn.innerHTML = `
+        <span class="ico">${iconSVG}</span>
+        <span class="label">.</span>
+      `;
+      btn.onclick = () => { location.href = url; };
+      return btn;
+    }
+
+    function addStep(railEl, iconSVG, url){
+      const row = document.createElement("div");
+      row.className = "step";
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      row.appendChild(dot);
+      row.appendChild(makeBtn(iconSVG, url));
+      railEl.appendChild(row);
+    }
+
+    function render(){
+      const rail = document.getElementById("rail");
+      rail.innerHTML = "";
+
+      // 按你的解锁顺序：起点 -> 天平路 -> 康平路 -> 衡山路
+      addStep(rail, svgStart(), STEP.start.url);
+
+      if (isUnlocked(STEP.circle.needKey)) addStep(rail, svgCircleBlueSquare(), STEP.circle.url);
+      if (isUnlocked(STEP.square.needKey)) addStep(rail, svgGreenCircle(), STEP.square.url);
+      if (isUnlocked(STEP.ppl.needKey))    addStep(rail, svgRedDiamond(), STEP.ppl.url);
+    }
+
+    render();
+
+    // ======（可选）调试：加 ?reset=1 清空存档 ======
+    // if (new URLSearchParams(location.search).get("reset") === "1") {
+    //   localStorage.removeItem(K_UNLOCK_CIRCLE);
+    //   localStorage.removeItem(K_UNLOCK_SQUARE);
+    //   localStorage.removeItem(K_UNLOCK_PPL);
+    //   location.replace(location.pathname);
+    // }
+  </script>
+</body>
+</html>
