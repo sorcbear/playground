@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no">
+  <title>map</title>
+
+  <style>
+    :root{
+      /* ===== 同源（Rotate） ===== */
+      --maxw: 720px;
+
+      --fs-body: 18px;
+      --lh-body: 1.6;
+
+      --fs-hint: 18px;
+      --lh-hint: 1.6;
+
+      --fs-btn: 18px;
+      --fw-btn: 600;
+      --h-btn: 52px;
+
+      --gap: 18px;
+      --gap-tight: 12px;
+
+      --c-text:#111;
+      --c-border:#000;
+      --c-ok:#0b6b2b;
+
+      --bg:#fff;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--c-text);
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+      -webkit-text-size-adjust:100%;
+    }
+
+    .wrap{
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:18px 14px 28px;
+    }
+
+    /* 顶部文字：同源 titleLine */
+    .titleLine{
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      font-weight:700;
+      margin:4px 0 var(--gap);
+      text-align:left;
+      white-space:pre-wrap;
+    }
+
+    /* 内联红色三角：大小与文字协调 */
+    .tri{
+      display:inline-block;
+      width:1.05em;
+      height:1.05em;
+      vertical-align:-0.12em;
+      margin:0 .18em;
+    }
+
+    /* 图片 */
+    .imgbox{
+      margin:0;
+    }
+    .imgbox img{
+      width:100%;
+      height:auto;
+      display:block;
+      user-select:none;
+      -webkit-user-drag:none;
+    }
+
+    /* 按钮：同源 Square/Rotate */
+    .panel{
+      margin-top:var(--gap);
+      display:flex;
+      justify-content:center;
+    }
+
+    button{
+      width:240px;
+      height:var(--h-btn);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-btn);
+      font-weight:var(--fw-btn);
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+      -webkit-tap-highlight-color:transparent;
+      font-family:inherit;
+      user-select:none;
+      transition:none; /* 瞬切 */
+    }
+
+    @media (hover:hover) and (pointer:fine){
+      button:hover{ background:#000; color:#fff; }
+    }
+
+    button.invert{
+      background:#000;
+      color:#fff;
+    }
+
+    button:disabled{
+      opacity:.45;
+      cursor:default;
+    }
+
+    .msg{
+      margin-top:var(--gap-tight);
+      min-height:1.4em;
+      font-size:14px;
+      line-height:1.6;
+    }
+    .msg.ok{
+      color:var(--c-ok);
+      font-weight:700;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="titleLine">穿过这条弄当，到达红色三角
+      <svg class="tri" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <polygon points="10,10 90,50 10,90" fill="#ff0000"></polygon>
+      </svg>
+      标注的地点后，点击确定
+    </div>
+
+    <div class="imgbox">
+      <img src="map.png" alt="map">
+    </div>
+
+    <div class="panel">
+      <button id="btnOk" type="button">已到达</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    (function(){
+      const btn = document.getElementById("btnOk");
+      const msg = document.getElementById("msg");
+
+      function flashInvert(el, ms=120){
+        el.classList.add("invert");
+        setTimeout(()=>el.classList.remove("invert"), ms);
+      }
+
+      btn.addEventListener("click", ()=>{
+        flashInvert(btn, 120);
+
+        // 同源：绿色成功提示（不做冻结/倒计时，避免额外逻辑）
+        msg.textContent = "已确认到达";
+        msg.className = "msg ok";
+      });
+    })();
+  </script>
+</body>
+</html>
