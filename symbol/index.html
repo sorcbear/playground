@@ -9,7 +9,7 @@
 
   <style>
     :root{
-      /* ✅ 同源：Rotate */
+      /* ✅ 同源：Rotate / Post Puzzle */
       --maxw: 720px;
 
       --fs-body: 18px;
@@ -39,25 +39,18 @@
       margin:0;
       background:var(--bg);
       color:var(--c-text);
-
-      /* ✅ 同源：Rotate 字体栈 */
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-
       font-size:var(--fs-body);
       line-height:var(--lh-body);
-
-      /* ✅ 同源：Rotate */
       -webkit-text-size-adjust:100%;
     }
 
-    /* ✅ 同源：Rotate wrap/padding */
     .container{
       max-width:var(--maxw);
       margin:0 auto;
       padding:18px 14px 28px;
     }
 
-    /* ✅ 同源：Rotate 顶部标题（titleLine 规范） */
     .title{
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
@@ -67,7 +60,6 @@
       white-space:pre-wrap;
     }
 
-    /* 图片：同源节奏 */
     .image-box{
       margin:0 0 var(--gap);
       text-align:center;
@@ -79,21 +71,23 @@
       margin:0 auto;
     }
 
-    /* 小标题间距 */
-    .title.smallGap{
-      margin:0 0 var(--gap-tight);
+    /* ✅ 正确地点 + 输入框：同一行 */
+    .answer-line{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom: calc(var(--gap) * 2);
+      flex-wrap:nowrap;
     }
 
-    /* 输入行 */
-    .answer{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:nowrap;
-      margin-bottom: calc(var(--gap) * 2);
+    .answer-line .label{
+      font-size:var(--fs-hint);
+      font-weight:700;
+      white-space:nowrap;
     }
 
     .ansInput{
+      flex:1;
       height:40px;
       padding:0 6px;
       border:2px solid var(--c-border);
@@ -105,11 +99,10 @@
       -webkit-appearance:none;
       font-weight:700;
       font-family:inherit;
-      width: 240px; /* 单输入框：与按钮同宽的视觉节奏 */
     }
     .ansInput:focus{ outline:none; box-shadow:none; }
 
-    /* 按钮区 */
+    /* 按钮区（同源） */
     .panel{
       display:flex;
       gap:12px;
@@ -161,27 +154,30 @@
 
     @media (max-width:520px){
       button{ width:46vw; }
-      .ansInput{ width: 100%; }
-      .answer{ justify-content:center; }
     }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <div class="title">这个绿色大邮筒正是寻找下一个谜题地点的关键。请使用道具包中的木条和/map/图纸，在图纸中找到现在你所在的绿色大邮筒的位置，然后借助木条，按照下图中的规则，找到下一个谜题地点，请输入正确地点并提交（4个字）。请注意：下个地点只能在每日5点至18点进入，你要抓紧时间了。</div>
+
+    <div class="title">
+这个绿色大邮筒正是寻找下一个谜题地点的关键。请使用道具包中的木条和/map/图纸，在图纸中找到现在你所在的绿色大邮筒的位置，然后借助木条，按照下图中的规则，找到下一个谜题地点，请输入正确地点并提交（4个字）。请注意：下个地点只能在每日5点至18点进入，你要抓紧时间了。
+    </div>
 
     <div class="image-box">
       <img src="symbol.png" alt="symbol" />
     </div>
 
-    <div class="title smallGap">正确地点：</div>
-
-    <div class="answer">
+    <!-- ✅ 同一行 -->
+    <div class="answer-line">
+      <div class="label">正确地点：</div>
       <input id="place" class="ansInput" placeholder="输入4个字" autocomplete="off" />
     </div>
 
+    <!-- ✅ 同一行两个按钮 -->
     <div class="panel">
+      <button id="hintBtn">获得提示</button>
       <button id="submitBtn">提交答案</button>
     </div>
 
@@ -189,6 +185,7 @@
   </div>
 
   <script>
+    const HINT_URL = "https://sorcbear.github.io/playground/post/hint";
     const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";
     const COUNTDOWN_START = 3;
 
@@ -196,15 +193,22 @@
 
     const placeInput = document.getElementById("place");
     const submitBtn  = document.getElementById("submitBtn");
+    const hintBtn    = document.getElementById("hintBtn");
     const msg        = document.getElementById("msg");
 
     let locked=false;
     let timer=null;
     let btnTimer=null;
 
+    function flashInvert(btn, ms=120){
+      btn.classList.add("invert");
+      setTimeout(()=>btn.classList.remove("invert"), ms);
+    }
+
     function setLocked(v){
       locked=v;
       submitBtn.disabled=v;
+      hintBtn.disabled=v;
       placeInput.disabled=v;
     }
 
@@ -222,36 +226,38 @@
       }, ms);
     }
 
+    hintBtn.onclick = () => {
+      if(locked) return;
+      flashInvert(hintBtn,120);
+      setTimeout(()=>location.href = HINT_URL,120);
+    };
+
     function normalize(s){
       return (s || "").replace(/\s+/g,"").trim();
     }
 
-    function isCorrect(){
-      return normalize(placeInput.value) === CORRECT;
-    }
-
-    submitBtn.onclick=()=>{
+    submitBtn.onclick = () => {
       if(locked) return;
 
-      if(isCorrect()){
+      if(normalize(placeInput.value) === CORRECT){
         setLocked(true);
-        let t=COUNTDOWN_START;
-        msg.textContent=`答案正确，即将进入下一题（${t}）`;
+        let t = COUNTDOWN_START;
+        msg.textContent = `答案正确，即将进入下一题（${t}）`;
         msg.classList.add("ok");
 
-        timer=setInterval(()=>{
+        timer = setInterval(()=>{
           t--;
           if(t>0){
-            msg.textContent=`答案正确，即将进入下一题（${t}）`;
+            msg.textContent = `答案正确，即将进入下一题（${t}）`;
           }else{
             clearInterval(timer);
-            location.href=NEXT_URL;
+            location.href = NEXT_URL;
           }
         },1000);
       }else{
-        msg.textContent="";
+        msg.textContent = "";
         msg.classList.remove("ok");
-        setBtnText("错了，再试一次", 900);
+        setBtnText("错了，再试一次",900);
       }
     };
   </script>
