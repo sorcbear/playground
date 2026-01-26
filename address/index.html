@@ -189,6 +189,9 @@
   const LOCK_MS = 1 * 60 * 1000;
   const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
 
+  // ✅ 新增：address 正确后解锁 save 的“康平路”
+  const UNLOCK_KEY_SQUARE = "pg_unlock_square_v1";
+
   const ADDRS = [
     "天平路75弄","天平路152弄","天平路216弄",
     "余庆路80弄","余庆路51弄",
@@ -236,6 +239,10 @@
   }
 
   function success(){
+    // ✅ 新增：正确时写入解锁（local + session 双写）
+    try{ localStorage.setItem(UNLOCK_KEY_SQUARE, "1"); }catch(e){}
+    try{ sessionStorage.setItem(UNLOCK_KEY_SQUARE, "1"); }catch(e){}
+
     inSuccess=true;setBtns(false);
     let n=3;show(`答案正确，即将进入下一题（${n}）`,"ok");
     successTimer=setInterval(()=>{
