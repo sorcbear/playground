@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Save</title>
+
+  <style>
+    :root{
+      --fs-body: 18px;
+
+      --btn-h: 56px;
+      --btn-w: 140px;   /* ✅ 文字按钮更宽一点更稳 */
+      --bg:#fff;
+      --c-border:#000;
+
+      --map-w: 780;
+      --map-h: 520;
+
+      --line-w: 8px;
+
+      --cap-sz: 34px;   /* 顶部方块大小 */
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      padding:0;
+      background:#fff;
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size:var(--fs-body);
+      color:#111;
+    }
+
+    .wrap{
+      min-height:100svh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding:16px 16px 32px;
+    }
+
+    .notice{
+      width:100%;
+      text-align:center;
+      font-size:13px;
+      font-weight:700;
+      color:#000;
+      margin: 4px 0 14px;
+    }
+
+    .map{
+      position:relative;
+      width:min(780px, 100%);
+      aspect-ratio: calc(var(--map-w) / var(--map-h));
+    }
+
+    .wires{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      pointer-events:none;
+    }
+
+    .node{
+      position:absolute;
+      transform:translate(-50%,-50%);
+    }
+
+    /* 顶部黑方块（非按钮） */
+    .cap{
+      width: var(--cap-sz);
+      height: var(--cap-sz);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .cap svg{ width:100%; height:100%; display:block; }
+
+    /* ✅ 文字按钮（无图标） */
+    .btn{
+      width:var(--btn-w);
+      height:var(--btn-h);
+      padding:0;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      font-size:var(--fs-body);
+      font-weight:600;
+
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+
+      appearance:none;
+      -webkit-appearance:none;
+      background-image:none;
+      box-shadow:none;
+
+      white-space:nowrap;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+    }
+    .btn:hover{ background:#000; color:#fff; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="notice">为保留进度，请勿使用浏览器无痕模式。</div>
+
+    <div class="map" id="map">
+      <!-- 统一 0~100 坐标系 -->
+      <svg class="wires" id="wires"
+           viewBox="0 0 100 100"
+           preserveAspectRatio="none"
+           aria-hidden="true"></svg>
+    </div>
+  </div>
+
+  <script>
+    // ===== 假存档：不读存档、不设限制，直接显示两个按钮 =====
+
+    // 顶部黑方块（永远显示）
+    const CAP = { x: 50.0, y: 10.0 };
+
+    // 只显示两个按钮：起点、天平路（链接与你原来一致）
+    const VIS = [
+      { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", x:50.0, y:26.0 },
+      { text:"天平路", url:"https://sorcbear.github.io/playground/circle", x:50.0, y:46.0 }
+    ];
+
+    function makeBtn(n){
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.type = "button";
+      btn.textContent = n.text;
+      btn.onclick = () => location.href = n.url;
+      return btn;
+    }
+
+    function makeCap(){
+      const d = document.createElement("div");
+      d.className = "cap";
+      d.innerHTML = `<svg viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="8" y="8" width="48" height="48" fill="#000"/>
+      </svg>`;
+      return d;
+    }
+
+    function render(){
+      const map = document.getElementById("map");
+      const wires = document.getElementById("wires");
+
+      map.querySelectorAll(".node").forEach(el => el.remove());
+      wires.innerHTML = "";
+
+      const lw = parseFloat(getComputedStyle(document.documentElement)
+        .getPropertyValue("--line-w")) || 8;
+
+      function addLine(x1,y1,x2,y2){
+        const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
+        ln.setAttribute("x1",x1);
+        ln.setAttribute("y1",y1);
+        ln.setAttribute("x2",x2);
+        ln.setAttribute("y2",y2);
+        ln.setAttribute("stroke","#000");
+        ln.setAttribute("stroke-width",lw);
+        ln.setAttribute("vector-effect","non-scaling-stroke");
+        ln.setAttribute("stroke-linecap","square");
+        wires.appendChild(ln);
+      }
+
+      // 1) 顶部黑方块
+      const capNode = document.createElement("div");
+      capNode.className = "node";
+      capNode.style.left = CAP.x + "%";
+      capNode.style.top  = CAP.y + "%";
+      capNode.appendChild(makeCap());
+      map.appendChild(capNode);
+
+      // 2) 两个按钮
+      for (const n of VIS){
+        const wrap = document.createElement("div");
+        wrap.className = "node";
+        wrap.style.left = n.x + "%";
+        wrap.style.top  = n.y + "%";
+        wrap.appendChild(makeBtn(n));
+        map.appendChild(wrap);
+      }
+
+      // 3) 画线：方块 -> 起点 -> 天平路
+      addLine(CAP.x, CAP.y, VIS[0].x, VIS[0].y);
+      addLine(VIS[0].x, VIS[0].y, VIS[1].x, VIS[1].y);
+    }
+
+    render();
+  </script>
+</body>
+</html>
