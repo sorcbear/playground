@@ -172,15 +172,14 @@
   ];
 
   // ====== 定位微调（解决“定位不准确”）======
-  // 先保持 0；如果 skull_bw.png 与 bw.jpg 不同裁切/比例，用这里对齐
-  const LIMIT_SCALE = 1.0;   // 例如 1.02 / 0.98
-  const LIMIT_DX    = 0;     // 像素（CSS像素）正=向右
-  const LIMIT_DY    = 0;     // 像素（CSS像素）正=向下
+  const LIMIT_SCALE = 1.0;
+  const LIMIT_DX    = 0;
+  const LIMIT_DY    = 0;
 
-  // u 蒙版位置微调（把 u 放到 M 左侧白色空白区）
+  // u 蒙版位置微调
   const U_SCALE = 1.0;
-  const U_DX    = -90;       // 默认往左移一点（你可再调）
-  const U_DY    = 10;        // 默认略往下
+  const U_DX    = -90;
+  const U_DY    = 10;
   // ================================================
 
   const img = document.getElementById("bw");
@@ -230,7 +229,6 @@
     allowCtx.clearRect(0,0,w,h);
     allowCtx.imageSmoothingEnabled = false;
 
-    // 将 LIMIT_SCALE/LIMIT_DX/LIMIT_DY 应用到 skull_bw.png
     const s = dpr();
     const dx = Math.round(LIMIT_DX * s);
     const dy = Math.round(LIMIT_DY * s);
@@ -348,7 +346,6 @@
     const imgData = ctx.getImageData(x0, y0, w, h);
     const data = imgData.data;
 
-    // alpha>0 => 255（把所有半透明边缘“顶满”）
     for(let i=0;i<data.length;i+=4){
       if(data[i+3] > 0) data[i+3] = 255;
     }
@@ -378,7 +375,6 @@
   function stroke(a,b,c,d){
     const dx=c-a, dy=d-b;
     const dist=Math.hypot(dx,dy);
-    // 步长小一点更顺滑
     const step=Math.max(1.5, BRUSH_RADIUS_CSS*0.35);
     const n=Math.max(1, Math.ceil(dist/step));
     for(let i=1;i<=n;i++){
@@ -392,11 +388,36 @@
     return {x:e.clientX-r.left, y:e.clientY-r.top};
   }
 
+  /* ======= 调色盘反馈：完全套用“参考代码”的写法/结构 ======= */
   function warnNeedColor(){
     hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br><strong>只有 #AC968A 才会显示隐藏的 u。</strong>';
   }
 
-  // pointer events（用 capture，手感更稳定）
+  function renderPalette(){
+    paletteEl.innerHTML = "";
+    COLORS.forEach(c=>{
+      const b=document.createElement("button");
+      b.type="button";
+      b.className="swatch";
+      b.style.setProperty("--c", c);
+
+      b.addEventListener("click", ()=>{
+        currentColor = c;
+
+        [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
+        b.classList.add("selected");
+
+        hintEl.innerHTML = isCorrect()
+          ? '已选中<strong>#AC968A</strong>：现在涂抹将显示隐藏的 u。'
+          : '已选中颜色：可以涂抹白色区域。但<strong>只有 #AC968A</strong>才会显示隐藏的 u。';
+      });
+
+      paletteEl.appendChild(b);
+    });
+  }
+  /* ========================================================= */
+
+  // pointer events（保留你这版的顺滑/纯色逻辑；仅“提示/调色盘反馈”按参考写法）
   cv.addEventListener("pointerdown", e=>{
     e.preventDefault();
     if(!currentColor){ warnNeedColor(); return; }
@@ -422,10 +443,8 @@
     drawing = false;
     last = null;
 
-    // 抬手后一次性硬化：最终效果是纯色且手感不卡
     hardenDirtyToSolid();
 
-    // 硬化后再确保裁剪与 u 挖洞一致（避免边缘“涨出”）
     clipToAllowed();
     punchUIfNeeded();
   }
@@ -433,30 +452,6 @@
   cv.addEventListener("pointerup", endStroke, {passive:true});
   cv.addEventListener("pointercancel", endStroke, {passive:true});
   cv.addEventListener("lostpointercapture", endStroke, {passive:true});
-
-  // 调色盘
-  function renderPalette(){
-    paletteEl.innerHTML = "";
-    COLORS.forEach(c=>{
-      const b=document.createElement("button");
-      b.type="button";
-      b.className="swatch";
-      b.style.setProperty("--c", c);
-
-      b.addEventListener("click", ()=>{
-        currentColor = c;
-
-        [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
-        b.classList.add("selected");
-
-        hintEl.innerHTML = isCorrect()
-          ? '已选中<strong>#AC968A</strong>：在白色区域涂抹将显示隐藏的 u。'
-          : '已选中颜色：可以涂抹白色区域。但<strong>只有 #AC968A</strong>才会显示隐藏的 u。';
-      });
-
-      paletteEl.appendChild(b);
-    });
-  }
 
   function ready(){
     resizeAll();
