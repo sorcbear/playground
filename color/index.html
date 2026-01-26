@@ -43,10 +43,11 @@
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
-      touch-action:none; /* 移动端拖动不滚屏 */
+      touch-action:none;
       background:#eee;
     }
 
+    /* ✅ 不改变你原图比例/位置 */
     .stage img{ width:100%; display:block; }
 
     canvas.overlay{
@@ -98,7 +99,7 @@
       -webkit-tap-highlight-color:transparent;
     }
 
-    /* 选中：白色外圈（不破坏内部颜色） */
+    /* 选中：白色外圈 */
     .swatch.selected{
       box-shadow: 0 0 0 var(--ring) #fff;
     }
@@ -132,34 +133,46 @@
     <div class="palette" id="palette"></div>
     <div class="hint" id="hint">
       请先选择一种颜色，再开始涂抹。<br>
-      <strong>只有正确的红色，才能显示隐藏的 P。</strong>
+      <strong>只有 #AC968A 才会显示隐藏的 u。</strong>
     </div>
   </div>
 </div>
 
 <script>
 (() => {
-  // ===== 核心参数 =====
+  // =========================
+  // 参数
+  // =========================
   const BRUSH_RADIUS = 18;
-  const BASE_MASK_URL = "mask_base.png"; // 透明蒙版：白框/白字
-  const CORRECT_RED = "#ff0000";         // 只有这个红色才显示 P
 
-  // 8 色（不含白色）
+  // ✅ 你的规则图：黑=不许涂，白=允许涂（无需透明）
+  const ALLOW_MASK_URL = "skull_bw.png";
+
+  // ✅ u 蒙版：透明底，u 为白色不透明
+  const U_MASK_URL = "mask_u.png";
+
+  // ✅ 钥匙颜色：sRGB Hex
+  const KEY_COLOR = "#ac968a";
+
+  // 8 色调色盘（必须含 KEY_COLOR）
   const COLORS = [
-    "#000000", // 黑
-    "#00e5ff", // 青
-    CORRECT_RED, // 正确红
-    "#ffc000", // 黄
-    "#00b050", // 绿
-    "#7030a0", // 紫
-    "#0070c0", // 蓝
-    "#444444"  // 深灰
+    "#000000",
+    "#00e5ff",
+    KEY_COLOR,     // ✅ 必须包含
+    "#ffc000",
+    "#00b050",
+    "#7030a0",
+    "#0070c0",
+    "#444444"
   ];
-  // ====================
 
+  // =========================
+  // DOM
+  // =========================
   const img = document.getElementById("bw");
-  const cv = document.getElementById("paint");
+  const cv  = document.getElementById("paint");
   const ctx = cv.getContext("2d", { alpha:true });
+
   const paletteEl = document.getElementById("palette");
   const hintEl = document.getElementById("hint");
   const loading = document.getElementById("loading");
@@ -167,113 +180,114 @@
   let currentColor = null;
   let down = false, last = null;
 
-  // 基础蒙版（白框/白字）：始终挖洞
-  const baseMaskImg = new Image();
-  baseMaskImg.decoding = "async";
-  baseMaskImg.src = BASE_MASK_URL;
+  // =========================
+  // 资源：允许涂抹 mask（黑白图 -> alpha mask）
+  // =========================
+  const allowImg = new Image();
+  allowImg.decoding = "async";
+  allowImg.src = ALLOW_MASK_URL;
 
-  const baseMaskCanvas = document.createElement("canvas");
-  const baseMaskCtx = baseMaskCanvas.getContext("2d");
+  const allowCanvas = document.createElement("canvas");
+  const allowCtx = allowCanvas.getContext("2d", { willReadFrequently:true });
 
-  // P 蒙版：仅正确红色时挖洞
-  const pMaskCanvas = document.createElement("canvas");
-  const pMaskCtx = pMaskCanvas.getContext("2d");
+  // u 蒙版
+  const uImg = new Image();
+  uImg.decoding = "async";
+  uImg.src = U_MASK_URL;
 
+  const uCanvas = document.createElement("canvas");
+  const uCtx = uCanvas.getContext("2d");
+
+  // =========================
+  // 工具
+  // =========================
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
-  function rebuildPMask(){
-    const w = pMaskCanvas.width;
-    const h = pMaskCanvas.height;
-
-    pMaskCtx.setTransform(1,0,0,1,0,0);
-    pMaskCtx.clearRect(0,0,w,h);
-
-    // P 的位置/大小（你要微调就改这里三个数）
-    const cx = w * 0.58;
-    const cy = h * 0.58;
-    const s  = Math.min(w/1200, h/800) * 1.0;
-    const strokeW = Math.max(36, Math.round(58 * (w/1200)));
-
-    const p = new Path2D();
-
-    // 主竖
-    p.moveTo(cx + (-40)*s, cy + (-220)*s);
-    p.quadraticCurveTo(cx + (-60)*s, cy + (-80)*s,  cx + (-40)*s, cy + (80)*s);
-    p.quadraticCurveTo(cx + (-30)*s, cy + (160)*s,  cx + (-40)*s, cy + (240)*s);
-
-    // 上半圆肚
-    p.moveTo(cx + (-40)*s, cy + (-200)*s);
-    p.quadraticCurveTo(cx + (90)*s,  cy + (-215)*s, cx + (150)*s, cy + (-160)*s);
-    p.quadraticCurveTo(cx + (210)*s, cy + (-120)*s, cx + (195)*s, cy + (-50)*s);
-    p.quadraticCurveTo(cx + (175)*s, cy + (25)*s,   cx + (95)*s,  cy + (55)*s);
-    p.quadraticCurveTo(cx + (25)*s,  cy + (80)*s,   cx + (-40)*s, cy + (65)*s);
-
-    pMaskCtx.save();
-    pMaskCtx.strokeStyle = "white";
-    pMaskCtx.lineWidth = strokeW;
-    pMaskCtx.lineCap = "round";
-    pMaskCtx.lineJoin = "round";
-    pMaskCtx.stroke(p);
-    pMaskCtx.restore();
+  function isKey(){
+    return !!currentColor && currentColor.trim().toLowerCase() === KEY_COLOR;
   }
 
   function resizeAll(){
     const r = img.getBoundingClientRect();
     const s = dpr();
 
-    cv.width = Math.round(r.width * s);
+    // 主画布（覆盖在图片上）
+    cv.width  = Math.round(r.width * s);
     cv.height = Math.round(r.height * s);
-    ctx.setTransform(s,0,0,s,0,0);
+    ctx.setTransform(s,0,0,s,0,0); // 之后用 CSS 像素画笔刷
 
-    baseMaskCanvas.width = cv.width;
-    baseMaskCanvas.height = cv.height;
+    // 允许涂抹 mask（设备像素）
+    allowCanvas.width  = cv.width;
+    allowCanvas.height = cv.height;
 
-    pMaskCanvas.width = cv.width;
-    pMaskCanvas.height = cv.height;
+    // u mask（设备像素）
+    uCanvas.width  = cv.width;
+    uCanvas.height = cv.height;
 
-    baseMaskCtx.setTransform(1,0,0,1,0,0);
-    baseMaskCtx.clearRect(0,0,baseMaskCanvas.width,baseMaskCanvas.height);
-    baseMaskCtx.drawImage(baseMaskImg, 0, 0, baseMaskCanvas.width, baseMaskCanvas.height);
-
-    rebuildPMask();
+    rebuildAllowMask();
+    rebuildUMask();
   }
 
-  function isCorrectRed(){
-    if(!currentColor) return false;
-    return currentColor.trim().toLowerCase() === CORRECT_RED;
+  // 把黑白骷髅图转换为 alpha mask：白区 alpha=1，黑区 alpha=0
+  function rebuildAllowMask(){
+    allowCtx.setTransform(1,0,0,1,0,0);
+    allowCtx.clearRect(0,0,allowCanvas.width, allowCanvas.height);
+    allowCtx.drawImage(allowImg, 0,0, allowCanvas.width, allowCanvas.height);
+
+    const id = allowCtx.getImageData(0,0,allowCanvas.width, allowCanvas.height);
+    const d = id.data;
+
+    // 计算亮度作为 alpha（白->255，黑->0）
+    for(let i=0;i<d.length;i+=4){
+      const r = d[i], g = d[i+1], b = d[i+2];
+      const lum = (0.2126*r + 0.7152*g + 0.0722*b); // 0..255
+      d[i] = 255; d[i+1] = 255; d[i+2] = 255; // 颜色无所谓，关键是 alpha
+      d[i+3] = lum; // alpha
+    }
+    allowCtx.putImageData(id,0,0);
   }
 
-  // 挖洞：基础蒙版总挖；P 仅正确红时挖
-  function punch(){
+  function rebuildUMask(){
+    uCtx.setTransform(1,0,0,1,0,0);
+    uCtx.clearRect(0,0,uCanvas.width,uCanvas.height);
+    uCtx.drawImage(uImg, 0,0, uCanvas.width, uCanvas.height);
+  }
+
+  // 核心：每次画完，把涂色裁剪到允许区域；若为 KEY_COLOR，再挖掉 u
+  function applyMasks(){
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
-    ctx.globalCompositeOperation = "destination-out";
 
-    ctx.drawImage(baseMaskCanvas, 0, 0);
+    // 1) 只保留允许涂抹区域（destination-in：保留重叠 alpha）
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.drawImage(allowCanvas, 0,0);
 
-    if (isCorrectRed()){
-      ctx.drawImage(pMaskCanvas, 0, 0);
+    // 2) 只有选中钥匙色时，才挖掉 u（destination-out：挖洞露出底图）
+    if(isKey()){
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.drawImage(uCanvas, 0,0);
     }
 
     ctx.restore();
   }
 
   function dab(x,y){
+    // 画纯色圆（在 CSS 像素坐标系）
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = currentColor; // 100% 纯色
+    ctx.fillStyle = currentColor;
     ctx.beginPath();
     ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
     ctx.fill();
     ctx.restore();
 
-    punch();
+    applyMasks();
   }
 
   function stroke(a,b,c,d){
     const dx=c-a, dy=d-b;
     const dist=Math.hypot(dx,dy);
-    const step=Math.max(2,BRUSH_RADIUS*0.5);
+    const step=Math.max(2, BRUSH_RADIUS*0.5);
     const n=Math.max(1, Math.ceil(dist/step));
     for(let i=1;i<=n;i++){
       const t=i/n;
@@ -288,9 +302,12 @@
   }
 
   function warnNeedColor(){
-    hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br><strong>只有正确红色才会显示隐藏的 P。</strong>';
+    hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br><strong>只有 #AC968A 才会显示隐藏的 u。</strong>';
   }
 
+  // =========================
+  // 事件：画画
+  // =========================
   cv.addEventListener("pointerdown", e=>{
     e.preventDefault();
     if(!currentColor){ warnNeedColor(); return; }
@@ -307,16 +324,17 @@
     last=p;
   }, {passive:false});
 
-  window.addEventListener("pointerup", e=>{
-    down=false;
-    last=null;
+  window.addEventListener("pointerup", ()=>{
+    down=false; last=null;
   }, {passive:true});
 
   window.addEventListener("pointercancel", ()=>{
     down=false; last=null;
   }, {passive:true});
 
+  // =========================
   // 调色盘
+  // =========================
   function renderPalette(){
     paletteEl.innerHTML = "";
     COLORS.forEach(c=>{
@@ -329,30 +347,38 @@
         [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
         b.classList.add("selected");
 
-        hintEl.innerHTML = isCorrectRed()
-          ? '已选中<strong>正确红色</strong>：现在涂抹将显示隐藏的 P。'
-          : '已选中颜色：可以涂抹。但<strong>只有正确红色</strong>才会显示隐藏的 P。';
+        hintEl.innerHTML = (c.trim().toLowerCase() === KEY_COLOR)
+          ? '已选中<strong>#AC968A</strong>：在骷髅白色区域涂抹将显示隐藏的 u。'
+          : '已选中颜色：只能在骷髅白色区域涂抹。<br><strong>只有 #AC968A 才会显示隐藏的 u。</strong>';
       });
       paletteEl.appendChild(b);
     });
   }
 
+  // =========================
+  // 加载与初始化
+  // =========================
+  let okImg=false, okAllow=false, okU=false;
+
   function ready(){
     resizeAll();
     renderPalette();
     loading.classList.add("hide");
+    // 初始也裁一遍（避免空画布受 mask 影响，不裁也行）
+    applyMasks();
   }
 
-  let imgOK=false, maskOK=false;
+  img.addEventListener("load", ()=>{ okImg=true; if(okAllow && okU) ready(); });
+  img.addEventListener("error", ()=>{ loading.textContent="bw.jpg 加载失败"; });
 
-  img.addEventListener("load", ()=>{ imgOK=true; if(maskOK) ready(); });
-  img.addEventListener("error", ()=>{ loading.textContent="底图 bw.jpg 加载失败"; });
+  allowImg.addEventListener("load", ()=>{ okAllow=true; if(okImg && okU) ready(); });
+  allowImg.addEventListener("error", ()=>{ loading.textContent="skull_bw.png 加载失败"; });
 
-  baseMaskImg.addEventListener("load", ()=>{ maskOK=true; if(imgOK) ready(); });
-  baseMaskImg.addEventListener("error", ()=>{ loading.textContent="蒙版 mask_base.png 加载失败"; });
+  uImg.addEventListener("load", ()=>{ okU=true; if(okImg && okAllow) ready(); });
+  uImg.addEventListener("error", ()=>{ loading.textContent="mask_u.png 加载失败"; });
 
   window.addEventListener("resize", ()=>{
-    if(imgOK && maskOK) resizeAll();
+    if(okImg && okAllow && okU) resizeAll();
   });
 })();
 </script>
