@@ -12,11 +12,9 @@
 
       --fs-body: 18px;
 
-      /* 原正文参数保留 */
       --fs-text: 18px;
       --lh-text: 1.6;
 
-      /* 标题样式参数 */
       --fs-hint: 18px;
       --lh-hint: 1.6;
 
@@ -24,6 +22,10 @@
 
       --c-text:#111;
       --c-border:#000;
+
+      /* ✅ 顶部 notice 区域高度（用于给中间层留出不被遮挡的空间） */
+      --notice-h: 40px;
+      --pad: 18px;
     }
 
     html, body{
@@ -40,13 +42,47 @@
 
     button{ font-family:inherit; }
 
-    /* ✅ 改为顶部起始布局：让 notice 真正靠近页面顶部 */
+    /* ✅ 页面：用于承载“顶部固定 + 中间居中”两层结构 */
     .page{
       min-height:100svh;
+      position:relative;
+      padding:var(--pad);
+      box-sizing:border-box;
+    }
+
+    /* ✅ 顶部固定的 notice（不参与居中计算） */
+    .noticeBar{
+      position:absolute;
+      left:0;
+      right:0;
+      top:0;
+      height:var(--notice-h);
       display:flex;
-      align-items:flex-start;
-      justify-content:flex-start;
-      padding:18px;
+      align-items:center;
+      justify-content:center;
+      padding:0 var(--pad);
+      box-sizing:border-box;
+      pointer-events:none; /* 纯展示，不挡点击（可删） */
+    }
+
+    /* ✅ notice 样式：复用 Save 页 */
+    .notice{
+      width:100%;
+      text-align:center;
+      font-size:13px;
+      font-weight:700;
+      color:#000;
+      margin:0;
+      user-select:none;
+    }
+
+    /* ✅ 中间内容层：扣掉 notice 的高度后，再上下居中 */
+    .center{
+      min-height:calc(100svh - var(--notice-h));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding-top:var(--notice-h);
       box-sizing:border-box;
     }
 
@@ -56,25 +92,8 @@
       flex-direction:column;
       align-items:center;
       text-align:center;
-
-      /* ✅ 红框白色区域：控制整体内容往下的距离（越大越“空”） */
-      margin-top:48px;
-      margin-left:auto;
-      margin-right:auto;
     }
 
-    /* ✅ 顶部提示（样式同 Save 页 notice） */
-    .notice{
-      width:100%;
-      text-align:center;
-      font-size:13px;
-      font-weight:700;
-      color:#000;
-      margin:0 0 18px;
-      user-select:none;
-    }
-
-    /* 标题文案 */
     .intro{
       width:100%;
       font-size:var(--fs-hint);
@@ -115,25 +134,30 @@
         --w-btn: 180px;
         --btn-h: 46px;
         --fs-text: 17px;
-      }
 
-      /* ✅ 手机端更靠近顶部（更“在页面顶上”） */
-      .card{ margin-top:24px; }
+        /* 手机上 notice 可以稍微矮一点 */
+        --notice-h: 36px;
+      }
     }
   </style>
 </head>
 
 <body>
   <div class="page">
-    <div class="card">
-
+    <!-- ✅ 顶部固定 -->
+    <div class="noticeBar" aria-hidden="true">
       <div class="notice">为保留游戏进度，请勿使用浏览器无痕模式。</div>
+    </div>
 
-      <div class="intro">确定要玩这个游戏吗？</div>
-      <div class="intro">这可能会影响到你和其他人的命运...</div>
+    <!-- ✅ 中间仍上下居中 -->
+    <div class="center">
+      <div class="card">
+        <div class="intro">确定要玩这个游戏吗？</div>
+        <div class="intro">这可能会影响到你和其他人的命运...</div>
 
-      <div class="btnRow">
-        <button id="goBtn">确定</button>
+        <div class="btnRow">
+          <button id="goBtn">确定</button>
+        </div>
       </div>
     </div>
   </div>
