@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no">
   <title>4 Scratch Boards</title>
 
   <style>
@@ -11,8 +12,9 @@
       --bg:#fff;
       --text:#111;
 
-      --fs-body: 16px;
-      --lh-body: 1.7;
+      /* ✅ 按你给的 Square UI：18px / 1.6 */
+      --fs-body: 18px;
+      --lh-body: 1.6;
 
       --hint-fs:18px;
       --hint-lh:1.6;
@@ -25,18 +27,20 @@
 
       --gap: 18px;
 
-      /* ✅ 分开控制：列间距 / 行间距（行间距更大 = “多一行空格”） */
-      --grid-col-gap: 18px;
+      /* ✅ 横向两图更近：让每个图更大一点 */
+      --grid-col-gap: 12px;
+
+      /* ✅ 行间距保持你原来的“多一行”感觉 */
       --grid-row-gap: 36px;
 
-      /* ✅ 图和调色盘之间距离（再加一点，避免互相遮挡） */
-      --stage-palette-gap: 22px;
+      /* ✅ 红框标注的间隔：调小一点（图 ↔ 调色盘） */
+      --stage-palette-gap: 14px;
 
       /* 每张图的黑色外边框 */
       --frame: 4px;
 
-      /* 按钮（沿用你之前 start UI） */
-      --fs-btn: 16px;
+      /* ✅ 按钮（完全对齐你给的 Square 规范） */
+      --fs-btn: 18px;
       --fw-btn: 600;
       --h-btn: 52px;
       --w-btn: 240px;
@@ -47,26 +51,31 @@
     }
 
     *{ box-sizing:border-box; }
-    html,body{
+    html,body{ height:100%; }
+
+    body{
       margin:0;
       background:var(--bg);
       color:var(--text);
       font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
       font-size:var(--fs-body);
       line-height:var(--lh-body);
+      -webkit-text-size-adjust:100%;
     }
 
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
-      padding:24px 16px 40px;
+      padding:18px 14px 28px; /* ✅ 对齐 Square wrap */
     }
 
     .title{
-      margin:0 0 var(--gap) 0;
+      margin:4px 0 var(--gap);
       font-size:var(--hint-fs);
       line-height:var(--hint-lh);
       font-weight:700;
+      text-align:left;
+      white-space:pre-wrap;
     }
 
     .grid{
@@ -81,9 +90,8 @@
       display:flex;
       flex-direction:column;
       gap: var(--stage-palette-gap);
-      min-width: 0;
-      /* ✅ 让调色盘的上沿不被任何东西“压住” */
-      padding-bottom: 6px;
+      min-width:0;
+      padding-bottom: 2px;
     }
 
     .stage{
@@ -94,13 +102,9 @@
       -webkit-user-select:none;
       touch-action:none;
       background:#fff;
-
-      /* ✅ 解决“load 时先出现四条黑线”：未 ready 前不画边框 */
-      border: var(--frame) solid transparent;
+      border: var(--frame) solid transparent; /* ✅ 未 ready 前不画边框 */
     }
-    .stage.ready{
-      border-color:#000;
-    }
+    .stage.ready{ border-color:#000; }
 
     .stage img{ width:100%; display:block; }
 
@@ -132,10 +136,8 @@
       align-items:center;
       gap:10px;
       width:100%;
-      /* ✅ 关键：不要裁切调色盘（包括选中外圈） */
-      overflow:visible;
-      /* ✅ 上下都留一点，确保上沿/下沿不互相遮挡 */
-      padding: 8px 0 10px;
+      overflow:visible;            /* ✅ 不裁切选中外圈 */
+      padding: 10px 0 10px;        /* ✅ 上下都留边，不互相遮挡 */
     }
 
     .palette{
@@ -162,9 +164,9 @@
     }
     .swatch.selected{ box-shadow: 0 0 0 var(--ring) #000; }
 
-    /* ===== 底部答案区（沿用你之前 UI 结构感） ===== */
+    /* ===== 底部答案区 ===== */
     .answerBlock{
-      margin-top: 26px;
+      margin-top: 18px;
       display:flex;
       flex-direction:column;
       gap: 18px;
@@ -173,7 +175,7 @@
     .answerRow{
       display:flex;
       align-items:center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap:wrap;
     }
 
@@ -185,36 +187,41 @@
     }
 
     .ansInput{
-      height: 44px;
-      line-height: 44px;
+      width:4em;                /* ✅ Square 同款观感 */
+      height:40px;
+      padding:0 6px;
       border:2px solid var(--c-border);
-      font-size: 18px;
       font-weight:700;
-      font-family: inherit;
-      text-align:center;
-      padding:0 10px;
-      outline:none;
+      font-family:inherit;
       border-radius:0;
+      font-size:18px;
+      text-align:center;
+      outline:none;
+      box-shadow:none;
       -webkit-appearance:none;
       appearance:none;
-      width: 6.5ch;
-      max-width: 120px;
+      line-height:40px;
     }
+    .ansInput:focus{ outline:none; box-shadow:none; }
 
+    /* ✅ 按钮区：必须一行（移动端也尽量一行） */
     .actions{
+      margin-top: 0;
       display:flex;
-      gap: 18px;
-      flex-wrap:wrap;
+      gap:12px;
+      justify-content:center;
+      flex-wrap:nowrap;          /* ✅ 关键：不换行 */
       align-items:center;
     }
 
+    /* ✅ Square 同款按钮 */
     button.uiBtn{
       width:var(--w-btn);
       height:var(--h-btn);
       padding:0 18px;
       box-sizing:border-box;
       font-size:var(--fs-btn);
-      font-weight:var(--fw-btn);
+      font-weight:600;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
@@ -223,16 +230,30 @@
       font-family:inherit;
       -webkit-tap-highlight-color:transparent;
     }
-    button.uiBtn:hover{ background:#000; color:#fff; }
-    button.uiBtn:disabled{ opacity:.45; cursor:default; }
-    button.uiBtn:disabled:hover{ background:#fff; color:#000; }
+
+    /* PC hover（和 Square 一样用 media 限定） */
+    @media (hover:hover) and (pointer:fine){
+      button.uiBtn:hover{ background:#000; color:#fff; }
+    }
+
+    /* JS 控制的点击反馈（Square 同款 invert） */
+    button.uiBtn.invert{
+      background:#000;
+      color:#fff;
+    }
+
+    button.uiBtn:disabled{
+      opacity:.45;
+      cursor:default;
+    }
 
     .msg{
-      min-height: 1.2em;
-      font-weight:700;
+      min-height: 1.4em;
+      font-size:14px;
+      margin-top: 0;
     }
-    .msg.ok{ color: var(--c-ok); }
-    .msg.bad{ color: var(--c-danger); }
+    .msg.ok{ color: var(--c-ok); font-weight:700; }
+    .msg.bad{ color: var(--c-danger); font-weight:700; }
 
     .hintBox{
       display:none;
@@ -243,16 +264,20 @@
       line-height: 1.7;
     }
     .hintBox.show{ display:block; }
+
+    /* ✅ Square 同款移动端按钮宽度策略：保证两按钮一行 */
+    @media (max-width:520px){
+      button.uiBtn{ width:46vw; }
+    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <p class="title">请按照正确颜色涂抹每个图白色区域。</p>
+    <div class="title">请按照正确颜色涂抹每个图白色区域。</div>
 
     <div class="grid" id="grid"></div>
 
-    <!-- ✅ 页面最下方：输入 + 两按钮（同一套 UI） -->
     <div class="answerBlock">
       <div class="answerRow">
         <div class="answerLabel">请输入隐藏的字母（不用区分大小写）：</div>
@@ -261,7 +286,6 @@
       </div>
 
       <div class="actions">
-        <!-- ✅ 左：获得提示；右：提交答案 -->
         <button class="uiBtn" id="btnHint" type="button">获得提示</button>
         <button class="uiBtn" id="btnSubmit" type="button">提交答案</button>
       </div>
@@ -284,7 +308,7 @@
     "#7030A0", // 紫
     "#FF4FA0", // 淡粉
     "#0070C0", // 深蓝
-    "#AC968A"  // ✅ 骷髅那张的“灰褐”
+    "#9B857A"  // ✅ 骷髅：同色系“深一点点”（原 #AC968A）
   ];
 
   // =========================
@@ -293,7 +317,7 @@
   const TILES = [
     { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
     { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
-    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#AC968A" }, // ✅ 你现在要的
+    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#9B857A" }, // ✅ 同步改深
     { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" },
   ];
 
@@ -309,16 +333,13 @@
   const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.22 };
   const A_STROKE_FACTOR = 0.18;
 
-  // ✅ L：你已调好的位置（保持不动）
   const L_BOX_REL = { x: 0.61, y: 0.67, w: 0.10, h: 0.07 };
   const L_STROKE_FACTOR = 0.137;
 
   const WHITE_TH = 200;
   const BRUSH_RADIUS = 18;
 
-  // ✅ 底部答案
   const ANSWER = "paul";
-  // ✅ 提示文本
   const HINT_TEXT = "线索：四个图里被“挖出来”的字母，按顺序组成答案。";
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
@@ -339,15 +360,28 @@
     msg.textContent = text || "";
   }
 
-  // ✅ 参照你之前“提交按钮反馈”的做法：临时改按钮文案，然后自动恢复
+  // ✅ Square 同款：短暂黑底白字反馈
+  function flashInvert(btn, ms=120){
+    btn.classList.add("invert");
+    setTimeout(()=>btn.classList.remove("invert"), ms);
+  }
+
+  // ✅ Square 同款：错误反馈用（按钮文案 + invert + disable，自动恢复）
   const SUBMIT_TEXT = "提交答案";
-  let submitTimer = 0;
-  function setSubmitText(tempText, ms){
-    clearTimeout(submitTimer);
-    btnSubmit.textContent = tempText;
-    if(ms && ms > 0){
-      submitTimer = setTimeout(()=>{ btnSubmit.textContent = SUBMIT_TEXT; }, ms);
-    }
+  let btnTimer = null;
+  function setBtnText(text, ms=900){
+    if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+
+    btnSubmit.textContent = text;
+    btnSubmit.classList.add("invert");
+    btnSubmit.disabled = true;
+
+    btnTimer = setTimeout(()=>{
+      btnSubmit.textContent = SUBMIT_TEXT;
+      btnSubmit.classList.remove("invert");
+      btnSubmit.disabled = false;
+      btnTimer = null;
+    }, ms);
   }
 
   function makeTileDOM(tile){
@@ -500,7 +534,6 @@
       this.ctx.fill();
       this.ctx.restore();
 
-      // ✅ 只有用“本图正确色”涂，才记录到 correctPaint，用于挖字母
       if(this.tile.reveal && this.isCorrect(this.currentColor)){
         this.correctPaintCtx.save();
         this.correctPaintCtx.globalCompositeOperation = "source-over";
@@ -769,7 +802,7 @@
     ready(){
       this.resizeAll();
       this.loading.classList.add("hide");
-      this.stage.classList.add("ready"); // ✅ 图片加载完成后再显示边框
+      this.stage.classList.add("ready");
     }
   }
 
@@ -786,8 +819,9 @@
     });
   });
 
-  // ===== 底部交互 =====
+  // ===== 底部交互（逻辑不改，只把按钮反馈做成 Square 同款）=====
   btnHint.addEventListener("click", ()=>{
+    flashInvert(btnHint, 120);
     hintBox.textContent = HINT_TEXT;
     hintBox.classList.toggle("show");
     setMsg("", "");
@@ -803,27 +837,24 @@
   }
 
   ans.addEventListener("input", ()=>{
-    // 只保留字母
     ans.value = ans.value.replace(/[^a-zA-Z]/g, "").slice(0,4);
   });
 
   btnSubmit.addEventListener("click", ()=>{
     const v = normalize4(ans.value);
 
-    // 参照你之前页面：反馈优先体现在按钮文案上
     if(v.length !== 4){
-      setSubmitText("请输入 4 个字母", 900);
       setMsg("", "");
+      setBtnText("请输入 4 个字母", 900);
       return;
     }
 
     if(v === ANSWER){
-      setSubmitText("正确。", 900);
       setMsg("正确。", "ok");
+      setBtnText("正确。", 900);
     }else{
-      // ✅ 不再弹 try again；直接按钮反馈
-      setSubmitText("不正确，再试一次", 900);
       setMsg("", "");
+      setBtnText("不正确，再试一次", 900);
     }
   });
 })();
