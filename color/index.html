@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>4 Scratch Panels</title>
+  <title>Scratch U</title>
 
   <style>
     :root{
@@ -22,10 +22,7 @@
       --swatch-gap: 14px;
       --ring: 5px;
 
-      --fs-btn: 16px;
-      --fw-btn: 600;
       --h-btn: 52px;
-
       --gap: 18px;
       --gap-tight: 12px;
 
@@ -54,16 +51,6 @@
       font-size:var(--hint-fs);
       line-height:var(--hint-lh);
       font-weight:700;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-      margin-top: 10px;
-    }
-    @media (max-width: 780px){
-      .grid{ grid-template-columns: 1fr; }
     }
 
     .panel{
@@ -111,7 +98,6 @@
       gap:10px;
     }
 
-    /* 2x4 */
     .palette{
       display:grid;
       grid-template-columns: repeat(4, var(--swatch));
@@ -144,91 +130,38 @@
       min-height: 2.2em;
     }
     .hint strong{ opacity:1; }
-
-    @media (max-width:420px){
-      :root{ --swatch:40px; --swatch-gap:12px; }
-      .panel{ padding:10px; }
-    }
-
-    .footer{
-      margin-top: 22px;
-      display:flex;
-      flex-direction:column;
-      gap: var(--gap-tight);
-      align-items:center;
-    }
-
-    .row{
-      width:100%;
-      max-width: 520px;
-      display:flex;
-      gap: 12px;
-    }
-
-    .slot{
-      flex:1;
-      height: var(--h-btn);
-      line-height: var(--h-btn);
-      border:2px solid var(--border);
-      font-size:18px;
-      font-weight:700;
-      font-family: inherit;
-      text-align:center;
-      padding:0 10px;
-      outline:none;
-      border-radius:0;
-      -webkit-appearance:none;
-    }
-
-    button.action{
-      width: 160px;
-      height: var(--h-btn);
-      padding:0 18px;
-      font-size:var(--fs-btn);
-      font-weight:var(--fw-btn);
-      background:#fff;
-      color:#000;
-      border:2px solid var(--border);
-      cursor:pointer;
-      border-radius:0;
-      -webkit-tap-highlight-color:transparent;
-    }
-    button.action:hover{ background:#000; color:#fff; }
-    button.action:disabled{ opacity:.45; cursor:default; }
-
-    .msg{
-      font-weight:700;
-      min-height: 1.6em;
-      text-align:center;
-    }
-    .msg.ok{ color: var(--ok); }
-    .msg.bad{ color: var(--danger); }
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <p class="title">请按照正确颜色涂抹每个图白色区域。</p>
-    <div class="grid" id="grid"></div>
 
-    <div class="footer">
-      <div class="row">
-        <input id="answer" class="slot" inputmode="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="请输入正确的方框" />
-        <button id="submit" class="action" type="button">提交</button>
+    <div class="panel">
+      <div class="stage">
+        <img id="bg" alt="" />
+        <canvas id="paint" class="overlay"></canvas>
+        <div id="loading" class="loading">资源加载中</div>
       </div>
-      <div id="msg" class="msg"></div>
+
+      <div class="paletteWrap">
+        <div class="palette" id="palette"></div>
+        <div class="hint" id="hint">请先选择一种颜色，再开始涂抹。</div>
+      </div>
     </div>
   </div>
 
 <script>
 (() => {
+  // ===== 核心参数 =====
   const BRUSH_RADIUS = 18;
 
-  const BG_URL   = "bw.jpg";
-  const PAINT_MASK_URL = "skull_bw.png";
+  const BG_URL = "bw.jpg";
+  const SKULL_URL = "skull_bw.png";      // 黑底白骷髅：白色=可涂区域来源
 
   const CORRECT_COLOR = "#AC968A";
 
+  // 8 色（含正确色）
   const COLORS = [
     "#000000",
     "#00e5ff",
@@ -240,312 +173,293 @@
     "#444444"
   ];
 
+  // ===== u 的红框区域（归一化坐标，按图片比例）=====
+  // 你要 u “就在红框范围内”，只需要调这四个值
+  // x/y：左上角；w/h：宽高（0~1）
+  const U_BOX = { x: 0.29, y: 0.18, w: 0.17, h: 0.24 }; // 先给一个接近你截图的位置
+
+  // u 粗细（相对 box 尺寸）
+  const U_STROKE_FACTOR = 0.22; // 越小越细，越大越粗
+  // =====================
+
+  const img = document.getElementById("bg");
+  const cv = document.getElementById("paint");
+  const ctx = cv.getContext("2d", { alpha:true });
+
+  const paletteEl = document.getElementById("palette");
+  const hintEl = document.getElementById("hint");
+  const loading = document.getElementById("loading");
+
+  let currentColor = null;
+  let down = false, last = null;
+
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
-  // ===== 透明 u：Path2D（stroke 成形）=====
+  function isCorrect(){
+    return !!currentColor && currentColor.trim().toLowerCase() === CORRECT_COLOR.toLowerCase();
+  }
+
+  // ===== 原始 skull 图（不透明），我们会转成“白区 alpha 蒙版”=====
+  const skullImg = new Image();
+  skullImg.decoding = "async";
+  skullImg.src = SKULL_URL;
+
+  // 白区蒙版：白色区域 alpha=255；黑色区域 alpha=0
+  const whiteMaskCanvas = document.createElement("canvas");
+  const whiteMaskCtx = whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
+
+  // uMask：仅 u 形状区域为 alpha=255
+  const uMaskCanvas = document.createElement("canvas");
+  const uMaskCtx = uMaskCanvas.getContext("2d");
+
+  // 记录“正确颜色涂过的区域”（关键：实现“随涂随显”）
+  const correctPaintCanvas = document.createElement("canvas");
+  const correctPaintCtx = correctPaintCanvas.getContext("2d");
+
+  // 交集画布：intersection = correctPaint ∩ uMask
+  const interCanvas = document.createElement("canvas");
+  const interCtx = interCanvas.getContext("2d");
+
+  // ===== Path2D：u（用 stroke 成字形）=====
   function buildUPath(cx, cy, s){
     const u = new Path2D();
-    u.moveTo(cx + (-120)*s, cy + (-170)*s);
-    u.quadraticCurveTo(cx + (-125)*s, cy + (40)*s,  cx + (-60)*s,  cy + (140)*s);
-    u.quadraticCurveTo(cx + (0)*s,    cy + (220)*s, cx + (60)*s,   cy + (140)*s);
-    u.quadraticCurveTo(cx + (125)*s,  cy + (40)*s,  cx + (120)*s,  cy + (-170)*s);
+    u.moveTo(cx + (-55)*s, cy + (-65)*s);
+    u.quadraticCurveTo(cx + (-58)*s, cy + (15)*s,  cx + (-28)*s, cy + (48)*s);
+    u.quadraticCurveTo(cx + (0)*s,   cy + (70)*s,  cx + (28)*s,  cy + (48)*s);
+    u.quadraticCurveTo(cx + (58)*s,  cy + (15)*s,  cx + (55)*s,  cy + (-65)*s);
     return u;
   }
 
-  function createScratchPanel(hostEl, cfg){
-    const panel = document.createElement("div");
-    panel.className = "panel";
-    panel.innerHTML = `
-      <div class="stage">
-        <img class="bg" alt="" />
-        <canvas class="overlay"></canvas>
-        <div class="loading">资源加载中</div>
-      </div>
-      <div class="paletteWrap">
-        <div class="palette"></div>
-        <div class="hint">请先选择一种颜色，再开始涂抹。</div>
-      </div>
-    `;
-    hostEl.appendChild(panel);
+  function rebuildWhiteMask(){
+    const w = whiteMaskCanvas.width;
+    const h = whiteMaskCanvas.height;
 
-    const img = panel.querySelector(".bg");
-    const cv = panel.querySelector("canvas.overlay");
-    const ctx = cv.getContext("2d", { alpha:true });
-    const paletteEl = panel.querySelector(".palette");
-    const hintEl = panel.querySelector(".hint");
-    const loading = panel.querySelector(".loading");
+    whiteMaskCtx.setTransform(1,0,0,1,0,0);
+    whiteMaskCtx.clearRect(0,0,w,h);
+    whiteMaskCtx.drawImage(skullImg, 0, 0, w, h);
 
-    let currentColor = null;
-    let down = false;
-    let last = null;
+    const imgData = whiteMaskCtx.getImageData(0,0,w,h);
+    const data = imgData.data;
 
-    // 原始遮罩图（黑底白骷髅，注意：不透明）
-    const paintMaskImg = new Image();
-    paintMaskImg.decoding = "async";
-    paintMaskImg.src = cfg.paintMaskUrl;
+    const TH = 200; // 白色阈值
 
-    // 处理后的“白色区域 alpha=255 / 黑色 alpha=0”的蒙版画布
-    const whiteMaskCanvas = document.createElement("canvas");
-    const whiteMaskCtx = whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
-
-    // u 蒙版（仅正确色时用 destination-out 挖洞）
-    const uMaskCanvas = document.createElement("canvas");
-    const uMaskCtx = uMaskCanvas.getContext("2d");
-
-    // u 的自动定位（用白色区域质心）
-    let uCenter = { x: 0.58, y: 0.60 };
-
-    function isCorrectColor(){
-      if(!currentColor) return false;
-      return currentColor.trim().toLowerCase() === cfg.correctColor.toLowerCase();
+    for(let i=0;i<data.length;i+=4){
+      const r=data[i], g=data[i+1], b=data[i+2];
+      const lum=(r+g+b)/3;
+      data[i+3] = (lum >= TH) ? 255 : 0; // 只用 alpha
     }
 
-    // 把 skull_bw.png 变成“白色可涂/黑色不可涂”的 alpha 蒙版，并计算白色区域质心
-    function rebuildWhiteMaskAndCenter(){
-      const w = whiteMaskCanvas.width;
-      const h = whiteMaskCanvas.height;
+    whiteMaskCtx.putImageData(imgData, 0, 0);
+  }
 
-      // 先把原图画进来
-      whiteMaskCtx.setTransform(1,0,0,1,0,0);
-      whiteMaskCtx.clearRect(0,0,w,h);
-      whiteMaskCtx.drawImage(paintMaskImg, 0, 0, w, h);
+  function rebuildUMask(){
+    const w = uMaskCanvas.width;
+    const h = uMaskCanvas.height;
 
-      // 再把“白色”转换成 alpha=255，“黑色”转换成 alpha=0
-      // 同时计算白色像素的质心
-      const imgData = whiteMaskCtx.getImageData(0,0,w,h);
-      const data = imgData.data;
+    uMaskCtx.setTransform(1,0,0,1,0,0);
+    uMaskCtx.clearRect(0,0,w,h);
 
-      let sumX=0, sumY=0, cnt=0;
+    // 把 u 放在 U_BOX 内
+    const bx = w * U_BOX.x;
+    const by = h * U_BOX.y;
+    const bw = w * U_BOX.w;
+    const bh = h * U_BOX.h;
 
-      // 阈值：你这张图白色非常白，黑色非常黑；200 很稳
-      const TH = 200;
+    const cx = bx + bw * 0.50;
+    const cy = by + bh * 0.58;
 
-      for(let y=0; y<h; y++){
-        for(let x=0; x<w; x++){
-          const i = (y*w + x) * 4;
-          const r = data[i], g = data[i+1], b = data[i+2];
-          const lum = (r + g + b) / 3;
+    const s = Math.min(bw, bh) / 140; // 控制形状尺寸（你要更小就把 140 改大）
+    const strokeW = Math.max(10, Math.round(Math.min(bw, bh) * U_STROKE_FACTOR));
 
-          if(lum >= TH){
-            // 白色区域：alpha=255，RGB 随便（这里保持原值也行）
-            data[i+3] = 255;
-            sumX += x; sumY += y; cnt++;
-          }else{
-            // 黑色区域：alpha=0
-            data[i+3] = 0;
-          }
-        }
-      }
+    const path = buildUPath(cx, cy, s);
 
-      whiteMaskCtx.putImageData(imgData, 0, 0);
+    uMaskCtx.save();
+    uMaskCtx.strokeStyle = "white";
+    uMaskCtx.lineWidth = strokeW;
+    uMaskCtx.lineCap = "round";
+    uMaskCtx.lineJoin = "round";
+    uMaskCtx.stroke(path);
+    uMaskCtx.restore();
+  }
 
-      if(cnt > 0){
-        uCenter = { x: (sumX/cnt) / w, y: (sumY/cnt) / h };
-      }
+  function resizeAll(){
+    const r = img.getBoundingClientRect();
+    const s = dpr();
+
+    cv.width  = Math.round(r.width * s);
+    cv.height = Math.round(r.height * s);
+
+    // 主画布用 CSS 像素坐标（你的原逻辑）
+    ctx.setTransform(s,0,0,s,0,0);
+
+    // 同步所有离屏画布尺寸
+    whiteMaskCanvas.width = cv.width;
+    whiteMaskCanvas.height = cv.height;
+
+    uMaskCanvas.width = cv.width;
+    uMaskCanvas.height = cv.height;
+
+    correctPaintCanvas.width = cv.width;
+    correctPaintCanvas.height = cv.height;
+
+    interCanvas.width = cv.width;
+    interCanvas.height = cv.height;
+
+    // 清空“正确涂抹记录”（resize 会重置）
+    correctPaintCtx.setTransform(1,0,0,1,0,0);
+    correctPaintCtx.clearRect(0,0,correctPaintCanvas.width, correctPaintCanvas.height);
+
+    rebuildWhiteMask();
+    rebuildUMask();
+  }
+
+  // ===== 每次涂抹后的裁切/挖洞 =====
+  function applyWhiteMask(){
+    // 只保留白色区域
+    ctx.save();
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.drawImage(whiteMaskCanvas, 0, 0);
+    ctx.restore();
+  }
+
+  function punchUByPaintedArea(){
+    // 关键：只在“正确颜色已涂区域”里显示 u
+    // intersection = correctPaint ∩ uMask
+    interCtx.setTransform(1,0,0,1,0,0);
+    interCtx.clearRect(0,0,interCanvas.width, interCanvas.height);
+
+    interCtx.globalCompositeOperation = "source-over";
+    interCtx.drawImage(correctPaintCanvas, 0, 0);
+
+    interCtx.globalCompositeOperation = "destination-in";
+    interCtx.drawImage(uMaskCanvas, 0, 0);
+
+    // 主画布挖洞：仅对 intersection 生效
+    ctx.save();
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.drawImage(interCanvas, 0, 0);
+    ctx.restore();
+  }
+
+  function dab(x,y){
+    // 1) 画到主画布（显示涂抹颜色）
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = currentColor;
+    ctx.beginPath();
+    ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // 2) 如果是正确颜色，同时记录到 correctPaintCanvas
+    if(isCorrect()){
+      correctPaintCtx.save();
+      correctPaintCtx.globalCompositeOperation = "source-over";
+      correctPaintCtx.fillStyle = "white"; // 只需要 alpha
+      correctPaintCtx.beginPath();
+      correctPaintCtx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
+      correctPaintCtx.fill();
+      correctPaintCtx.restore();
     }
 
-    function rebuildUMask(){
-      const w = uMaskCanvas.width;
-      const h = uMaskCanvas.height;
+    // 3) 限制到白色区域
+    applyWhiteMask();
 
-      uMaskCtx.setTransform(1,0,0,1,0,0);
-      uMaskCtx.clearRect(0,0,w,h);
+    // 4) 随涂随显：只用已涂过的区域去挖 u
+    punchUByPaintedArea();
+  }
 
-      // 用白色区域质心定位 u（保证在白区内）
-      const cx = w * uCenter.x;
-      const cy = h * uCenter.y;
-
-      const s  = Math.min(w/1200, h/800) * 1.05;
-      const strokeW = Math.max(34, Math.round(58 * (w/1200)));
-
-      const uPath = buildUPath(cx, cy, s);
-
-      uMaskCtx.save();
-      uMaskCtx.strokeStyle = "white";
-      uMaskCtx.lineWidth = strokeW;
-      uMaskCtx.lineCap = "round";
-      uMaskCtx.lineJoin = "round";
-      uMaskCtx.stroke(uPath);
-      uMaskCtx.restore();
+  function stroke(a,b,c,d){
+    const dx=c-a, dy=d-b;
+    const dist=Math.hypot(dx,dy);
+    const step=Math.max(2, BRUSH_RADIUS*0.5);
+    const n=Math.max(1, Math.ceil(dist/step));
+    for(let i=1;i<=n;i++){
+      const t=i/n;
+      dab(a+dx*t, b+dy*t);
     }
+  }
 
-    function resizeAll(){
-      const r = img.getBoundingClientRect();
-      const s = dpr();
+  function pos(e){
+    const r=cv.getBoundingClientRect();
+    const p=(e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+    return {x:p.clientX-r.left, y:p.clientY-r.top};
+  }
 
-      cv.width  = Math.round(r.width * s);
-      cv.height = Math.round(r.height * s);
+  function warnNeedColor(){
+    hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。';
+  }
 
-      // 画笔仍然用 CSS 像素坐标（和你原逻辑一致）
-      ctx.setTransform(s,0,0,s,0,0);
+  cv.addEventListener("pointerdown", e=>{
+    e.preventDefault();
+    if(!currentColor){ warnNeedColor(); return; }
+    down=true;
+    last=pos(e);
+    dab(last.x,last.y);
+  }, {passive:false});
 
-      whiteMaskCanvas.width = cv.width;
-      whiteMaskCanvas.height = cv.height;
+  window.addEventListener("pointermove", e=>{
+    if(!down) return;
+    e.preventDefault();
+    const p=pos(e);
+    stroke(last.x,last.y,p.x,p.y);
+    last=p;
+  }, {passive:false});
 
-      uMaskCanvas.width = cv.width;
-      uMaskCanvas.height = cv.height;
+  window.addEventListener("pointerup", ()=>{
+    down=false;
+    last=null;
+  }, {passive:true});
 
-      // 关键：重建“白色可涂 alpha 蒙版” + 自动质心
-      rebuildWhiteMaskAndCenter();
+  window.addEventListener("pointercancel", ()=>{
+    down=false; last=null;
+  }, {passive:true});
 
-      // 然后基于质心重建 u
-      rebuildUMask();
+  function renderPalette(){
+    paletteEl.innerHTML = "";
+    COLORS.forEach(c=>{
+      const b=document.createElement("button");
+      b.type="button";
+      b.className="swatch";
+      b.style.setProperty("--c", c);
+      b.addEventListener("click", ()=>{
+        currentColor = c;
+        [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
+        b.classList.add("selected");
 
-      // resize 后不做复杂内容迁移（保持你“逻辑不变”的风格）
-    }
+        hintEl.innerHTML = isCorrect()
+          ? '已选中<strong>正确颜色</strong>：涂抹到的地方将逐渐显示隐藏字母。'
+          : '已选中颜色：可以涂抹，但<strong>只有正确颜色</strong>才会显示隐藏字母。';
 
-    // 每次涂抹后：
-    // 1) 用 destination-in 把已画内容裁切到“白色区域”
-    // 2) 若正确色，则 destination-out 挖洞显示透明 u
-    function applyMasks(){
-      // 1) 限制可涂区域：只保留白色区域（alpha 蒙版）
-      ctx.save();
-      ctx.setTransform(1,0,0,1,0,0);
-      ctx.globalCompositeOperation = "destination-in";
-      ctx.drawImage(whiteMaskCanvas, 0, 0);
-      ctx.restore();
-
-      // 2) 正确色显示隐藏字母：挖洞
-      if(isCorrectColor()){
-        ctx.save();
-        ctx.setTransform(1,0,0,1,0,0);
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.drawImage(uMaskCanvas, 0, 0);
-        ctx.restore();
-      }
-    }
-
-    function dab(x,y){
-      ctx.save();
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = currentColor;
-      ctx.beginPath();
-      ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-
-      applyMasks();
-    }
-
-    function stroke(a,b,c,d){
-      const dx=c-a, dy=d-b;
-      const dist=Math.hypot(dx,dy);
-      const step=Math.max(2, BRUSH_RADIUS*0.5);
-      const n=Math.max(1, Math.ceil(dist/step));
-      for(let i=1;i<=n;i++){
-        const t=i/n;
-        dab(a+dx*t, b+dy*t);
-      }
-    }
-
-    function pos(e){
-      const r=cv.getBoundingClientRect();
-      const p=(e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
-      return {x:p.clientX-r.left, y:p.clientY-r.top};
-    }
-
-    function warnNeedColor(){
-      hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。';
-    }
-
-    cv.addEventListener("pointerdown", e=>{
-      e.preventDefault();
-      if(!currentColor){ warnNeedColor(); return; }
-      down=true;
-      last=pos(e);
-      dab(last.x,last.y);
-    }, {passive:false});
-
-    window.addEventListener("pointermove", e=>{
-      if(!down) return;
-      e.preventDefault();
-      const p=pos(e);
-      stroke(last.x,last.y,p.x,p.y);
-      last=p;
-    }, {passive:false});
-
-    window.addEventListener("pointerup", ()=>{
-      down=false;
-      last=null;
-    }, {passive:true});
-
-    window.addEventListener("pointercancel", ()=>{
-      down=false; last=null;
-    }, {passive:true});
-
-    function renderPalette(){
-      paletteEl.innerHTML = "";
-      COLORS.forEach(c=>{
-        const b=document.createElement("button");
-        b.type="button";
-        b.className="swatch";
-        b.style.setProperty("--c", c);
-        b.addEventListener("click", ()=>{
-          currentColor = c;
-          [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
-          b.classList.add("selected");
-
-          hintEl.innerHTML = isCorrectColor()
-            ? '已选中<strong>正确颜色</strong>：现在涂抹将显示隐藏的字母。'
-            : '已选中颜色：可以涂抹，但<strong>只有正确颜色</strong>才会显示隐藏的字母。';
-        });
-        paletteEl.appendChild(b);
+        // 注意：这里不再“选中就弹出”，完全由 correctPaint 决定显示范围
+        // 如果用户已经用正确色涂过，切换回来时应立即按已涂区域显示：
+        applyWhiteMask();
+        punchUByPaintedArea();
       });
-    }
-
-    let bgOK=false, maskOK=false;
-
-    function ready(){
-      resizeAll();
-      renderPalette();
-      loading.classList.add("hide");
-    }
-
-    img.addEventListener("load", ()=>{ bgOK=true; if(maskOK) ready(); });
-    img.addEventListener("error", ()=>{ loading.textContent="底图加载失败"; });
-
-    paintMaskImg.addEventListener("load", ()=>{ maskOK=true; if(bgOK) ready(); });
-    paintMaskImg.addEventListener("error", ()=>{ loading.textContent="遮罩 skull_bw.png 加载失败"; });
-
-    img.src = cfg.bgUrl;
-
-    window.addEventListener("resize", ()=>{
-      if(bgOK && maskOK) resizeAll();
+      paletteEl.appendChild(b);
     });
   }
 
-  const grid = document.getElementById("grid");
-  const commonCfg = {
-    bgUrl: BG_URL,
-    paintMaskUrl: PAINT_MASK_URL,
-    correctColor: CORRECT_COLOR
-  };
+  let imgOK=false, maskOK=false;
 
-  // 4 张图（现在都用同一套资源，你后面换成各自的 png/jpg 即可）
-  createScratchPanel(grid, commonCfg);
-  createScratchPanel(grid, commonCfg);
-  createScratchPanel(grid, commonCfg);
-  createScratchPanel(grid, commonCfg);
-
-  // ===== 输入校验：paul =====
-  const ans = document.getElementById("answer");
-  const btn = document.getElementById("submit");
-  const msg = document.getElementById("msg");
-
-  function setMsg(text, cls){
-    msg.className = "msg " + (cls || "");
-    msg.textContent = text;
+  function ready(){
+    resizeAll();
+    renderPalette();
+    loading.classList.add("hide");
   }
 
-  btn.addEventListener("click", ()=>{
-    const v = (ans.value || "").trim().toLowerCase();
-    if(v === "paul"){
-      setMsg("正确。", "ok");
-      ans.disabled = true;
-      btn.disabled = true;
-    }else{
-      setMsg("不正确。", "bad");
-    }
+  img.addEventListener("load", ()=>{ imgOK=true; if(maskOK) ready(); });
+  img.addEventListener("error", ()=>{ loading.textContent="底图 bw.jpg 加载失败"; });
+
+  skullImg.addEventListener("load", ()=>{ maskOK=true; if(imgOK) ready(); });
+  skullImg.addEventListener("error", ()=>{ loading.textContent="遮罩 skull_bw.png 加载失败"; });
+
+  img.src = BG_URL;
+
+  window.addEventListener("resize", ()=>{
+    if(imgOK && maskOK) resizeAll();
   });
 })();
 </script>
