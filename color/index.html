@@ -8,22 +8,19 @@
   <style>
     :root{
       --maxw: 980px;
-      --pad: 18px;
-      --radius: 10px;
-
       --bg:#fff;
       --text:#111;
       --border:#000;
 
-      --swatch: 44px;
-      --swatch-gap: 14px;
-      --ring: 5px;          /* 选中白圈粗细 */
+      --fs-body: 16px;
+      --lh-body: 1.7;
 
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      --fs-body: 16px;
-      --lh-body: 1.7;
+      --swatch: 44px;
+      --swatch-gap: 14px;
+      --ring: 5px;
 
       --fs-btn: 16px;
       --fw-btn: 600;
@@ -37,7 +34,6 @@
     }
 
     *{ box-sizing:border-box; }
-
     html,body{
       margin:0;
       background:var(--bg);
@@ -66,14 +62,13 @@
       gap: 18px;
       margin-top: 10px;
     }
-
     @media (max-width: 780px){
       .grid{ grid-template-columns: 1fr; }
     }
 
     .panel{
       border:2px solid var(--border);
-      border-radius: 0;
+      border-radius:0;
       padding: 12px;
     }
 
@@ -86,11 +81,7 @@
       touch-action:none;
       background:#eee;
     }
-
-    .stage img{
-      width:100%;
-      display:block;
-    }
+    .stage img{ width:100%; display:block; }
 
     canvas.overlay{
       position:absolute;
@@ -112,7 +103,6 @@
     }
     .loading.hide{ display:none; }
 
-    /* ===== 调色盘：每张图独立 2x4 ===== */
     .paletteWrap{
       margin-top:12px;
       display:flex;
@@ -121,6 +111,7 @@
       gap:10px;
     }
 
+    /* 2x4 */
     .palette{
       display:grid;
       grid-template-columns: repeat(4, var(--swatch));
@@ -141,7 +132,6 @@
       outline:none;
       -webkit-tap-highlight-color:transparent;
     }
-
     .swatch.selected{
       box-shadow: 0 0 0 var(--ring) #fff;
     }
@@ -156,14 +146,10 @@
     .hint strong{ opacity:1; }
 
     @media (max-width:420px){
-      :root{
-        --swatch:40px;
-        --swatch-gap:12px;
-      }
+      :root{ --swatch:40px; --swatch-gap:12px; }
       .panel{ padding:10px; }
     }
 
-    /* ===== 底部输入区域（同一套 UI 逻辑）===== */
     .footer{
       margin-top: 22px;
       display:flex;
@@ -222,8 +208,7 @@
 
 <body>
   <div class="wrap">
-    <p class="title">1请按照正确颜色涂抹每个图白色区域。</p>
-
+    <p class="title">请按照正确颜色涂抹每个图白色区域。</p>
     <div class="grid" id="grid"></div>
 
     <div class="footer">
@@ -237,20 +222,17 @@
 
 <script>
 (() => {
-  // ===== 你要的核心参数（四张图统一）=====
   const BRUSH_RADIUS = 18;
 
-  const BG_URL   = "bw.jpg";         // 完整显示底图
-  const PAINT_MASK_URL = "skull_bw.png"; // 白色可涂、黑色不可涂（用 alpha 裁切）
+  const BG_URL   = "bw.jpg";
+  const PAINT_MASK_URL = "skull_bw.png";
 
-  // 正确颜色
   const CORRECT_COLOR = "#AC968A";
 
-  // 8 色（含正确色）
   const COLORS = [
     "#000000",
     "#00e5ff",
-    CORRECT_COLOR,  // 正确色
+    CORRECT_COLOR,
     "#ffc000",
     "#00b050",
     "#7030a0",
@@ -258,28 +240,21 @@
     "#444444"
   ];
 
-  // ===== 工具：DPR =====
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
-  // ===== Path2D：透明 u（只做一个矢量路径，逻辑与之前 P 一致）=====
+  // ===== 透明 u：Path2D（stroke 成形）=====
   function buildUPath(cx, cy, s){
     const u = new Path2D();
-
-    // 这是一个“笔画式 U”的中轴路径（用 stroke + round cap/join 形成字形）
-    // 你后续若要更像字体，可以只改这一段控制点，不动逻辑。
     u.moveTo(cx + (-120)*s, cy + (-170)*s);
     u.quadraticCurveTo(cx + (-125)*s, cy + (40)*s,  cx + (-60)*s,  cy + (140)*s);
     u.quadraticCurveTo(cx + (0)*s,    cy + (220)*s, cx + (60)*s,   cy + (140)*s);
     u.quadraticCurveTo(cx + (125)*s,  cy + (40)*s,  cx + (120)*s,  cy + (-170)*s);
-
     return u;
   }
 
-  // ===== 单个涂抹组件：每张图独立状态（独立调色盘、独立 canvas）=====
   function createScratchPanel(hostEl, cfg){
     const panel = document.createElement("div");
     panel.className = "panel";
-
     panel.innerHTML = `
       <div class="stage">
         <img class="bg" alt="" />
@@ -304,21 +279,69 @@
     let down = false;
     let last = null;
 
-    // 可涂区域遮罩（skull_bw.png）：用 destination-in 裁切，保证黑色不可涂
+    // 原始遮罩图（黑底白骷髅，注意：不透明）
     const paintMaskImg = new Image();
     paintMaskImg.decoding = "async";
     paintMaskImg.src = cfg.paintMaskUrl;
 
-    const paintMaskCanvas = document.createElement("canvas");
-    const paintMaskCtx = paintMaskCanvas.getContext("2d");
+    // 处理后的“白色区域 alpha=255 / 黑色 alpha=0”的蒙版画布
+    const whiteMaskCanvas = document.createElement("canvas");
+    const whiteMaskCtx = whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
 
-    // u 遮罩：仅当正确色时，destination-out 挖洞显示透明 u
+    // u 蒙版（仅正确色时用 destination-out 挖洞）
     const uMaskCanvas = document.createElement("canvas");
     const uMaskCtx = uMaskCanvas.getContext("2d");
+
+    // u 的自动定位（用白色区域质心）
+    let uCenter = { x: 0.58, y: 0.60 };
 
     function isCorrectColor(){
       if(!currentColor) return false;
       return currentColor.trim().toLowerCase() === cfg.correctColor.toLowerCase();
+    }
+
+    // 把 skull_bw.png 变成“白色可涂/黑色不可涂”的 alpha 蒙版，并计算白色区域质心
+    function rebuildWhiteMaskAndCenter(){
+      const w = whiteMaskCanvas.width;
+      const h = whiteMaskCanvas.height;
+
+      // 先把原图画进来
+      whiteMaskCtx.setTransform(1,0,0,1,0,0);
+      whiteMaskCtx.clearRect(0,0,w,h);
+      whiteMaskCtx.drawImage(paintMaskImg, 0, 0, w, h);
+
+      // 再把“白色”转换成 alpha=255，“黑色”转换成 alpha=0
+      // 同时计算白色像素的质心
+      const imgData = whiteMaskCtx.getImageData(0,0,w,h);
+      const data = imgData.data;
+
+      let sumX=0, sumY=0, cnt=0;
+
+      // 阈值：你这张图白色非常白，黑色非常黑；200 很稳
+      const TH = 200;
+
+      for(let y=0; y<h; y++){
+        for(let x=0; x<w; x++){
+          const i = (y*w + x) * 4;
+          const r = data[i], g = data[i+1], b = data[i+2];
+          const lum = (r + g + b) / 3;
+
+          if(lum >= TH){
+            // 白色区域：alpha=255，RGB 随便（这里保持原值也行）
+            data[i+3] = 255;
+            sumX += x; sumY += y; cnt++;
+          }else{
+            // 黑色区域：alpha=0
+            data[i+3] = 0;
+          }
+        }
+      }
+
+      whiteMaskCtx.putImageData(imgData, 0, 0);
+
+      if(cnt > 0){
+        uCenter = { x: (sumX/cnt) / w, y: (sumY/cnt) / h };
+      }
     }
 
     function rebuildUMask(){
@@ -328,9 +351,10 @@
       uMaskCtx.setTransform(1,0,0,1,0,0);
       uMaskCtx.clearRect(0,0,w,h);
 
-      // 放在骷髅头“白色区域”中间偏下（你要微调只改这三项）
-      const cx = w * 0.58;
-      const cy = h * 0.60;
+      // 用白色区域质心定位 u（保证在白区内）
+      const cx = w * uCenter.x;
+      const cy = h * uCenter.y;
+
       const s  = Math.min(w/1200, h/800) * 1.05;
       const strokeW = Math.max(34, Math.round(58 * (w/1200)));
 
@@ -352,36 +376,36 @@
       cv.width  = Math.round(r.width * s);
       cv.height = Math.round(r.height * s);
 
-      // 你的原逻辑：ctx 用 CSS 像素坐标画（通过 setTransform(s,...)）
+      // 画笔仍然用 CSS 像素坐标（和你原逻辑一致）
       ctx.setTransform(s,0,0,s,0,0);
 
-      paintMaskCanvas.width = cv.width;
-      paintMaskCanvas.height = cv.height;
+      whiteMaskCanvas.width = cv.width;
+      whiteMaskCanvas.height = cv.height;
 
       uMaskCanvas.width = cv.width;
       uMaskCanvas.height = cv.height;
 
-      // 画可涂区域遮罩（用图片 alpha 作为裁切）
-      paintMaskCtx.setTransform(1,0,0,1,0,0);
-      paintMaskCtx.clearRect(0,0,paintMaskCanvas.width, paintMaskCanvas.height);
-      paintMaskCtx.drawImage(paintMaskImg, 0, 0, paintMaskCanvas.width, paintMaskCanvas.height);
+      // 关键：重建“白色可涂 alpha 蒙版” + 自动质心
+      rebuildWhiteMaskAndCenter();
 
+      // 然后基于质心重建 u
       rebuildUMask();
 
-      // 重要：resize 后保持“当前已画内容”不做复杂迁移（你要保留可再加缓存）
-      // 这里按你“逻辑不变”的精神：只保证坐标/遮罩一致。
+      // resize 后不做复杂内容迁移（保持你“逻辑不变”的风格）
     }
 
-    // 每次涂抹后：1) 限制在白色可涂区域 2) 若正确色则挖洞显示 u
+    // 每次涂抹后：
+    // 1) 用 destination-in 把已画内容裁切到“白色区域”
+    // 2) 若正确色，则 destination-out 挖洞显示透明 u
     function applyMasks(){
-      // 1) 仅保留在 skull 白色区域（利用 mask 图片 alpha）
+      // 1) 限制可涂区域：只保留白色区域（alpha 蒙版）
       ctx.save();
       ctx.setTransform(1,0,0,1,0,0);
       ctx.globalCompositeOperation = "destination-in";
-      ctx.drawImage(paintMaskCanvas, 0, 0);
+      ctx.drawImage(whiteMaskCanvas, 0, 0);
       ctx.restore();
 
-      // 2) 正确色才挖洞显示透明 u
+      // 2) 正确色显示隐藏字母：挖洞
       if(isCorrectColor()){
         ctx.save();
         ctx.setTransform(1,0,0,1,0,0);
@@ -394,7 +418,7 @@
     function dab(x,y){
       ctx.save();
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = currentColor; // 100% 纯色
+      ctx.fillStyle = currentColor;
       ctx.beginPath();
       ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
       ctx.fill();
@@ -449,7 +473,6 @@
       down=false; last=null;
     }, {passive:true});
 
-    // 独立调色盘（含选中反馈）
     function renderPalette(){
       paletteEl.innerHTML = "";
       COLORS.forEach(c=>{
@@ -484,32 +507,27 @@
     paintMaskImg.addEventListener("load", ()=>{ maskOK=true; if(bgOK) ready(); });
     paintMaskImg.addEventListener("error", ()=>{ loading.textContent="遮罩 skull_bw.png 加载失败"; });
 
-    // set src
     img.src = cfg.bgUrl;
 
-    // resize
     window.addEventListener("resize", ()=>{
       if(bgOK && maskOK) resizeAll();
     });
   }
 
-  // ===== 页面：创建 4 个独立 panel（2x2）=====
   const grid = document.getElementById("grid");
-
   const commonCfg = {
     bgUrl: BG_URL,
     paintMaskUrl: PAINT_MASK_URL,
     correctColor: CORRECT_COLOR
   };
 
-  // 你现在说“这是第 3 个图”，但页面最终要四个图。
-  // 这里四个都用同一套底图与遮罩；你之后换各自的文件名即可做到四张不同图。
-  createScratchPanel(grid, commonCfg); // 1
-  createScratchPanel(grid, commonCfg); // 2
-  createScratchPanel(grid, commonCfg); // 3（你当前这张）
-  createScratchPanel(grid, commonCfg); // 4
+  // 4 张图（现在都用同一套资源，你后面换成各自的 png/jpg 即可）
+  createScratchPanel(grid, commonCfg);
+  createScratchPanel(grid, commonCfg);
+  createScratchPanel(grid, commonCfg);
+  createScratchPanel(grid, commonCfg);
 
-  // ===== 底部输入校验：paul =====
+  // ===== 输入校验：paul =====
   const ans = document.getElementById("answer");
   const btn = document.getElementById("submit");
   const msg = document.getElementById("msg");
