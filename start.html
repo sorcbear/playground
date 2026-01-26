@@ -18,9 +18,6 @@
       --ctl-h: 48px;
       --w-mainbtn: 240px;
 
-      --gap: 18px;
-      --space-action: 64px;
-
       --c-text:#111;
       --c-border:#000;
       --c-danger:#b00020;
@@ -135,7 +132,7 @@
     }
 
     /* =========================
-       ✅ 爆炸覆盖层：纯黑底 + 纯色扩散（无渐变、无白色、无文字）
+       ✅ 爆炸覆盖层：纯色方形扩散（无渐变、无白色）
        ========================= */
 
     #fx{
@@ -146,16 +143,6 @@
       pointer-events:none;
       z-index:9999;
       opacity:0;
-    }
-
-    /* 最后仍然用黑底（你说“始终背景是纯黑的”） */
-    #black{
-      position:fixed;
-      inset:0;
-      background:#000;
-      opacity:0;
-      pointer-events:none;
-      z-index:10000;
     }
 
     @keyframes shake {
@@ -188,7 +175,6 @@
   </div>
 
   <canvas id="fx"></canvas>
-  <div id="black"></div>
 
 <script>
 (() => {
@@ -198,14 +184,15 @@
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
 
-  /* ✅ 你要整体更大声：调这里（已压缩保护） */
   const MASTER_VOL = 2.15;
 
-  /* ✅ 0 到咔嚓：改成 1 秒 */
+  // ✅ 0 后停 1 秒再咔嚓
   const PAUSE_BEFORE_LATCH_MS = 1000;
-
-  /* ✅ 咔嚓到爆炸间隔（留出可辨识空间） */
+  // ✅ 咔嚓到爆炸间隔
   const LATCH_TO_BOOM_MS = 320;
+
+  // ✅ 爆炸流程启动后：无论如何最多 N 秒必跳转，防止“黑屏卡死”
+  const NAV_WATCHDOG_MS = 9000;
 
   const KEYS = [
     {c:"green",n:"so",m:55},{c:"green",n:"la",m:57},{c:"green",n:"si",m:59},
@@ -233,7 +220,6 @@
   const startBtn = document.getElementById("startBtn");
 
   const fx = document.getElementById("fx");
-  const black = document.getElementById("black");
   const fxCtx = fx.getContext("2d", { alpha: true });
 
   let audioCtx = null;
@@ -244,6 +230,27 @@
 
   let masterGain = null;
   let compressor = null;
+
+  let navWatchdog = null;
+  let navDone = false;
+
+  function forceNavigate(){
+    if(navDone) return;
+    navDone = true;
+    try { location.assign(NEXT_URL); return; } catch(e) {}
+    try { location.href = NEXT_URL; return; } catch(e) {}
+    try { location.replace(NEXT_URL); } catch(e) {}
+  }
+
+  function startNavWatchdog(){
+    clearTimeout(navWatchdog);
+    navWatchdog = setTimeout(forceNavigate, NAV_WATCHDOG_MS);
+  }
+
+  function stopNavWatchdog(){
+    clearTimeout(navWatchdog);
+    navWatchdog = null;
+  }
 
   function ensureAudio(){
     if(!audioCtx){
@@ -307,73 +314,73 @@
     timers = [];
   }
 
-  /* =========================
-     ✅ 咔嚓：更长、更清晰（可辨识）
-     ========================= */
   function playLatch(){
     if(!audioEnabled || !audioCtx) return;
     const ctx = audioCtx;
     const t0 = ctx.currentTime;
 
-    // “卡扣1”
     const o1 = ctx.createOscillator();
     const g1 = ctx.createGain();
     o1.type = "square";
-    o1.frequency.setValueAtTime(240, t0);
-    o1.frequency.exponentialRampToValueAtTime(155, t0 + 0.18);
+    o1.frequency.setValueAtTime(260, t0);
+    o1.frequency.exponentialRampToValueAtTime(150, t0 + 0.12);
     g1.gain.setValueAtTime(0.0001, t0);
-    g1.gain.linearRampToValueAtTime(0.72, t0 + 0.012);
-    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.26);
-    o1.connect(g1); g1.connect(masterGain);
-    o1.start(t0); o1.stop(t0 + 0.28);
+    g1.gain.linearRampToValueAtTime(0.75, t0 + 0.01);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+    o1.connect(g1);
+    g1.connect(masterGain);
+    o1.start(t0);
+    o1.stop(t0 + 0.18);
 
-    // “卡扣2”更明显一点
-    const t1 = t0 + 0.22;
+    const t1 = t0 + 0.18;
     const o2 = ctx.createOscillator();
     const g2 = ctx.createGain();
     o2.type = "square";
     o2.frequency.setValueAtTime(210, t1);
-    o2.frequency.exponentialRampToValueAtTime(125, t1 + 0.16);
+    o2.frequency.exponentialRampToValueAtTime(120, t1 + 0.10);
     g2.gain.setValueAtTime(0.0001, t1);
-    g2.gain.linearRampToValueAtTime(0.66, t1 + 0.012);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.23);
-    o2.connect(g2); g2.connect(masterGain);
-    o2.start(t1); o2.stop(t1 + 0.26);
+    g2.gain.linearRampToValueAtTime(0.68, t1 + 0.01);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.14);
+    o2.connect(g2);
+    g2.connect(masterGain);
+    o2.start(t1);
+    o2.stop(t1 + 0.16);
 
-    // 轻微“金属摩擦”噪声，持续更久一点让你听清楚
-    const dur = 0.62;
+    const dur = 0.42;
     const bufferSize = Math.floor(ctx.sampleRate * dur);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for(let i=0;i<bufferSize;i++){
       const x = i / bufferSize;
       const raw = (Math.random()*2-1);
-      data[i] = raw * (0.34*(1-x));
+      data[i] = raw * (0.45*(1-x));
     }
     const src = ctx.createBufferSource();
     src.buffer = buffer;
 
     const hp = ctx.createBiquadFilter();
     hp.type = "highpass";
-    hp.frequency.setValueAtTime(800, t0);
+    hp.frequency.setValueAtTime(900, t0);
 
     const bp = ctx.createBiquadFilter();
     bp.type = "bandpass";
-    bp.frequency.setValueAtTime(1700, t0);
-    bp.Q.setValueAtTime(5, t0);
+    bp.frequency.setValueAtTime(1900, t0);
+    bp.Q.setValueAtTime(6, t0);
 
     const ng = ctx.createGain();
     ng.gain.setValueAtTime(0.0001, t0);
-    ng.gain.linearRampToValueAtTime(0.46, t0 + 0.03);
+    ng.gain.linearRampToValueAtTime(0.55, t0 + 0.03);
     ng.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
 
-    src.connect(hp); hp.connect(bp); bp.connect(ng); ng.connect(masterGain);
-    src.start(t0); src.stop(t0 + dur);
+    src.connect(hp);
+    hp.connect(bp);
+    bp.connect(ng);
+    ng.connect(masterGain);
+
+    src.start(t0);
+    src.stop(t0 + dur);
   }
 
-  /* =========================
-     ✅ 爆炸：更响
-     ========================= */
   function playExplosion(){
     if(!audioEnabled || !audioCtx) return;
     const ctx = audioCtx;
@@ -403,14 +410,12 @@
     gain.gain.setValueAtTime(1.0, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
 
-    src.connect(lp); lp.connect(gain); gain.connect(masterGain);
+    src.connect(lp);
+    lp.connect(gain);
+    gain.connect(masterGain);
+
     src.start();
   }
-
-  /* =========================
-     ✅ 纯黑底 + 纯色扩散（中心向外）
-     闪烁顺序：橘红 -> 深橘红 -> 红 -> 黑（循环/加速）
-     ========================= */
 
   function resizeFx(){
     const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -432,80 +437,108 @@
     }, 560);
   }
 
-  const FLASH_COLORS = [
-    "#ff5a00", // 橘红
-    "#d43b00", // 深橘红
+  // ✅ 颜色顺序：橘红 -> 深橘红 -> 红 -> 黑（扩散完就是黑）
+  // 全程纯色块，不做渐变
+  const RINGS = [
+    "#ff6a00", // 橘红
+    "#c84500", // 深橘红
     "#b00000", // 红
-    "#000000", // 黑
+    "#000000", // 黑（终态）
   ];
 
-  function fillBlack(){
-    fxCtx.fillStyle = "#000";
-    fxCtx.fillRect(0,0,innerWidth,innerHeight);
+  // ✅ 方形扩散：用 Chebyshev 距离（max(|dx|,|dy|)）
+  function squareDistNorm(x, y, cx, cy, maxD){
+    const dx = Math.abs(x - cx);
+    const dy = Math.abs(y - cy);
+    return Math.min(1, Math.max(dx, dy) / maxD);
   }
 
-  // ✅ 纯色“圆形扩散”：用圆形 clip 区域填充纯色，背景永远是黑
-  function drawRadialSolid(color, radiusPx){
+  function drawSquareExpand(progress){
     const w = innerWidth, h = innerHeight;
     const cx = w/2, cy = h/2;
 
-    // 背景始终黑
+    // maxD：从中心到最远边界的 Chebyshev 距离
+    const maxD = Math.max(cx, w - cx, cy, h - cy);
+
+    // cell：越大越像“像素块扩散”，也更省性能
+    const hc = navigator.hardwareConcurrency || 8;
+    const cell = (hc <= 4) ? 28 : 22;
+
+    // 背景始终先铺黑（保证无白色）
     fxCtx.fillStyle = "#000";
     fxCtx.fillRect(0,0,w,h);
 
-    fxCtx.save();
-    fxCtx.beginPath();
-    fxCtx.arc(cx, cy, radiusPx, 0, Math.PI*2);
-    fxCtx.clip();
+    // 扩散前沿（0..1）
+    const front = Math.min(1, progress);
 
-    fxCtx.fillStyle = color;
-    fxCtx.fillRect(0,0,w,h);
-    fxCtx.restore();
+    // 分层厚度（越小层越多）
+    const step = 0.085;
+
+    for(let y=0; y<h; y+=cell){
+      for(let x=0; x<w; x+=cell){
+        const gx = x + cell/2;
+        const gy = y + cell/2;
+
+        const dn = squareDistNorm(gx, gy, cx, cy, maxD);
+
+        if(dn > front) continue;
+
+        // 在 front 内：按“环”分段，离中心越近越先被染色
+        const ratio = dn / Math.max(0.0001, front); // 0..1
+        const band = Math.min(1, Math.floor(ratio / step) * step);
+
+        // 让颜色从外到内逐渐走向黑（最后终态黑）
+        // 这里用 band 推索引：更靠外(接近1)更接近黑
+        const idx = Math.min(RINGS.length - 1, Math.floor(band * (RINGS.length)));
+        const col = RINGS[idx];
+
+        fxCtx.fillStyle = col;
+        fxCtx.fillRect(x, y, cell, cell);
+      }
+    }
   }
 
-  function runSolidRadialFlashFx(onDone){
+  // ✅ 爆炸阶段：方形向外扩散，结束即纯黑；只在中途震动一次；完成后直接跳转
+  function runSquareExplosionFx(onDone){
     fx.style.opacity = "1";
-    black.style.opacity = "0";
 
-    // ✅ 爆炸开始：立刻隐藏所有文字
+    // 进入爆炸：隐藏所有文字层（你要求“纯色画面”）
     centerStack.style.display = "none";
-
-    // 第一帧纯黑，避免白色
-    fillBlack();
 
     const t0 = performance.now();
 
-    const phaseFlash = 980;   // 扩散闪烁阶段
-    const phaseFade  = 240;   // 收尾（回到纯黑）
-    const phaseHold  = 520;   // 纯黑停留 + 震动
+    const phaseExpand = 920;   // 扩散总时长
+    const phaseHoldBlack = 220; // 黑屏停留一点点再跳转
 
-    const w = innerWidth, h = innerHeight;
-    const maxR = Math.hypot(w/2, h/2);
+    const TOTAL_MS = phaseExpand + phaseHoldBlack;
 
-    let shookA = false;
-    let shookB = false;
+    let shook = false;
+    let doneCalled = false;
+
+    // ✅ rAF 可能被系统暂停：加一个“总时长兜底”
+    const hardTimeout = setTimeout(() => {
+      if(doneCalled) return;
+      doneCalled = true;
+      try { onDone && onDone(); } catch(e) {}
+    }, TOTAL_MS + 600);
+
+    function finish(){
+      if(doneCalled) return;
+      doneCalled = true;
+      clearTimeout(hardTimeout);
+      if(typeof onDone === "function") onDone();
+    }
 
     function tick(now){
       const dt = now - t0;
 
-      if(dt <= phaseFlash){
-        const p = dt / phaseFlash;
+      if(dt <= phaseExpand){
+        const p = dt / phaseExpand;
+        drawSquareExpand(p);
 
-        // 半径从中心扩到全屏
-        const r = maxR * Math.min(1, p*1.08);
-
-        // 闪烁频率：随进度加快
-        const baseHz = 5;
-        const addHz  = 20 * p;
-        const hz = baseHz + addHz;
-
-        const idx = Math.floor(dt * hz / 1000) % FLASH_COLORS.length;
-        const col = FLASH_COLORS[idx];
-
-        drawRadialSolid(col, r);
-
-        if(!shookA && dt > 40){
-          shookA = true;
+        // ✅ 只在扩散中途震一次（不在末尾震）
+        if(!shook && p > 0.42){
+          shook = true;
           doShakeOnce();
         }
 
@@ -513,26 +546,16 @@
         return;
       }
 
-      if(dt <= phaseFlash + phaseFade){
-        // 收尾：回到纯黑
-        fillBlack();
+      // 扩散完成：保持纯黑（你说“变成黑色就扩散完了”）
+      fxCtx.fillStyle = "#000";
+      fxCtx.fillRect(0,0,innerWidth,innerHeight);
+
+      if(dt <= TOTAL_MS){
         requestAnimationFrame(tick);
         return;
       }
 
-      if(dt <= phaseFlash + phaseFade + phaseHold){
-        black.style.opacity = "1";
-        if(!shookB){
-          shookB = true;
-          doShakeOnce();
-        }
-        requestAnimationFrame(tick);
-        return;
-      }
-
-      fx.style.opacity = "0";
-      black.style.opacity = "1";
-      if(typeof onDone === "function") onDone();
+      finish();
     }
 
     requestAnimationFrame(tick);
@@ -542,18 +565,21 @@
     if(exploded) return;
     exploded = true;
 
-    // 0 秒之后停 1 秒，再咔嚓
+    // ✅ 防卡死：爆炸流程启动就开看门狗
+    startNavWatchdog();
+
     setTimeout(() => {
       playLatch();
 
-      // 再等一下，让咔嚓听清楚
       setTimeout(() => {
         playExplosion();
-        runSolidRadialFlashFx(() => {
-          setTimeout(() => {
-            location.href = NEXT_URL;
-          }, 140);
+
+        runSquareExplosionFx(() => {
+          // 最后强制跳转（双保险：即使 onDone 正常，也走这里）
+          stopNavWatchdog();
+          setTimeout(forceNavigate, 80);
         });
+
       }, LATCH_TO_BOOM_MS);
 
     }, PAUSE_BEFORE_LATCH_MS);
@@ -584,6 +610,9 @@
   }
 
   async function startFlow(){
+    navDone = false;
+    stopNavWatchdog();
+
     startBtn.disabled = true;
     btnRow.style.display = "none";
     centerStack.style.display = "block";
@@ -592,13 +621,20 @@
     exploded = false;
 
     fx.style.opacity = "0";
-    black.style.opacity = "0";
 
     clearTimers();
 
     try{ await enableAudio(); }catch(e){}
     startCountdown();
   }
+
+  // 如果用户切后台导致定时器/动画乱序，回来时也确保不“永远卡住”
+  document.addEventListener("visibilitychange", () => {
+    if(!document.hidden && exploded && !navDone){
+      // 爆炸流程已经开始但没跳走：给它一个更短兜底
+      startNavWatchdog();
+    }
+  });
 
   startBtn.addEventListener("click", startFlow);
 })();
