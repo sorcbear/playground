@@ -12,32 +12,24 @@
       --bg:#fff;
       --text:#111;
 
-      /* ✅ 同源：Rotate/Post Puzzle */
+      /* Square UI */
       --fs-body: 18px;
       --lh-body: 1.6;
 
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      /* 调色盘：小一点，避免手机遮挡 */
+      /* 调色盘 */
       --swatch: clamp(24px, 7.2vw, 34px);
       --swatch-gap: clamp(8px, 2.4vw, 12px);
-
       --ring: 3px;
 
       --gap: 18px;
-      --gap-tight: 12px;
 
-      /* 两列更近 */
-      --grid-col-gap: 12px;
-      --grid-row-gap: 36px;
-
-      /* ✅ 关键：图 ↔ 调色盘距离（想更近就继续减小） */
-      --stage-palette-gap: 10px;
-
+      /* 田字格边框线宽 */
       --frame: 4px;
 
-      /* ✅ 按钮：同源 */
+      /* 按钮（Square 规范） */
       --fs-btn: 18px;
       --fw-btn: 600;
       --h-btn: 52px;
@@ -76,35 +68,35 @@
       white-space:pre-wrap;
     }
 
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      column-gap: var(--grid-col-gap);
-      row-gap: var(--grid-row-gap);
-      align-items:start;
-    }
-
-    .tile{
-      display:flex;
-      flex-direction:column;
-      gap: var(--stage-palette-gap); /* ✅ 就是这个控制“图和调色盘距离” */
-      min-width:0;
-      padding-bottom: 2px;
-    }
-
-    .stage{
-      position:relative;
+    /* =========================
+       ✅ 田字格：无 gap，只有黑色边框
+       做法：外层一个大边框，内部用 2px/4px 的“分割线”
+       ========================= */
+    .board{
       width:100%;
+      background:#fff;
+      border: var(--frame) solid #000;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0; /* ✅ 关键：不留白 */
+      overflow:hidden;
+    }
+
+    .cell{
+      position:relative;
+      background:#fff;
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
       touch-action:none;
-      background:#fff;
-      border: var(--frame) solid transparent;
+      min-width:0;
     }
-    .stage.ready{ border-color:#000; }
 
-    .stage img{ width:100%; display:block; }
+    /* ✅ 内部分割线：只画中间那两条 */
+    .cell.rline{ border-right: var(--frame) solid #000; }
+    .cell.bline{ border-bottom: var(--frame) solid #000; }
+
+    .cell img{ width:100%; display:block; }
 
     canvas.overlay{
       position:absolute;
@@ -128,15 +120,16 @@
     }
     .loading.hide{ display:none; }
 
+    /* ✅ 单一调色盘：在四图下面 */
     .paletteWrap{
+      margin-top: 14px;
       display:flex;
       flex-direction:column;
       align-items:center;
       gap:10px;
       width:100%;
       overflow:visible;
-      /* ✅ 也会影响“上沿距离”：上 padding 越小越贴近 */
-      padding: 6px 0 10px;
+      padding: 10px 0 6px;
     }
 
     .palette{
@@ -163,7 +156,7 @@
     }
     .swatch.selected{ box-shadow: 0 0 0 var(--ring) #000; }
 
-    /* ===== 底部答案区（同源节奏）===== */
+    /* ===== 底部答案区 ===== */
     .answerBlock{
       margin-top: 18px;
       display:flex;
@@ -186,9 +179,12 @@
     }
 
     .ansInput{
+      width:4em;
       height:40px;
       padding:0 6px;
       border:2px solid var(--c-border);
+      font-weight:700;
+      font-family:inherit;
       border-radius:0;
       font-size:18px;
       text-align:center;
@@ -196,9 +192,6 @@
       box-shadow:none;
       -webkit-appearance:none;
       appearance:none;
-      font-weight:700;
-      font-family:inherit;
-      width:4em;
       line-height:40px;
     }
     .ansInput:focus{ outline:none; box-shadow:none; }
@@ -217,15 +210,14 @@
       padding:0 18px;
       box-sizing:border-box;
       font-size:var(--fs-btn);
-      font-weight:var(--fw-btn);
+      font-weight:600;
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
-      -webkit-tap-highlight-color:transparent;
       font-family:inherit;
-      transition:none;
+      -webkit-tap-highlight-color:transparent;
     }
 
     @media (hover:hover) and (pointer:fine){
@@ -243,30 +235,40 @@
     }
 
     .msg{
-      margin-top:var(--gap-tight);
-      min-height:1.4em;
+      min-height: 1.4em;
       font-size:14px;
-      line-height:1.6;
+      margin-top: 0;
     }
-    .msg.ok{
-      color:var(--c-ok);
-      font-weight:700;
+    .msg.ok{ color: var(--c-ok); font-weight:700; }
+    .msg.bad{ color: var(--c-danger); font-weight:700; }
+
+    .hintBox{
+      display:none;
+      border-left: 4px solid #000;
+      padding: 10px 12px;
+      background: #fff;
+      font-size: 16px;
+      line-height: 1.7;
     }
+    .hintBox.show{ display:block; }
 
     @media (max-width:520px){
       button.uiBtn{ width:46vw; }
     }
-
-    /* hintBox 保留但不使用（与“完全同款跳转提示页”不冲突） */
-    .hintBox{ display:none; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="title">请继续往天平路康平路路口方向前进，在到达路口之前，你要仔细留意马路两边的街景。你会先后在街面上看到以下4个图案。请选择正确的颜色涂抹每个图缺失色彩的区域，找到正确的线索。</div>
+    <div class="title">请按照正确颜色涂抹每个图白色区域。</div>
 
-    <div class="grid" id="grid"></div>
+    <!-- ✅ 田字格 -->
+    <div class="board" id="board"></div>
+
+    <!-- ✅ 单一调色盘 -->
+    <div class="paletteWrap">
+      <div class="palette" id="palette"></div>
+    </div>
 
     <div class="answerBlock">
       <div class="answerRow">
@@ -288,19 +290,22 @@
 <script>
 (() => {
   // =========================
-  // ✅ 调色盘
+  // ✅ 单一调色盘（全局）
   // =========================
   const PALETTE_COLORS = [
-    "#2A5A5E",
-    "#C62622",
-    "#E2C164",
-    "#00E5FF",
-    "#7030A0",
-    "#FF4FA0",
-    "#0070C0",
-    "#9B857A"
+    "#2A5A5E", // correct (t1)
+    "#C62622", // correct (t2)
+    "#E2C164", // correct (t4)
+    "#00E5FF", // 浅蓝
+    "#7030A0", // 紫
+    "#FF4FA0", // 淡粉
+    "#0070C0", // 深蓝
+    "#9B857A"  // 骷髅：同色系深一点点
   ];
 
+  // =========================
+  // ✅ 每张图自己的正确色（用于“挖字母”记录）
+  // =========================
   const TILES = [
     { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
     { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
@@ -308,6 +313,7 @@
     { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" },
   ];
 
+  // reveal 定位（相对“可涂抹白区”bbox）
   const U_BOX_REL = { x: 0.20, y: 0.08, w: 0.20, h: 0.30 };
   const U_STROKE_FACTOR = 0.22;
 
@@ -323,75 +329,94 @@
   const WHITE_TH = 200;
   const BRUSH_RADIUS = 18;
 
-  // =========================
-  // ✅ 底部答案 & 跳转（按 Post Puzzle 反馈“完全同款”）
-  // =========================
   const ANSWER = "paul";
-
-  // 你把这里换成你的提示页 / 下一页
-  const HINT_URL = "https://sorcbear.github.io/playground/XXXX/hint";
-  const NEXT_URL = "https://sorcbear.github.io/playground/XXXX/";
-  const COUNTDOWN_START = 3;
+  const HINT_TEXT = "线索：四个图里被“挖出来”的字母，按顺序组成答案。";
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
   function sameHex(a,b){
     return (a||"").trim().toLowerCase() === (b||"").trim().toLowerCase();
   }
 
-  const grid = document.getElementById("grid");
+  const board = document.getElementById("board");
+  const palette = document.getElementById("palette");
 
   const ans = document.getElementById("ans");
   const btnHint = document.getElementById("btnHint");
   const btnSubmit = document.getElementById("btnSubmit");
+  const hintBox = document.getElementById("hintBox");
   const msg = document.getElementById("msg");
 
-  let locked = false;
-  let timer = null;
-  let btnTimer = null;
+  function setMsg(text, cls){
+    msg.className = "msg" + (cls ? (" " + cls) : "");
+    msg.textContent = text || "";
+  }
 
   function flashInvert(btn, ms=120){
     btn.classList.add("invert");
     setTimeout(()=>btn.classList.remove("invert"), ms);
   }
 
-  function setLocked(v){
-    locked = v;
-    btnSubmit.disabled = v;
-    btnHint.disabled = v;
-    ans.disabled = v;
-  }
-
+  const SUBMIT_TEXT = "提交答案";
+  let btnTimer = null;
   function setBtnText(text, ms=900){
-    if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+    if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+
     btnSubmit.textContent = text;
     btnSubmit.classList.add("invert");
     btnSubmit.disabled = true;
 
     btnTimer = setTimeout(()=>{
-      btnSubmit.textContent = "提交答案";
+      btnSubmit.textContent = SUBMIT_TEXT;
       btnSubmit.classList.remove("invert");
       btnSubmit.disabled = false;
       btnTimer = null;
     }, ms);
   }
 
-  function makeTileDOM(tile){
-    const wrap = document.createElement("div");
-    wrap.className = "tile";
-    wrap.dataset.key = tile.key;
+  // =========================
+  // ✅ 全局当前颜色：一个调色盘控制全部
+  // =========================
+  let CURRENT_COLOR = null;
 
-    wrap.innerHTML = `
-      <div class="stage">
-        <img class="bg" alt="" />
-        <canvas class="overlay"></canvas>
-        <div class="loading">资源加载中</div>
-      </div>
+  function renderGlobalPalette(){
+    palette.innerHTML = "";
+    PALETTE_COLORS.forEach(c=>{
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch";
+      b.style.setProperty("--c", c);
 
-      <div class="paletteWrap">
-        <div class="palette"></div>
-      </div>
+      b.addEventListener("click", ()=>{
+        CURRENT_COLOR = c;
+        [...palette.children].forEach(x=>x.classList.remove("selected"));
+        b.classList.add("selected");
+      });
+
+      palette.appendChild(b);
+    });
+  }
+  renderGlobalPalette();
+
+  // =========================
+  // ✅ 田字格 DOM：四格 + 分割线
+  // =========================
+  function makeCellDOM(tile, idx){
+    const cell = document.createElement("div");
+    cell.className = "cell";
+
+    // idx: 0 1 / 2 3
+    const isLeft = (idx % 2 === 0);
+    const isTop  = (idx < 2);
+    if(isLeft) cell.classList.add("rline");   // 左列画右分割线
+    if(isTop)  cell.classList.add("bline");   // 上行画下分割线
+
+    cell.dataset.key = tile.key;
+    cell.innerHTML = `
+      <img class="bg" alt="" />
+      <canvas class="overlay"></canvas>
+      <div class="loading">资源加载中</div>
     `;
-    return wrap;
+    return cell;
   }
 
   class ScratchTile{
@@ -399,15 +424,11 @@
       this.tile = tile;
       this.root = root;
 
-      this.stage = root.querySelector(".stage");
       this.img = root.querySelector("img.bg");
       this.cv  = root.querySelector("canvas.overlay");
       this.ctx = this.cv.getContext("2d", { alpha:true });
 
       this.loading = root.querySelector(".loading");
-      this.paletteEl = root.querySelector(".palette");
-
-      this.currentColor = null;
 
       this.down = false;
       this.last = null;
@@ -436,7 +457,6 @@
       this.bbox = null;
 
       this.bind();
-      this.renderPalette();
 
       this.img.src = tile.bg;
       this.maskImg.src = tile.mask;
@@ -465,7 +485,7 @@
 
       this.cv.addEventListener("pointerdown", (e)=>{
         e.preventDefault();
-        if(!this.currentColor) return;
+        if(!CURRENT_COLOR) return;         // ✅ 统一调色盘：没选颜色不画
         try{ this.cv.setPointerCapture(e.pointerId); }catch(_){}
         this.down = true;
         this.last = null;
@@ -517,15 +537,18 @@
     }
 
     dabOnly(x,y){
+      const color = CURRENT_COLOR;
+
       this.ctx.save();
       this.ctx.globalCompositeOperation = "source-over";
-      this.ctx.fillStyle = this.currentColor;
+      this.ctx.fillStyle = color;
       this.ctx.beginPath();
       this.ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
       this.ctx.fill();
       this.ctx.restore();
 
-      if(this.tile.reveal && this.isCorrect(this.currentColor)){
+      // ✅ 仍然只在“本图正确色”时记录，用于挖字母
+      if(this.tile.reveal && this.isCorrect(color)){
         this.correctPaintCtx.save();
         this.correctPaintCtx.globalCompositeOperation = "source-over";
         this.correctPaintCtx.fillStyle = "white";
@@ -599,6 +622,7 @@
       p.moveTo(x, top);
       p.quadraticCurveTo(cx + (72)*s,  cy + (-92)*s,  cx + (72)*s,  cy + (-28)*s);
       p.quadraticCurveTo(cx + (72)*s,  cy + (38)*s,   x,            mid);
+
       return p;
     }
 
@@ -618,6 +642,7 @@
       const barY = cy + (8)*s;
       a.moveTo(cx + (-40)*s, barY);
       a.lineTo(cx + (42)*s, barY);
+
       return a;
     }
 
@@ -633,6 +658,7 @@
 
       l.moveTo(leftX, baseY);
       l.lineTo(rightX, baseY);
+
       return l;
     }
 
@@ -769,36 +795,18 @@
       this.needPost = false;
     }
 
-    renderPalette(){
-      this.paletteEl.innerHTML = "";
-      PALETTE_COLORS.forEach(c=>{
-        const b=document.createElement("button");
-        b.type="button";
-        b.className="swatch";
-        b.style.setProperty("--c", c);
-
-        b.addEventListener("click", ()=>{
-          this.currentColor = c;
-          [...this.paletteEl.children].forEach(x=>x.classList.remove("selected"));
-          b.classList.add("selected");
-        });
-
-        this.paletteEl.appendChild(b);
-      });
-    }
-
     ready(){
       this.resizeAll();
       this.loading.classList.add("hide");
-      this.stage.classList.add("ready");
     }
   }
 
+  // ✅ 创建四格
   const tiles = [];
-  TILES.forEach(t=>{
-    const dom = makeTileDOM(t);
-    grid.appendChild(dom);
-    tiles.push(new ScratchTile(t, dom));
+  TILES.forEach((t, idx)=>{
+    const cell = makeCellDOM(t, idx);
+    board.appendChild(cell);
+    tiles.push(new ScratchTile(t, cell));
   });
 
   window.addEventListener("resize", ()=>{
@@ -807,14 +815,13 @@
     });
   });
 
-  // =========================
-  // ✅ 底部交互：完全同款 Post Puzzle
-  // =========================
-  btnHint.onclick = ()=>{
-    if(locked) return;
-    flashInvert(btnHint,120);
-    setTimeout(()=>location.href = HINT_URL,120);
-  };
+  // ===== 底部交互 =====
+  btnHint.addEventListener("click", ()=>{
+    flashInvert(btnHint, 120);
+    hintBox.textContent = HINT_TEXT;
+    hintBox.classList.toggle("show");
+    setMsg("", "");
+  });
 
   function normalize4(s){
     return (s || "")
@@ -825,39 +832,27 @@
       .toLowerCase();
   }
 
-  function isCorrect(){
-    const v = normalize4(ans.value);
-    return v === ANSWER;
-  }
-
   ans.addEventListener("input", ()=>{
     ans.value = ans.value.replace(/[^a-zA-Z]/g, "").slice(0,4);
   });
 
-  btnSubmit.onclick = ()=>{
-    if(locked) return;
+  btnSubmit.addEventListener("click", ()=>{
+    const v = normalize4(ans.value);
 
-    if(isCorrect()){
-      setLocked(true);
-      let t = COUNTDOWN_START;
-      msg.textContent = `答案正确，即将进入下一题（${t}）`;
-      msg.classList.add("ok");
-
-      timer = setInterval(()=>{
-        t--;
-        if(t>0){
-          msg.textContent = `答案正确，即将进入下一题（${t}）`;
-        }else{
-          clearInterval(timer);
-          location.href = NEXT_URL;
-        }
-      },1000);
-    }else{
-      msg.textContent = "";
-      msg.classList.remove("ok");
-      setBtnText("错了，再试一次",900);
+    if(v.length !== 4){
+      setMsg("", "");
+      setBtnText("请输入 4 个字母", 900);
+      return;
     }
-  };
+
+    if(v === ANSWER){
+      setMsg("正确。", "ok");
+      setBtnText("正确。", 900);
+    }else{
+      setMsg("", "");
+      setBtnText("不正确，再试一次", 900);
+    }
+  });
 })();
 </script>
 </body>
