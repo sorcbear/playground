@@ -28,7 +28,7 @@
       --c-text:#111;
       --c-border:#000;
       --c-ok:#0b6b2b;
-      --c-danger:#b00020; /* ✅ 红色强调 */
+      --c-danger:#b00020;
 
       --bg:#fff;
     }
@@ -61,7 +61,6 @@
       white-space:pre-wrap;
     }
 
-    /* ✅ 红色强调（无下划线） */
     .red{
       color:var(--c-danger);
     }
@@ -77,7 +76,6 @@
       margin:0 auto;
     }
 
-    /* ✅ 正确地点 + 输入框：同一行 */
     .answer-line{
       display:flex;
       align-items:center;
@@ -93,7 +91,7 @@
     }
 
     .ansInput{
-      width: 8em;              /* ✅ 4 个汉字 ≈ 8em */
+      width: 8em;
       height:40px;
       padding:0 6px;
       border:2px solid var(--c-border);
@@ -108,7 +106,6 @@
     }
     .ansInput:focus{ outline:none; box-shadow:none; }
 
-    /* 按钮区（同源） */
     .panel{
       display:flex;
       gap:12px;
@@ -195,6 +192,9 @@
 
     const CORRECT = "衡山公园";
 
+    /* ✅ 新增：symbol 成功后解锁 save 的“衡山路” */
+    const UNLOCK_KEY_PPL = "pg_unlock_ppl_v1";
+
     const placeInput = document.getElementById("place");
     const submitBtn  = document.getElementById("submitBtn");
     const hintBtn    = document.getElementById("hintBtn");
@@ -244,6 +244,11 @@
       if(locked) return;
 
       if(normalize(placeInput.value) === CORRECT){
+
+        /* ✅ 只加这两行：写入解锁（local + session） */
+        try{ localStorage.setItem(UNLOCK_KEY_PPL, "1"); }catch(e){}
+        try{ sessionStorage.setItem(UNLOCK_KEY_PPL, "1"); }catch(e){}
+
         setLocked(true);
         let t = COUNTDOWN_START;
         msg.textContent = `答案正确，即将进入下一题（${t}）`;
