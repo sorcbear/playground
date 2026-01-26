@@ -19,9 +19,9 @@
       --hint-lh:1.6;
 
       /* ✅ 调色板：更大、更松 */
-      --swatch: clamp(34px, 9vw, 52px);
+      --swatch: clamp(34px, 10.5vw, 56px);
       --swatch-gap: clamp(12px, 3.6vw, 20px);
-      --ring: 4px;
+      --ring: 3px;
 
       --gap: 18px;
 
@@ -65,7 +65,7 @@
       white-space:pre-wrap;
     }
 
-    /* ✅ 田字格：无 gap，黑底防 subpixel 白缝 */
+    /* ✅ 田字格：用黑底“兜底”子像素缝（就算出现也会是黑的，不会白） */
     .board{
       width:100%;
       background:#000;
@@ -78,48 +78,41 @@
 
     .cell{
       position:relative;
+      background:#fff;
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
       touch-action:none;
       min-width:0;
 
-      /* ✅ 每格正方形（你 1280x1280 最稳） */
+      /* ✅ 强制正方形格子：与你 1280x1280 素材匹配 */
       aspect-ratio: 1 / 1;
 
-      /* ✅ 防止行内基线带来的微小空隙 */
       font-size:0;
       line-height:0;
-
-      /* ✅ 让渲染更稳定（移动端减少抖动/细缝） */
-      transform: translateZ(0);
-      background:#fff;
     }
 
-    /* ✅ 内部分割线：只画中间那两条 */
     .cell.rline{ border-right: var(--frame) solid #000; }
     .cell.bline{ border-bottom: var(--frame) solid #000; }
 
-    /* ✅ 底图：绝对定位铺满 */
+    /* ✅ 关键：不要 cover（会裁切导致 mask 对不齐）
+       你是 1280x1280 → 直接拉伸到格子=等比，无裁切 */
     .cell img{
       position:absolute;
       inset:0;
       width:100%;
       height:100%;
-      object-fit:cover;
+      object-fit: fill;   /* 或者直接删掉这一行也行（默认就是 fill） */
       display:block;
-      -webkit-user-drag:none;
-      user-select:none;
     }
 
-    /* ✅ overlay：必须与底图完全同尺寸（不要 inset:-1px） */
+    /* ✅ 关键：canvas 必须与图片“同一个盒子”（inset:0），JS 的 rect 才一致 */
     canvas.overlay{
       position:absolute;
       inset:0;
       width:100%;
       height:100%;
       display:block;
-      transform: translateZ(0);
     }
 
     .loading{
@@ -729,17 +722,12 @@
     }
 
     resizeAll(){
-      /* ✅ 关键修复：用 .cell（root）的尺寸做基准，永远和底图同一套几何 */
-      const r = this.root.getBoundingClientRect();
+      const r = this.cv.getBoundingClientRect();
       const s = dpr();
 
-      const cssW = Math.max(1, r.width);
-      const cssH = Math.max(1, r.height);
+      this.cv.width  = Math.round(r.width * s);
+      this.cv.height = Math.round(r.height * s);
 
-      this.cv.width  = Math.round(cssW * s);
-      this.cv.height = Math.round(cssH * s);
-
-      /* 画图用 CSS 像素坐标（便于 pointer 坐标直接用） */
       this.ctx.setTransform(s,0,0,s,0,0);
 
       this.whiteMaskCanvas.width  = this.cv.width;
