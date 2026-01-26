@@ -12,24 +12,20 @@
       --bg:#fff;
       --text:#111;
 
-      /* Square UI */
       --fs-body: 18px;
       --lh-body: 1.6;
 
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      /* 调色盘 */
       --swatch: clamp(24px, 7.2vw, 34px);
       --swatch-gap: clamp(8px, 2.4vw, 12px);
       --ring: 3px;
 
       --gap: 18px;
 
-      /* 田字格边框线宽 */
       --frame: 4px;
 
-      /* 按钮（Square 规范） */
       --fs-btn: 18px;
       --fw-btn: 600;
       --h-btn: 52px;
@@ -68,17 +64,19 @@
       white-space:pre-wrap;
     }
 
-    /* =========================
-       ✅ 田字格：无 gap，只有黑色边框
-       做法：外层一个大边框，内部用 2px/4px 的“分割线”
-       ========================= */
+    /* ✅ 田字格：无 gap，只有黑色边框 */
     .board{
       width:100%;
       background:#fff;
       border: var(--frame) solid #000;
       display:grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0; /* ✅ 关键：不留白 */
+      gap: 0;
+
+      /* ✅ 关键：不要 stretch，否则会产生“边框内白空隙” */
+      align-items:start;
+      align-content:start;
+
       overflow:hidden;
     }
 
@@ -90,13 +88,21 @@
       -webkit-user-select:none;
       touch-action:none;
       min-width:0;
+
+      /* ✅ 防止任何“行内基线”产生微小空隙 */
+      font-size:0;
+      line-height:0;
     }
 
     /* ✅ 内部分割线：只画中间那两条 */
     .cell.rline{ border-right: var(--frame) solid #000; }
     .cell.bline{ border-bottom: var(--frame) solid #000; }
 
-    .cell img{ width:100%; display:block; }
+    .cell img{
+      width:100%;
+      height:auto;
+      display:block;
+    }
 
     canvas.overlay{
       position:absolute;
@@ -113,6 +119,7 @@
       align-items:center;
       justify-content:center;
       font-size:14px;
+      line-height:1.4;
       background:rgba(255,255,255,.78);
       backdrop-filter:blur(2px);
       padding:12px;
@@ -120,7 +127,6 @@
     }
     .loading.hide{ display:none; }
 
-    /* ✅ 单一调色盘：在四图下面 */
     .paletteWrap{
       margin-top: 14px;
       display:flex;
@@ -156,7 +162,6 @@
     }
     .swatch.selected{ box-shadow: 0 0 0 var(--ring) #000; }
 
-    /* ===== 底部答案区 ===== */
     .answerBlock{
       margin-top: 18px;
       display:flex;
@@ -260,12 +265,10 @@
 
 <body>
   <div class="wrap">
-    <div class="title">请按照正确颜色涂抹每个图白色区域。</div>
+    <div class="title">请继续往天平路康平路路口方向前进，在到达路口之前，你要仔细留意马路两边的街景。你会先后在街面上看到以下4个图案。请选择正确的颜色涂抹每个图缺失色彩的区域，找到正确的线索。</div>
 
-    <!-- ✅ 田字格 -->
     <div class="board" id="board"></div>
 
-    <!-- ✅ 单一调色盘 -->
     <div class="paletteWrap">
       <div class="palette" id="palette"></div>
     </div>
@@ -289,23 +292,17 @@
 
 <script>
 (() => {
-  // =========================
-  // ✅ 单一调色盘（全局）
-  // =========================
   const PALETTE_COLORS = [
-    "#2A5A5E", // correct (t1)
-    "#C62622", // correct (t2)
-    "#E2C164", // correct (t4)
-    "#00E5FF", // 浅蓝
-    "#7030A0", // 紫
-    "#FF4FA0", // 淡粉
-    "#0070C0", // 深蓝
-    "#9B857A"  // 骷髅：同色系深一点点
+    "#2A5A5E",
+    "#C62622",
+    "#E2C164",
+    "#00E5FF",
+    "#7030A0",
+    "#FF4FA0",
+    "#0070C0",
+    "#9B857A"
   ];
 
-  // =========================
-  // ✅ 每张图自己的正确色（用于“挖字母”记录）
-  // =========================
   const TILES = [
     { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
     { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
@@ -313,7 +310,6 @@
     { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" },
   ];
 
-  // reveal 定位（相对“可涂抹白区”bbox）
   const U_BOX_REL = { x: 0.20, y: 0.08, w: 0.20, h: 0.30 };
   const U_STROKE_FACTOR = 0.22;
 
@@ -373,9 +369,6 @@
     }, ms);
   }
 
-  // =========================
-  // ✅ 全局当前颜色：一个调色盘控制全部
-  // =========================
   let CURRENT_COLOR = null;
 
   function renderGlobalPalette(){
@@ -397,18 +390,14 @@
   }
   renderGlobalPalette();
 
-  // =========================
-  // ✅ 田字格 DOM：四格 + 分割线
-  // =========================
   function makeCellDOM(tile, idx){
     const cell = document.createElement("div");
     cell.className = "cell";
 
-    // idx: 0 1 / 2 3
     const isLeft = (idx % 2 === 0);
     const isTop  = (idx < 2);
-    if(isLeft) cell.classList.add("rline");   // 左列画右分割线
-    if(isTop)  cell.classList.add("bline");   // 上行画下分割线
+    if(isLeft) cell.classList.add("rline");
+    if(isTop)  cell.classList.add("bline");
 
     cell.dataset.key = tile.key;
     cell.innerHTML = `
@@ -485,7 +474,7 @@
 
       this.cv.addEventListener("pointerdown", (e)=>{
         e.preventDefault();
-        if(!CURRENT_COLOR) return;         // ✅ 统一调色盘：没选颜色不画
+        if(!CURRENT_COLOR) return;
         try{ this.cv.setPointerCapture(e.pointerId); }catch(_){}
         this.down = true;
         this.last = null;
@@ -547,7 +536,6 @@
       this.ctx.fill();
       this.ctx.restore();
 
-      // ✅ 仍然只在“本图正确色”时记录，用于挖字母
       if(this.tile.reveal && this.isCorrect(color)){
         this.correctPaintCtx.save();
         this.correctPaintCtx.globalCompositeOperation = "source-over";
@@ -731,7 +719,8 @@
     }
 
     resizeAll(){
-      const r = this.img.getBoundingClientRect();
+      /* ✅ 关键：用 canvas 的实际覆盖区域做尺寸基准，确保 mask 对齐 */
+      const r = this.cv.getBoundingClientRect();
       const s = dpr();
 
       this.cv.width  = Math.round(r.width * s);
@@ -801,7 +790,6 @@
     }
   }
 
-  // ✅ 创建四格
   const tiles = [];
   TILES.forEach((t, idx)=>{
     const cell = makeCellDOM(t, idx);
@@ -815,7 +803,6 @@
     });
   });
 
-  // ===== 底部交互 =====
   btnHint.addEventListener("click", ()=>{
     flashInvert(btnHint, 120);
     hintBox.textContent = HINT_TEXT;
