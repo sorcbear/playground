@@ -1,4 +1,4 @@
-<!doctype html> 
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
@@ -17,11 +17,8 @@
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      /* ✅ 调色盘尺寸：用 clamp 让手机也能稳定塞进 2 列 */
       --swatch: clamp(34px, 9vw, 44px);
       --swatch-gap: clamp(10px, 3vw, 14px);
-
-      /* ✅ 选中边框（黑色） */
       --ring: 4px;
 
       --gap: 18px;
@@ -51,7 +48,6 @@
       font-weight:700;
     }
 
-    /* ✅ 永远 2x2（手机也保持 2 列） */
     .grid{
       display:grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -63,7 +59,7 @@
       display:flex;
       flex-direction:column;
       gap: 12px;
-      min-width: 0; /* 防止内容把列撑爆 */
+      min-width: 0;
     }
 
     .stage{
@@ -89,6 +85,8 @@
       position:absolute;
       inset:0;
       display:flex;
+      flex-direction:column;
+      gap:10px;
       align-items:center;
       justify-content:center;
       font-size:14px;
@@ -96,6 +94,7 @@
       backdrop-filter:blur(2px);
       padding:12px;
       text-align:center;
+      word-break:break-word;
     }
     .loading.hide{ display:none; }
 
@@ -105,7 +104,7 @@
       align-items:center;
       gap:10px;
       width:100%;
-      overflow:hidden; /* ✅ 防止调色盘溢出到隔壁列造成“重叠” */
+      overflow:hidden;
     }
 
     .palette{
@@ -132,30 +131,40 @@
       -webkit-tap-highlight-color:transparent;
     }
 
-    /* ✅ 选中反馈：仅黑色边框，不要外圈 */
     .swatch.selected{
       box-shadow: 0 0 0 var(--ring) #000;
     }
 
-    .hint{
-      display:none; /* ✅ 不显示“已选中...”文字 */
+    .hint{ display:none; }
+
+    /* 页面顶部调试条（你确认没问题后可删除） */
+    .debugbar{
+      font-size:12px;
+      line-height:1.5;
+      color:#111;
+      opacity:.7;
+      margin:0 0 12px 0;
+      word-break:break-all;
     }
   </style>
 </head>
 
 <body>
   <div class="wrap">
+    <div class="debugbar" id="debugbar"></div>
     <p class="title">请按照正确颜色涂抹每个图白色区域。</p>
     <div class="grid" id="grid"></div>
   </div>
 
 <script>
 (() => {
-  // ✅ 正确颜色：#2A5A5E（并替代原来的黑色）
-  const CORRECT_COLOR = "#2A5A5E";
-
-  const COLORS = [
-    CORRECT_COLOR,   // 原黑色位置 -> 正确色
+  // -------------------------
+  // 调色盘基础色
+  // 第1格会被“本格正确色”覆盖
+  // 第2格要求：把灰色(#444444)替换成正确色(#C62622)
+  // -------------------------
+  const BASE_COLORS = [
+    "#000000",
     "#00e5ff",
     "#AC968A",
     "#ffc000",
@@ -165,29 +174,52 @@
     "#444444"
   ];
 
-  // 4 个图配置
+  const DEFAULT_CORRECT = "#2A5A5E";
+
+  // ✅ 强制同目录相对路径（避免你页面不是在 /color/ 时相对路径跑飞）
+  const ASSET = (name) => `./${name}`;
+
+  // 4 个图配置（确保文件名大小写与仓库完全一致）
   const TILES = [
-    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" } }, // ✅ 画正确色显示 P
-    { key:"t2", bg:"img2_bw.jpg", mask:"img2_mask.png", reveal:null },
-    { key:"t3", bg:"bw.jpg", mask:"skull_bw.png", reveal:{ type:"U" } },        // ✅ 画正确色显示 U
-    { key:"t4", bg:"img4_bw.jpg", mask:"img4_mask.png", reveal:null },
+    { key:"t1", bg:ASSET("violin.jpg"),      mask:ASSET("violin_mask.png"),  reveal:{ type:"P" }, correctColor: DEFAULT_CORRECT },
+    { key:"t2", bg:ASSET("avec.jpg"),        mask:ASSET("avec_mask.png"),    reveal:{ type:"A" }, correctColor: "#C62622", replaceGreyWithCorrect:true },
+    { key:"t3", bg:ASSET("bw.jpg"),          mask:ASSET("skull_bw.png"),     reveal:{ type:"U" }, correctColor: DEFAULT_CORRECT },
+    { key:"t4", bg:ASSET("img4_bw.jpg"),     mask:ASSET("img4_mask.png"),    reveal:null,         correctColor: DEFAULT_CORRECT },
   ];
 
-  // reveal 定位（相对 mask bbox）
+  // reveal 定位（相对“可涂抹白区 bbox”）
   const U_BOX_REL = { x: 0.23, y: 0.08, w: 0.20, h: 0.30 };
   const U_STROKE_FACTOR = 0.22;
 
-  // P 放在偏右下
   const P_BOX_REL = { x: 0.62, y: 0.70, w: 0.26, h: 0.26 };
   const P_STROKE_FACTOR = 0.20;
+
+  const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.22 };
+  const A_STROKE_FACTOR = 0.18;
 
   const WHITE_TH = 200;
   const BRUSH_RADIUS = 18;
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
-  function isCorrectColor(c){
-    return !!c && c.trim().toLowerCase() === CORRECT_COLOR.toLowerCase();
+  function sameHex(a,b){ return (a||"").trim().toLowerCase() === (b||"").trim().toLowerCase(); }
+
+  function buildPaletteColorsForTile(tile){
+    const c = (tile && tile.correctColor) ? tile.correctColor : DEFAULT_CORRECT;
+    const arr = BASE_COLORS.slice();
+    arr[0] = c;
+    if(tile && tile.replaceGreyWithCorrect){
+      const greyIndex = arr.findIndex(x => x.toLowerCase() === "#444444");
+      if(greyIndex >= 0) arr[greyIndex] = c;
+    }
+    return arr;
   }
+
+  // 顶部调试条：展示当前 URL + 每张图实际请求 URL
+  const debugbar = document.getElementById("debugbar");
+  const resolved = (u)=> new URL(u, location.href).href;
+  debugbar.textContent =
+    `URL: ${location.href}\n` +
+    TILES.map(t => `${t.key}: bg=${resolved(t.bg)} | mask=${resolved(t.mask)}`).join("\n");
 
   const grid = document.getElementById("grid");
 
@@ -222,7 +254,6 @@
 
       this.loading = root.querySelector(".loading");
       this.paletteEl = root.querySelector(".palette");
-      this.hintEl = root.querySelector(".hint");
 
       this.currentColor = null;
 
@@ -255,8 +286,14 @@
       this.bind();
       this.renderPalette();
 
+      // ✅ 用 tile 里明确的路径
       this.img.src = tile.bg;
       this.maskImg.src = tile.mask;
+    }
+
+    isCorrect(c){
+      const cc = (this.tile && this.tile.correctColor) ? this.tile.correctColor : DEFAULT_CORRECT;
+      return sameHex(c, cc);
     }
 
     bind(){
@@ -265,7 +302,10 @@
         if(this.maskOK) this.ready();
       });
       this.img.addEventListener("error", ()=>{
-        this.loading.textContent = `底图加载失败：${this.tile.bg}`;
+        this.loading.innerHTML =
+          `底图加载失败：<b>${this.tile.bg}</b><br/>` +
+          `实际请求：${new URL(this.tile.bg, location.href).href}<br/>` +
+          `请检查：文件名大小写/是否在同目录/是否已部署`;
       });
 
       this.maskImg.addEventListener("load", ()=>{
@@ -273,7 +313,10 @@
         if(this.bgOK) this.ready();
       });
       this.maskImg.addEventListener("error", ()=>{
-        this.loading.textContent = `遮罩加载失败：${this.tile.mask}`;
+        this.loading.innerHTML =
+          `遮罩加载失败：<b>${this.tile.mask}</b><br/>` +
+          `实际请求：${new URL(this.tile.mask, location.href).href}<br/>` +
+          `请检查：文件名大小写/是否在同目录/是否已部署`;
       });
 
       this.cv.addEventListener("pointerdown", (e)=>{
@@ -338,7 +381,7 @@
       this.ctx.fill();
       this.ctx.restore();
 
-      if(this.tile.reveal && isCorrectColor(this.currentColor)){
+      if(this.tile.reveal && this.isCorrect(this.currentColor)){
         this.correctPaintCtx.save();
         this.correctPaintCtx.globalCompositeOperation = "source-over";
         this.correctPaintCtx.fillStyle = "white";
@@ -399,25 +442,41 @@
       return u;
     }
 
-    /* ✅ 更“标准”的 P：加长竖杆，肚更像 P，避免看成 D */
     buildPPath(cx, cy, s){
       const p = new Path2D();
+      const x = cx + (-42)*s;
+      const top = cy + (-88)*s;
+      const mid = cy + (-6)*s;
+      const bottom = cy + (92)*s;
 
-      const x = cx + (-42)*s;          // 竖杆 x
-      const top = cy + (-88)*s;        // 更高
-      const mid = cy + (-6)*s;         // 肚子的中线
-      const bottom = cy + (92)*s;      // 更低
-
-      // 竖杆
       p.moveTo(x, bottom);
       p.lineTo(x, top);
 
-      // 上半肚：从 top 出发，向右绕回到 mid（不闭合，保持手写线条感）
       p.moveTo(x, top);
       p.quadraticCurveTo(cx + (72)*s,  cy + (-92)*s,  cx + (72)*s,  cy + (-28)*s);
       p.quadraticCurveTo(cx + (72)*s,  cy + (38)*s,   x,            mid);
-
       return p;
+    }
+
+    buildAPath(cx, cy, s){
+      const a = new Path2D();
+      const topY = cy + (-90)*s;
+      const baseY = cy + (92)*s;
+
+      const leftX = cx + (-70)*s;
+      const rightX = cx + (70)*s;
+
+      a.moveTo(leftX, baseY);
+      a.lineTo(cx + (-6)*s, topY);
+
+      a.moveTo(rightX, baseY);
+      a.lineTo(cx + (6)*s, topY);
+
+      const barY = cy + (8)*s;
+      a.moveTo(cx + (-40)*s, barY);
+      a.lineTo(cx + (42)*s, barY);
+
+      return a;
     }
 
     rebuildWhiteMask(){
@@ -438,7 +497,6 @@
       }
 
       this.whiteMaskCtx.putImageData(imgData, 0, 0);
-
       this.bbox = this.tile.reveal ? this.computeBBoxFromAlpha(imgData, w, h) : null;
     }
 
@@ -461,6 +519,9 @@
       if(this.tile.reveal.type === "P"){
         boxRel = P_BOX_REL;
         strokeFactor = P_STROKE_FACTOR;
+      }else if(this.tile.reveal.type === "A"){
+        boxRel = A_BOX_REL;
+        strokeFactor = A_STROKE_FACTOR;
       }
 
       const bx = bbox.minx + bw * boxRel.x;
@@ -474,9 +535,10 @@
       const s = Math.min(boxW, boxH) / 140;
       const strokeW = Math.max(10, Math.round(Math.min(boxW, boxH) * strokeFactor));
 
-      const path = (this.tile.reveal.type === "P")
-        ? this.buildPPath(cx, cy, s)
-        : this.buildUPath(cx, cy, s);
+      const t = this.tile.reveal.type;
+      const path = (t === "P") ? this.buildPPath(cx, cy, s)
+                : (t === "A") ? this.buildAPath(cx, cy, s)
+                              : this.buildUPath(cx, cy, s);
 
       this.letterMaskCtx.save();
       this.letterMaskCtx.strokeStyle = "white";
@@ -554,7 +616,9 @@
 
     renderPalette(){
       this.paletteEl.innerHTML = "";
-      COLORS.forEach(c=>{
+      const colors = buildPaletteColorsForTile(this.tile);
+
+      colors.forEach(c=>{
         const b=document.createElement("button");
         b.type="button";
         b.className="swatch";
@@ -590,6 +654,11 @@
     tiles.forEach(t=>{
       if(t.bgOK && t.maskOK) t.resizeAll();
     });
+  });
+
+  // 如果 JS 整体报错，这里能兜底显示在页面上（否则你只会“看不到”）
+  window.addEventListener("error", (ev)=>{
+    debugbar.textContent += `\n\nJS ERROR: ${ev.message || ev.error}`;
   });
 })();
 </script>
