@@ -40,11 +40,12 @@
 
     button{ font-family:inherit; }
 
+    /* ✅ 改为顶部起始布局：让 notice 真正靠近页面顶部 */
     .page{
       min-height:100svh;
       display:flex;
-      align-items:center;
-      justify-content:center;
+      align-items:flex-start;
+      justify-content:flex-start;
       padding:18px;
       box-sizing:border-box;
     }
@@ -55,16 +56,21 @@
       flex-direction:column;
       align-items:center;
       text-align:center;
+
+      /* ✅ 红框白色区域：控制整体内容往下的距离（越大越“空”） */
+      margin-top:48px;
+      margin-left:auto;
+      margin-right:auto;
     }
 
-    /* ✅ 顶部提示（完全对齐 Save 页 notice 语义） */
+    /* ✅ 顶部提示（样式同 Save 页 notice） */
     .notice{
       width:100%;
       text-align:center;
       font-size:13px;
       font-weight:700;
       color:#000;
-      margin: 4px 0 18px;
+      margin:0 0 18px;
       user-select:none;
     }
 
@@ -110,6 +116,9 @@
         --btn-h: 46px;
         --fs-text: 17px;
       }
+
+      /* ✅ 手机端更靠近顶部（更“在页面顶上”） */
+      .card{ margin-top:24px; }
     }
   </style>
 </head>
@@ -118,10 +127,7 @@
   <div class="page">
     <div class="card">
 
-      <!-- ✅ 新增的顶部小字 -->
-      <div class="notice">
-        为保留游戏进度，请勿使用浏览器无痕模式。
-      </div>
+      <div class="notice">为保留游戏进度，请勿使用浏览器无痕模式。</div>
 
       <div class="intro">确定要玩这个游戏吗？</div>
       <div class="intro">这可能会影响到你和其他人的命运...</div>
