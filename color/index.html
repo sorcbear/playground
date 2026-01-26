@@ -17,17 +17,16 @@
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      /* ✅ 调色盘：再缩小一点，避免手机遮挡 */
+      /* 调色盘：小一点，避免手机遮挡 */
       --swatch: clamp(24px, 7.2vw, 34px);
       --swatch-gap: clamp(8px, 2.4vw, 12px);
 
-      /* 选中边框 */
       --ring: 3px;
 
       --gap: 18px;
       --tile-gap: 18px;
 
-      /* ✅ 每张图的黑色外边框 */
+      /* 每张图的黑色外边框 */
       --frame: 4px;
     }
 
@@ -54,7 +53,6 @@
       font-weight:700;
     }
 
-    /* 永远 2x2（手机也保持 2 列） */
     .grid{
       display:grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -77,14 +75,9 @@
       -webkit-user-select:none;
       touch-action:none;
       background:#fff;
-
-      /* ✅ 粗黑边框 */
       border: var(--frame) solid #000;
     }
-    .stage img{
-      width:100%;
-      display:block;
-    }
+    .stage img{ width:100%; display:block; }
 
     canvas.overlay{
       position:absolute;
@@ -124,7 +117,6 @@
       gap: var(--swatch-gap);
       justify-content:center;
       align-content:center;
-
       width: 100%;
       max-width: min(100%, calc(4 * var(--swatch) + 3 * var(--swatch-gap)));
     }
@@ -140,10 +132,7 @@
       outline:none;
       -webkit-tap-highlight-color:transparent;
     }
-
-    .swatch.selected{
-      box-shadow: 0 0 0 var(--ring) #000;
-    }
+    .swatch.selected{ box-shadow: 0 0 0 var(--ring) #000; }
 
     .hint{ display:none; }
   </style>
@@ -158,42 +147,34 @@
 <script>
 (() => {
   // =========================
-  // 调色盘（基础色）
-  // - 第 1 格会被“本 tile 的正确色”替换
-  // - 黄色替换为 #E2C164
-  // - 第 2 张：灰色会替换为正确红色 #C62622
-  // - 第 4 张：绿色替换为粉红色（仅该张）
+  // ✅ 四张图统一调色盘（完全一致）
+  // - 包含：4个“正确答案颜色”中的已知3个：#2A5A5E、#C62622、#E2C164
+  // - 外加：浅蓝、紫、淡粉、深蓝
+  // - 再保留一个中性色（灰褐）凑满8格
   // =========================
-  const BASE_COLORS = [
-    "#000000",  // index 0: 会被本格 correctColor 替换
-    "#00e5ff",
-    "#AC968A",
-    "#E2C164",  // ✅ 新的“黄色”
-    "#00b050",  // 绿色（第4张会替换成粉红）
-    "#7030a0",
-    "#0070c0",
-    "#444444"   // 灰色（第2张会替换成正确红）
+  const PALETTE_COLORS = [
+    "#2A5A5E", // correct (t1/t3)
+    "#C62622", // correct (t2)
+    "#E2C164", // correct (t4)
+    "#00E5FF", // 浅蓝
+    "#7030A0", // 紫
+    "#FF4FA0", // 淡粉
+    "#0070C0", // 深蓝
+    "#AC968A"  // 中性灰褐（保留）
   ];
 
-  // 默认正确色（用于 P / U / L）
-  const DEFAULT_CORRECT = "#2A5A5E";
-
-  // 第 4 张调色盘里用的粉红（替换绿色）
-  const TILE4_PINK = "#ff4fa0";
-
   // =========================
-  // 4 个图配置
+  // ✅ 每张图自己的正确色（用于“挖字母”记录）
   // =========================
   const TILES = [
-    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor: DEFAULT_CORRECT },
-    { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor: "#C62622", replaceGreyWithCorrect:true },
-    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor: DEFAULT_CORRECT },
-    { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor: DEFAULT_CORRECT, replaceGreenWithPink:true },
+    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
+    { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
+    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#2A5A5E" },
+    { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" }, // ✅ 第四张正确色
   ];
 
   // =========================
   // reveal 定位（相对“可涂抹白区”bbox）
-  // 你要微调位置/大小，只改 *_BOX_REL
   // =========================
   const U_BOX_REL = { x: 0.23, y: 0.08, w: 0.20, h: 0.30 };
   const U_STROKE_FACTOR = 0.22;
@@ -201,46 +182,19 @@
   const P_BOX_REL = { x: 0.62, y: 0.70, w: 0.26, h: 0.26 };
   const P_STROKE_FACTOR = 0.20;
 
-  // A：你之前红框位置
   const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.22 };
   const A_STROKE_FACTOR = 0.18;
 
-  // ✅ L：按你红框大概在圆形内下方中间（如偏差就调这里）
-  const L_BOX_REL = { x: 0.40, y: 0.73, w: 0.24, h: 0.14 };
-  const L_STROKE_FACTOR = 0.22;
+  // ✅ L：放到你红框区域（如果还偏差，只调这四个数）
+  const L_BOX_REL = { x: 0.41, y: 0.74, w: 0.22, h: 0.14 };
+  const L_STROKE_FACTOR = 0.28; // 稍粗，肉眼更明显
 
-  // 白区阈值（mask 有灰边可稍降低）
   const WHITE_TH = 200;
-
-  // 画笔
   const BRUSH_RADIUS = 18;
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
   function sameHex(a,b){
     return (a||"").trim().toLowerCase() === (b||"").trim().toLowerCase();
-  }
-
-  function buildPaletteColorsForTile(tile){
-    const c = (tile && tile.correctColor) ? tile.correctColor : DEFAULT_CORRECT;
-
-    const arr = BASE_COLORS.slice();
-
-    // 第一个色块永远是“本格正确色”
-    arr[0] = c;
-
-    // 第 2 张：灰色替换成正确色（红）
-    if(tile && tile.replaceGreyWithCorrect){
-      const greyIndex = arr.findIndex(x => x.toLowerCase() === "#444444");
-      if(greyIndex >= 0) arr[greyIndex] = c;
-    }
-
-    // 第 4 张：绿色替换为粉红色（仅该张）
-    if(tile && tile.replaceGreenWithPink){
-      const greenIndex = arr.findIndex(x => x.toLowerCase() === "#00b050");
-      if(greenIndex >= 0) arr[greenIndex] = TILE4_PINK;
-    }
-
-    return arr;
   }
 
   const grid = document.getElementById("grid");
@@ -291,15 +245,12 @@
       this.maskImg = new Image();
       this.maskImg.decoding = "async";
 
-      // 白区 mask（alpha=255 可涂）
       this.whiteMaskCanvas = document.createElement("canvas");
       this.whiteMaskCtx = this.whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
 
-      // 正确颜色涂过的区域（用于 reveal）
       this.correctPaintCanvas = document.createElement("canvas");
       this.correctPaintCtx = this.correctPaintCanvas.getContext("2d");
 
-      // 字母形状 mask + intersection
       this.letterMaskCanvas = document.createElement("canvas");
       this.letterMaskCtx = this.letterMaskCanvas.getContext("2d");
 
@@ -316,8 +267,7 @@
     }
 
     isCorrect(c){
-      const cc = (this.tile && this.tile.correctColor) ? this.tile.correctColor : DEFAULT_CORRECT;
-      return sameHex(c, cc);
+      return sameHex(c, this.tile.correctColor);
     }
 
     bind(){
@@ -399,7 +349,7 @@
       this.ctx.fill();
       this.ctx.restore();
 
-      // 只有“正确色”才记录，用于 reveal（A/P/U/L）
+      // ✅ 只有用“本图正确色”涂，才记录到 correctPaint，用于挖字母
       if(this.tile.reveal && this.isCorrect(this.currentColor)){
         this.correctPaintCtx.save();
         this.correctPaintCtx.globalCompositeOperation = "source-over";
@@ -463,7 +413,6 @@
 
     buildPPath(cx, cy, s){
       const p = new Path2D();
-
       const x = cx + (-42)*s;
       const top = cy + (-88)*s;
       const mid = cy + (-6)*s;
@@ -481,10 +430,8 @@
 
     buildAPath(cx, cy, s){
       const a = new Path2D();
-
       const topY = cy + (-90)*s;
       const baseY = cy + (92)*s;
-
       const leftX = cx + (-70)*s;
       const rightX = cx + (70)*s;
 
@@ -501,20 +448,16 @@
       return a;
     }
 
-    // ✅ 手写 L：竖 + 底横
     buildLPath(cx, cy, s){
       const l = new Path2D();
-
       const topY = cy + (-92)*s;
       const baseY = cy + (92)*s;
-      const leftX = cx + (-55)*s;
-      const rightX = cx + (55)*s;
+      const leftX = cx + (-60)*s;
+      const rightX = cx + (60)*s;
 
-      // 竖
       l.moveTo(leftX, topY);
       l.lineTo(leftX, baseY);
 
-      // 底横
       l.moveTo(leftX, baseY);
       l.lineTo(rightX, baseY);
 
@@ -555,20 +498,14 @@
       const bw = (bbox.maxx - bbox.minx);
       const bh = (bbox.maxy - bbox.miny);
 
+      const t = this.tile.reveal.type;
+
       let boxRel = U_BOX_REL;
       let strokeFactor = U_STROKE_FACTOR;
 
-      const t = this.tile.reveal.type;
-      if(t === "P"){
-        boxRel = P_BOX_REL;
-        strokeFactor = P_STROKE_FACTOR;
-      }else if(t === "A"){
-        boxRel = A_BOX_REL;
-        strokeFactor = A_STROKE_FACTOR;
-      }else if(t === "L"){
-        boxRel = L_BOX_REL;
-        strokeFactor = L_STROKE_FACTOR;
-      }
+      if(t === "P"){ boxRel = P_BOX_REL; strokeFactor = P_STROKE_FACTOR; }
+      else if(t === "A"){ boxRel = A_BOX_REL; strokeFactor = A_STROKE_FACTOR; }
+      else if(t === "L"){ boxRel = L_BOX_REL; strokeFactor = L_STROKE_FACTOR; }
 
       const bx = bbox.minx + bw * boxRel.x;
       const by = bbox.miny + bh * boxRel.y;
@@ -579,7 +516,7 @@
       const cy = by + boxH * 0.52;
 
       const s = Math.min(boxW, boxH) / 140;
-      const strokeW = Math.max(10, Math.round(Math.min(boxW, boxH) * strokeFactor));
+      const strokeW = Math.max(12, Math.round(Math.min(boxW, boxH) * strokeFactor));
 
       const path = (t === "P") ? this.buildPPath(cx, cy, s)
                 : (t === "A") ? this.buildAPath(cx, cy, s)
@@ -602,10 +539,8 @@
       this.cv.width  = Math.round(r.width * s);
       this.cv.height = Math.round(r.height * s);
 
-      // 主画布：CSS 坐标系绘制
       this.ctx.setTransform(s,0,0,s,0,0);
 
-      // 离屏：device 像素
       this.whiteMaskCanvas.width  = this.cv.width;
       this.whiteMaskCanvas.height = this.cv.height;
 
@@ -618,7 +553,6 @@
       this.interCanvas.width  = this.cv.width;
       this.interCanvas.height = this.cv.height;
 
-      // correctPaint：也用 CSS 坐标
       this.correctPaintCtx.setTransform(1,0,0,1,0,0);
       this.correctPaintCtx.clearRect(0,0,this.correctPaintCanvas.width, this.correctPaintCanvas.height);
       this.correctPaintCtx.setTransform(s,0,0,s,0,0);
@@ -641,7 +575,6 @@
     punchLetterByPaintedArea(){
       if(!this.tile.reveal) return;
 
-      // intersection = correctPaint ∩ letterMask
       this.interCtx.setTransform(1,0,0,1,0,0);
       this.interCtx.clearRect(0,0,this.interCanvas.width, this.interCanvas.height);
 
@@ -651,7 +584,6 @@
       this.interCtx.globalCompositeOperation = "destination-in";
       this.interCtx.drawImage(this.letterMaskCanvas, 0, 0);
 
-      // 在涂层挖洞 -> 露出底图，形成字母
       this.ctx.save();
       this.ctx.setTransform(1,0,0,1,0,0);
       this.ctx.globalCompositeOperation = "destination-out";
@@ -667,9 +599,7 @@
 
     renderPalette(){
       this.paletteEl.innerHTML = "";
-      const colors = buildPaletteColorsForTile(this.tile);
-
-      colors.forEach(c=>{
+      PALETTE_COLORS.forEach(c=>{
         const b=document.createElement("button");
         b.type="button";
         b.className="swatch";
@@ -679,9 +609,6 @@
           this.currentColor = c;
           [...this.paletteEl.children].forEach(x=>x.classList.remove("selected"));
           b.classList.add("selected");
-
-          this.needPost = true;
-          this.scheduleFrame();
         });
 
         this.paletteEl.appendChild(b);
