@@ -29,8 +29,8 @@
       --grid-col-gap: 18px;
       --grid-row-gap: 36px;
 
-      /* ✅ 图和调色盘之间距离（稍微远一点） */
-      --stage-palette-gap: 18px;
+      /* ✅ 图和调色盘之间距离（再加一点，避免互相遮挡） */
+      --stage-palette-gap: 22px;
 
       /* 每张图的黑色外边框 */
       --frame: 4px;
@@ -82,6 +82,8 @@
       flex-direction:column;
       gap: var(--stage-palette-gap);
       min-width: 0;
+      /* ✅ 让调色盘的上沿不被任何东西“压住” */
+      padding-bottom: 6px;
     }
 
     .stage{
@@ -130,8 +132,10 @@
       align-items:center;
       gap:10px;
       width:100%;
-      overflow:hidden;
-      padding-bottom: 6px; /* ✅ 给手机一点余量，避免看起来被“压住” */
+      /* ✅ 关键：不要裁切调色盘（包括选中外圈） */
+      overflow:visible;
+      /* ✅ 上下都留一点，确保上沿/下沿不互相遮挡 */
+      padding: 8px 0 10px;
     }
 
     .palette{
@@ -193,7 +197,7 @@
       border-radius:0;
       -webkit-appearance:none;
       appearance:none;
-      width: 6.5ch;       /* ✅ 约等于 4 个字母 + 余量 */
+      width: 6.5ch;
       max-width: 120px;
     }
 
@@ -257,7 +261,8 @@
       </div>
 
       <div class="actions">
-        <button class="uiBtn" id="btnHint" type="button">获得线索</button>
+        <!-- ✅ 左：获得提示；右：提交答案 -->
+        <button class="uiBtn" id="btnHint" type="button">获得提示</button>
         <button class="uiBtn" id="btnSubmit" type="button">提交答案</button>
       </div>
 
@@ -313,7 +318,7 @@
 
   // ✅ 底部答案
   const ANSWER = "paul";
-  // ✅ 线索文本（你想改内容直接改这里）
+  // ✅ 提示文本
   const HINT_TEXT = "线索：四个图里被“挖出来”的字母，按顺序组成答案。";
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
@@ -332,6 +337,17 @@
   function setMsg(text, cls){
     msg.className = "msg" + (cls ? (" " + cls) : "");
     msg.textContent = text || "";
+  }
+
+  // ✅ 参照你之前“提交按钮反馈”的做法：临时改按钮文案，然后自动恢复
+  const SUBMIT_TEXT = "提交答案";
+  let submitTimer = 0;
+  function setSubmitText(tempText, ms){
+    clearTimeout(submitTimer);
+    btnSubmit.textContent = tempText;
+    if(ms && ms > 0){
+      submitTimer = setTimeout(()=>{ btnSubmit.textContent = SUBMIT_TEXT; }, ms);
+    }
   }
 
   function makeTileDOM(tile){
@@ -793,14 +809,21 @@
 
   btnSubmit.addEventListener("click", ()=>{
     const v = normalize4(ans.value);
+
+    // 参照你之前页面：反馈优先体现在按钮文案上
     if(v.length !== 4){
-      setMsg("请输入 4 个字母。", "bad");
+      setSubmitText("请输入 4 个字母", 900);
+      setMsg("", "");
       return;
     }
+
     if(v === ANSWER){
+      setSubmitText("正确。", 900);
       setMsg("正确。", "ok");
     }else{
-      setMsg("不正确，再试一次。", "bad");
+      // ✅ 不再弹 try again；直接按钮反馈
+      setSubmitText("不正确，再试一次", 900);
+      setMsg("", "");
     }
   });
 })();
