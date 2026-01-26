@@ -24,10 +24,26 @@
       --ring: 3px;
 
       --gap: 18px;
-      --tile-gap: 18px;
+
+      /* ✅ 分开控制：列间距 / 行间距（行间距更大 = “多一行空格”） */
+      --grid-col-gap: 18px;
+      --grid-row-gap: 36px;
+
+      /* ✅ 图和调色盘之间距离（稍微远一点） */
+      --stage-palette-gap: 18px;
 
       /* 每张图的黑色外边框 */
       --frame: 4px;
+
+      /* 按钮（沿用你之前 start UI） */
+      --fs-btn: 16px;
+      --fw-btn: 600;
+      --h-btn: 52px;
+      --w-btn: 240px;
+
+      --c-border:#000;
+      --c-ok:#0b6b2b;
+      --c-danger:#b00020;
     }
 
     *{ box-sizing:border-box; }
@@ -56,14 +72,15 @@
     .grid{
       display:grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--tile-gap);
+      column-gap: var(--grid-col-gap);
+      row-gap: var(--grid-row-gap);
       align-items:start;
     }
 
     .tile{
       display:flex;
       flex-direction:column;
-      gap: 12px;
+      gap: var(--stage-palette-gap);
       min-width: 0;
     }
 
@@ -75,8 +92,14 @@
       -webkit-user-select:none;
       touch-action:none;
       background:#fff;
-      border: var(--frame) solid #000;
+
+      /* ✅ 解决“load 时先出现四条黑线”：未 ready 前不画边框 */
+      border: var(--frame) solid transparent;
     }
+    .stage.ready{
+      border-color:#000;
+    }
+
     .stage img{ width:100%; display:block; }
 
     canvas.overlay{
@@ -108,6 +131,7 @@
       gap:10px;
       width:100%;
       overflow:hidden;
+      padding-bottom: 6px; /* ✅ 给手机一点余量，避免看起来被“压住” */
     }
 
     .palette{
@@ -134,32 +158,128 @@
     }
     .swatch.selected{ box-shadow: 0 0 0 var(--ring) #000; }
 
-    .hint{ display:none; }
+    /* ===== 底部答案区（沿用你之前 UI 结构感） ===== */
+    .answerBlock{
+      margin-top: 26px;
+      display:flex;
+      flex-direction:column;
+      gap: 18px;
+    }
+
+    .answerRow{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      flex-wrap:wrap;
+    }
+
+    .answerLabel{
+      font-size: var(--hint-fs);
+      line-height: var(--hint-lh);
+      font-weight:700;
+      margin:0;
+    }
+
+    .ansInput{
+      height: 44px;
+      line-height: 44px;
+      border:2px solid var(--c-border);
+      font-size: 18px;
+      font-weight:700;
+      font-family: inherit;
+      text-align:center;
+      padding:0 10px;
+      outline:none;
+      border-radius:0;
+      -webkit-appearance:none;
+      appearance:none;
+      width: 6.5ch;       /* ✅ 约等于 4 个字母 + 余量 */
+      max-width: 120px;
+    }
+
+    .actions{
+      display:flex;
+      gap: 18px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    button.uiBtn{
+      width:var(--w-btn);
+      height:var(--h-btn);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-btn);
+      font-weight:var(--fw-btn);
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+      font-family:inherit;
+      -webkit-tap-highlight-color:transparent;
+    }
+    button.uiBtn:hover{ background:#000; color:#fff; }
+    button.uiBtn:disabled{ opacity:.45; cursor:default; }
+    button.uiBtn:disabled:hover{ background:#fff; color:#000; }
+
+    .msg{
+      min-height: 1.2em;
+      font-weight:700;
+    }
+    .msg.ok{ color: var(--c-ok); }
+    .msg.bad{ color: var(--c-danger); }
+
+    .hintBox{
+      display:none;
+      border-left: 4px solid #000;
+      padding: 10px 12px;
+      background: #fff;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    .hintBox.show{ display:block; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <p class="title">请按照正确颜色涂抹每个图白色区域。</p>
+
     <div class="grid" id="grid"></div>
+
+    <!-- ✅ 页面最下方：输入 + 两按钮（同一套 UI） -->
+    <div class="answerBlock">
+      <div class="answerRow">
+        <div class="answerLabel">请输入隐藏的字母（不用区分大小写）：</div>
+        <input id="ans" class="ansInput" type="text" inputmode="latin" autocomplete="off" autocapitalize="none"
+               spellcheck="false" maxlength="4" />
+      </div>
+
+      <div class="actions">
+        <button class="uiBtn" id="btnHint" type="button">获得线索</button>
+        <button class="uiBtn" id="btnSubmit" type="button">提交答案</button>
+      </div>
+
+      <div class="hintBox" id="hintBox"></div>
+      <div class="msg" id="msg"></div>
+    </div>
   </div>
 
 <script>
 (() => {
   // =========================
   // ✅ 四张图统一调色盘（完全一致）
-  // 包含：4个正确答案颜色（已知3个，其中 t1/t3 同色）
-  // 外加：浅蓝、紫、淡粉、深蓝、灰褐
   // =========================
   const PALETTE_COLORS = [
-    "#2A5A5E", // correct (t1/t3)
+    "#2A5A5E", // correct (t1)
     "#C62622", // correct (t2)
     "#E2C164", // correct (t4)
     "#00E5FF", // 浅蓝
     "#7030A0", // 紫
     "#FF4FA0", // 淡粉
     "#0070C0", // 深蓝
-    "#AC968A"  // 中性灰褐
+    "#AC968A"  // ✅ 骷髅那张的“灰褐”
   ];
 
   // =========================
@@ -168,8 +288,8 @@
   const TILES = [
     { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
     { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
-    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#AC968A" },
-    { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" }, // ✅ 第四张正确色
+    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#AC968A" }, // ✅ 你现在要的
+    { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" },
   ];
 
   // =========================
@@ -184,13 +304,17 @@
   const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.22 };
   const A_STROKE_FACTOR = 0.18;
 
-
-// ✅ L：更小 + 往白区内收，避免压到黑线
-  const L_BOX_REL = { x: 0.61, y: 0.67, w: 0.1, h: 0.07 };
+  // ✅ L：你已调好的位置（保持不动）
+  const L_BOX_REL = { x: 0.61, y: 0.67, w: 0.10, h: 0.07 };
   const L_STROKE_FACTOR = 0.137;
 
   const WHITE_TH = 200;
   const BRUSH_RADIUS = 18;
+
+  // ✅ 底部答案
+  const ANSWER = "paul";
+  // ✅ 线索文本（你想改内容直接改这里）
+  const HINT_TEXT = "线索：四个图里被“挖出来”的字母，按顺序组成答案。";
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
   function sameHex(a,b){
@@ -198,6 +322,17 @@
   }
 
   const grid = document.getElementById("grid");
+
+  const ans = document.getElementById("ans");
+  const btnHint = document.getElementById("btnHint");
+  const btnSubmit = document.getElementById("btnSubmit");
+  const hintBox = document.getElementById("hintBox");
+  const msg = document.getElementById("msg");
+
+  function setMsg(text, cls){
+    msg.className = "msg" + (cls ? (" " + cls) : "");
+    msg.textContent = text || "";
+  }
 
   function makeTileDOM(tile){
     const wrap = document.createElement("div");
@@ -213,7 +348,6 @@
 
       <div class="paletteWrap">
         <div class="palette"></div>
-        <div class="hint"></div>
       </div>
     `;
     return wrap;
@@ -224,6 +358,7 @@
       this.tile = tile;
       this.root = root;
 
+      this.stage = root.querySelector(".stage");
       this.img = root.querySelector("img.bg");
       this.cv  = root.querySelector("canvas.overlay");
       this.ctx = this.cv.getContext("2d", { alpha:true });
@@ -618,6 +753,7 @@
     ready(){
       this.resizeAll();
       this.loading.classList.add("hide");
+      this.stage.classList.add("ready"); // ✅ 图片加载完成后再显示边框
     }
   }
 
@@ -632,6 +768,40 @@
     tiles.forEach(t=>{
       if(t.bgOK && t.maskOK) t.resizeAll();
     });
+  });
+
+  // ===== 底部交互 =====
+  btnHint.addEventListener("click", ()=>{
+    hintBox.textContent = HINT_TEXT;
+    hintBox.classList.toggle("show");
+    setMsg("", "");
+  });
+
+  function normalize4(s){
+    return (s || "")
+      .toString()
+      .trim()
+      .replace(/\s+/g, "")
+      .slice(0, 4)
+      .toLowerCase();
+  }
+
+  ans.addEventListener("input", ()=>{
+    // 只保留字母
+    ans.value = ans.value.replace(/[^a-zA-Z]/g, "").slice(0,4);
+  });
+
+  btnSubmit.addEventListener("click", ()=>{
+    const v = normalize4(ans.value);
+    if(v.length !== 4){
+      setMsg("请输入 4 个字母。", "bad");
+      return;
+    }
+    if(v === ANSWER){
+      setMsg("正确。", "ok");
+    }else{
+      setMsg("不正确，再试一次。", "bad");
+    }
   });
 })();
 </script>
