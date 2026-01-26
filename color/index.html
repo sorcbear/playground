@@ -142,20 +142,21 @@
 <body>
   <div class="wrap">
     <p class="title">请按照正确颜色涂抹每个图白色区域。</p>
-
     <div class="grid" id="grid"></div>
   </div>
 
 <script>
 (() => {
   // =========================
-  // 全局调色板（每格独立选中）
+  // 调色板：把原来的黑色 #000000 改成 #2A5A5E
   // =========================
-  const CORRECT_COLOR = "#AC968A";
+  const COLOR_VIOLIN_CORRECT = "#2A5A5E";
+  const COLOR_SKULL_CORRECT  = "#AC968A";
+
   const COLORS = [
-    "#000000",
+    COLOR_VIOLIN_CORRECT,   // ✅ 取代黑色
     "#00e5ff",
-    CORRECT_COLOR,
+    COLOR_SKULL_CORRECT,
     "#ffc000",
     "#00b050",
     "#7030a0",
@@ -165,27 +166,40 @@
 
   // =========================
   // 4 个图的配置
-  // - 第1个：violin.jpg + violin_mask.png
-  // - 第3个：骷髅图 bw.jpg + skull_bw.png（带 U reveal）
+  // - 第1个：violin.jpg + violin_mask.png（正确颜色 #2A5A5E 显示 P）
+  // - 第3个：骷髅 bw.jpg + skull_bw.png（正确颜色 #AC968A 显示 U）
   // =========================
   const TILES = [
-    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:null },
-    { key:"t2", bg:"img2_bw.jpg", mask:"img2_mask.png", reveal:null },
-    { key:"t3", bg:"bw.jpg",      mask:"skull_bw.png",  reveal:{ type:"U" } },
-    { key:"t4", bg:"img4_bw.jpg", mask:"img4_mask.png", reveal:null },
+    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", correctColor: COLOR_VIOLIN_CORRECT, reveal:{ type:"P" } },
+    { key:"t2", bg:"img2_bw.jpg", mask:"img2_mask.png", correctColor: null, reveal:null },
+    { key:"t3", bg:"bw.jpg",      mask:"skull_bw.png",  correctColor: COLOR_SKULL_CORRECT,  reveal:{ type:"U" } },
+    { key:"t4", bg:"img4_bw.jpg", mask:"img4_mask.png", correctColor: null, reveal:null },
   ];
 
-  // U 的定位参数（bbox 相对定位）
-  const U_BOX_REL = { x: 0.23, y: 0.08, w: 0.20, h: 0.30 };
-  const U_STROKE_FACTOR = 0.22;
+  // 白色阈值：mask 图片里 “接近白色” 的区域才允许涂
   const WHITE_TH = 200;
 
   // 画笔
   const BRUSH_RADIUS = 18;
 
+  // =========================
+  // Reveal 字母定位参数（都基于 mask 白区 bbox 的相对位置）
+  // =========================
+
+  // U：沿用你之前的 bbox 相对定位
+  const U_BOX_REL = { x: 0.23, y: 0.08, w: 0.20, h: 0.30 };
+  const U_STROKE_FACTOR = 0.22;
+
+  // P：你图里红框在右下角；先给一个默认值（不对你再微调这四个数）
+  // （x,y,w,h）都是相对于“mask 白区 bbox”的比例
+  const P_BOX_REL = { x: 0.72, y: 0.78, w: 0.22, h: 0.18 };
+  const P_STROKE_FACTOR = 0.22;
+
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
-  function isCorrectColor(c){
-    return !!c && c.trim().toLowerCase() === CORRECT_COLOR.toLowerCase();
+  function normHex(c){ return (c || "").trim().toLowerCase(); }
+  function isCorrectForTile(tile, c){
+    if(!tile.correctColor) return false;
+    return normHex(c) === normHex(tile.correctColor);
   }
 
   // =========================
@@ -249,17 +263,19 @@
       this.whiteMaskCanvas = document.createElement("canvas");
       this.whiteMaskCtx = this.whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
 
-      // 正确涂抹记录（仅 reveal 用）
+      // 记录“正确颜色涂过的区域”（用于随涂随显）
       this.correctPaintCanvas = document.createElement("canvas");
       this.correctPaintCtx = this.correctPaintCanvas.getContext("2d");
 
-      // reveal 用：U mask / intersection
-      this.uMaskCanvas = document.createElement("canvas");
-      this.uMaskCtx = this.uMaskCanvas.getContext("2d");
+      // letterMask：字母形状（U 或 P）
+      this.letterMaskCanvas = document.createElement("canvas");
+      this.letterMaskCtx = this.letterMaskCanvas.getContext("2d");
+
+      // intersection = correctPaint ∩ letterMask
       this.interCanvas = document.createElement("canvas");
       this.interCtx = this.interCanvas.getContext("2d");
 
-      this.skullBBox = null;
+      this.whiteBBox = null; // 白区 bbox（device px）
 
       this.bind();
       this.renderPalette();
@@ -358,8 +374,8 @@
       this.ctx.fill();
       this.ctx.restore();
 
-      // 正确色记录
-      if(this.tile.reveal && isCorrectColor(this.currentColor)){
+      // 正确色记录（仅有 reveal 的格子才需要）
+      if(this.tile.reveal && isCorrectForTile(this.tile, this.currentColor)){
         this.correctPaintCtx.save();
         this.correctPaintCtx.globalCompositeOperation = "source-over";
         this.correctPaintCtx.fillStyle = "white";
@@ -411,6 +427,7 @@
       };
     }
 
+    // ===== 字母路径（用 stroke 画粗线，和 U 一样的风格）=====
     buildUPath(cx, cy, s){
       const u = new Path2D();
       u.moveTo(cx + (-55)*s, cy + (-65)*s);
@@ -418,6 +435,27 @@
       u.quadraticCurveTo(cx + (0)*s,   cy + (70)*s,  cx + (28)*s,  cy + (48)*s);
       u.quadraticCurveTo(cx + (58)*s,  cy + (15)*s,  cx + (55)*s,  cy + (-65)*s);
       return u;
+    }
+
+    buildPPath(cx, cy, s){
+      // 用“竖杆 + 上半圆肚”的粗线 P
+      // 以 (cx,cy) 为中心基准，尺寸与 U 类似（140 标尺）
+      const p = new Path2D();
+      const x0 = cx + (-50)*s;
+      const yTop = cy + (-65)*s;
+      const yMid = cy + (-5)*s;
+      const xRight = cx + (35)*s;
+
+      // 竖杆
+      p.moveTo(x0, yTop);
+      p.lineTo(x0, cy + (70)*s);
+
+      // 上半部分“肚”
+      p.moveTo(x0, yTop);
+      p.quadraticCurveTo(cx + (10)*s, yTop, xRight, cy + (-40)*s);
+      p.quadraticCurveTo(cx + (10)*s, cy + (-5)*s, x0, yMid);
+
+      return p;
     }
 
     rebuildWhiteMask(){
@@ -436,50 +474,61 @@
         const lum=(r+g+b)/3;
         data[i+3] = (lum >= WHITE_TH) ? 255 : 0;
       }
-
       this.whiteMaskCtx.putImageData(imgData, 0, 0);
 
-      // 仅 reveal 需要 bbox
-      if(this.tile.reveal){
-        this.skullBBox = this.computeBBoxFromAlpha(imgData, w, h);
-      }else{
-        this.skullBBox = null;
+      // 计算白区 bbox（给 P/U 定位）
+      this.whiteBBox = this.computeBBoxFromAlpha(imgData, w, h);
+      if(!this.whiteBBox){
+        this.whiteBBox = { minx:0, miny:0, maxx:w-1, maxy:h-1 };
       }
     }
 
-    rebuildUMask(){
-      const w = this.uMaskCanvas.width;
-      const h = this.uMaskCanvas.height;
+    rebuildLetterMask(){
+      const w = this.letterMaskCanvas.width;
+      const h = this.letterMaskCanvas.height;
 
-      this.uMaskCtx.setTransform(1,0,0,1,0,0);
-      this.uMaskCtx.clearRect(0,0,w,h);
+      this.letterMaskCtx.setTransform(1,0,0,1,0,0);
+      this.letterMaskCtx.clearRect(0,0,w,h);
 
       if(!this.tile.reveal) return;
 
-      const bbox = this.skullBBox || { minx:0, miny:0, maxx:w-1, maxy:h-1 };
+      const bbox = this.whiteBBox || { minx:0, miny:0, maxx:w-1, maxy:h-1 };
       const bw = (bbox.maxx - bbox.minx);
       const bh = (bbox.maxy - bbox.miny);
 
-      const bx = bbox.minx + bw * U_BOX_REL.x;
-      const by = bbox.miny + bh * U_BOX_REL.y;
-      const boxW = bw * U_BOX_REL.w;
-      const boxH = bh * U_BOX_REL.h;
+      let boxRel, strokeFactor, buildPath;
+      if(this.tile.reveal.type === "U"){
+        boxRel = U_BOX_REL;
+        strokeFactor = U_STROKE_FACTOR;
+        buildPath = (cx,cy,s)=>this.buildUPath(cx,cy,s);
+      }else if(this.tile.reveal.type === "P"){
+        boxRel = P_BOX_REL;
+        strokeFactor = P_STROKE_FACTOR;
+        buildPath = (cx,cy,s)=>this.buildPPath(cx,cy,s);
+      }else{
+        return;
+      }
+
+      const bx = bbox.minx + bw * boxRel.x;
+      const by = bbox.miny + bh * boxRel.y;
+      const boxW = bw * boxRel.w;
+      const boxH = bh * boxRel.h;
 
       const cx = bx + boxW * 0.50;
-      const cy = by + boxH * 0.58;
+      const cy = by + boxH * 0.55;
 
       const s = Math.min(boxW, boxH) / 140;
-      const strokeW = Math.max(10, Math.round(Math.min(boxW, boxH) * U_STROKE_FACTOR));
+      const strokeW = Math.max(10, Math.round(Math.min(boxW, boxH) * strokeFactor));
 
-      const path = this.buildUPath(cx, cy, s);
+      const path = buildPath(cx, cy, s);
 
-      this.uMaskCtx.save();
-      this.uMaskCtx.strokeStyle = "white";
-      this.uMaskCtx.lineWidth = strokeW;
-      this.uMaskCtx.lineCap = "round";
-      this.uMaskCtx.lineJoin = "round";
-      this.uMaskCtx.stroke(path);
-      this.uMaskCtx.restore();
+      this.letterMaskCtx.save();
+      this.letterMaskCtx.strokeStyle = "white";
+      this.letterMaskCtx.lineWidth = strokeW;
+      this.letterMaskCtx.lineCap = "round";
+      this.letterMaskCtx.lineJoin = "round";
+      this.letterMaskCtx.stroke(path);
+      this.letterMaskCtx.restore();
     }
 
     resizeAll(){
@@ -499,8 +548,8 @@
       this.correctPaintCanvas.width  = this.cv.width;
       this.correctPaintCanvas.height = this.cv.height;
 
-      this.uMaskCanvas.width  = this.cv.width;
-      this.uMaskCanvas.height = this.cv.height;
+      this.letterMaskCanvas.width  = this.cv.width;
+      this.letterMaskCanvas.height = this.cv.height;
 
       this.interCanvas.width  = this.cv.width;
       this.interCanvas.height = this.cv.height;
@@ -511,13 +560,14 @@
       this.correctPaintCtx.setTransform(s,0,0,s,0,0);
 
       this.rebuildWhiteMask();
-      this.rebuildUMask();
+      this.rebuildLetterMask();
 
       this.needPost = true;
       this.scheduleFrame();
     }
 
     applyWhiteMask(){
+      // 只保留 mask 的白区（黑区完全不可涂）
       this.ctx.save();
       this.ctx.setTransform(1,0,0,1,0,0);
       this.ctx.globalCompositeOperation = "destination-in";
@@ -525,10 +575,10 @@
       this.ctx.restore();
     }
 
-    punchUByPaintedArea(){
+    punchLetterByPaintedArea(){
       if(!this.tile.reveal) return;
 
-      // intersection = correctPaint ∩ uMask
+      // intersection = correctPaint ∩ letterMask
       this.interCtx.setTransform(1,0,0,1,0,0);
       this.interCtx.clearRect(0,0,this.interCanvas.width, this.interCanvas.height);
 
@@ -536,9 +586,9 @@
       this.interCtx.drawImage(this.correctPaintCanvas, 0, 0);
 
       this.interCtx.globalCompositeOperation = "destination-in";
-      this.interCtx.drawImage(this.uMaskCanvas, 0, 0);
+      this.interCtx.drawImage(this.letterMaskCanvas, 0, 0);
 
-      // 在涂层挖洞 -> 露出底图形成 U
+      // 在涂层挖洞 -> 露出底图形成字母
       this.ctx.save();
       this.ctx.setTransform(1,0,0,1,0,0);
       this.ctx.globalCompositeOperation = "destination-out";
@@ -548,7 +598,7 @@
 
     postProcess(){
       this.applyWhiteMask();
-      this.punchUByPaintedArea();
+      this.punchLetterByPaintedArea();
       this.needPost = false;
     }
 
@@ -565,7 +615,8 @@
           [...this.paletteEl.children].forEach(x=>x.classList.remove("selected"));
           b.classList.add("selected");
 
-          this.hintEl.innerHTML = (this.tile.reveal && isCorrectColor(this.currentColor))
+          const ok = this.tile.reveal && isCorrectForTile(this.tile, this.currentColor);
+          this.hintEl.innerHTML = ok
             ? '已选中<strong>正确颜色</strong>：涂抹到的地方将逐渐显示隐藏内容。'
             : '已选中颜色：可以涂抹，但<strong>只有正确颜色</strong>才会显示隐藏内容。';
 
