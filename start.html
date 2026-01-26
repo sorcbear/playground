@@ -26,10 +26,7 @@
       --c-danger:#b00020;
       --c-muted:#888;
 
-      /* 标题单行高度（用于固定相对位置） */
       --hint-line-h: calc(var(--fs-hint) * var(--lh-hint));
-
-      /* 提示文字与倒计时间距（单位：标题行） */
       --hint-gap-lines: 3;
       --hint-gap: calc(var(--hint-line-h) * var(--hint-gap-lines));
     }
@@ -138,7 +135,7 @@
     }
 
     /* =========================
-       ✅ 纯色闪动覆盖层 + 红底震动（无白色、无渐变）
+       ✅ 爆炸覆盖层：纯黑底 + 纯色扩散（无渐变、无白色、无文字）
        ========================= */
 
     #fx{
@@ -151,11 +148,11 @@
       opacity:0;
     }
 
-    /* ✅ 最后阶段：红色背景（不是黑色） */
-    #finalRed{
+    /* 最后仍然用黑底（你说“始终背景是纯黑的”） */
+    #black{
       position:fixed;
       inset:0;
-      background:#7a0000; /* 深红 */
+      background:#000;
       opacity:0;
       pointer-events:none;
       z-index:10000;
@@ -191,7 +188,7 @@
   </div>
 
   <canvas id="fx"></canvas>
-  <div id="finalRed"></div>
+  <div id="black"></div>
 
 <script>
 (() => {
@@ -201,15 +198,14 @@
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
 
-  /* ✅ 整体音量更大（你要再大就调这里）
-     注意：太大可能在手机扬声器上失真；已加压缩器保护。 */
+  /* ✅ 你要整体更大声：调这里（已压缩保护） */
   const MASTER_VOL = 2.15;
 
-  /* ✅ 0 到咔嚓的停顿：2 秒 */
-  const PAUSE_BEFORE_LATCH_MS = 2000;
+  /* ✅ 0 到咔嚓：改成 1 秒 */
+  const PAUSE_BEFORE_LATCH_MS = 1000;
 
-  /* ✅ 咔嚓到爆炸间隔 */
-  const LATCH_TO_BOOM_MS = 260;
+  /* ✅ 咔嚓到爆炸间隔（留出可辨识空间） */
+  const LATCH_TO_BOOM_MS = 320;
 
   const KEYS = [
     {c:"green",n:"so",m:55},{c:"green",n:"la",m:57},{c:"green",n:"si",m:59},
@@ -237,7 +233,7 @@
   const startBtn = document.getElementById("startBtn");
 
   const fx = document.getElementById("fx");
-  const finalRed = document.getElementById("finalRed");
+  const black = document.getElementById("black");
   const fxCtx = fx.getContext("2d", { alpha: true });
 
   let audioCtx = null;
@@ -287,7 +283,6 @@
     o.type = "sine";
     o.frequency.setValueAtTime(freq, t);
 
-    /* ✅ 倒计时音乐更大声 */
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(0.78, t + 0.015);
     g.gain.exponentialRampToValueAtTime(0.0001, t + d);
@@ -313,78 +308,67 @@
   }
 
   /* =========================
-     ✅ 咔嚓：更长、更清晰的机关启动声
-    （两段“卡扣” + 一点金属摩擦）
+     ✅ 咔嚓：更长、更清晰（可辨识）
      ========================= */
   function playLatch(){
     if(!audioEnabled || !audioCtx) return;
     const ctx = audioCtx;
     const t0 = ctx.currentTime;
 
-    // 段1：机械卡扣（方波短音+下滑）
+    // “卡扣1”
     const o1 = ctx.createOscillator();
     const g1 = ctx.createGain();
     o1.type = "square";
-    o1.frequency.setValueAtTime(260, t0);
-    o1.frequency.exponentialRampToValueAtTime(150, t0 + 0.12);
+    o1.frequency.setValueAtTime(240, t0);
+    o1.frequency.exponentialRampToValueAtTime(155, t0 + 0.18);
     g1.gain.setValueAtTime(0.0001, t0);
-    g1.gain.linearRampToValueAtTime(0.75, t0 + 0.01);
-    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
-    o1.connect(g1);
-    g1.connect(masterGain);
-    o1.start(t0);
-    o1.stop(t0 + 0.18);
+    g1.gain.linearRampToValueAtTime(0.72, t0 + 0.012);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.26);
+    o1.connect(g1); g1.connect(masterGain);
+    o1.start(t0); o1.stop(t0 + 0.28);
 
-    // 段2：第二次“咔”稍晚一点（更像机关两步到位）
-    const t1 = t0 + 0.18;
+    // “卡扣2”更明显一点
+    const t1 = t0 + 0.22;
     const o2 = ctx.createOscillator();
     const g2 = ctx.createGain();
     o2.type = "square";
     o2.frequency.setValueAtTime(210, t1);
-    o2.frequency.exponentialRampToValueAtTime(120, t1 + 0.10);
+    o2.frequency.exponentialRampToValueAtTime(125, t1 + 0.16);
     g2.gain.setValueAtTime(0.0001, t1);
-    g2.gain.linearRampToValueAtTime(0.68, t1 + 0.01);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.14);
-    o2.connect(g2);
-    g2.connect(masterGain);
-    o2.start(t1);
-    o2.stop(t1 + 0.16);
+    g2.gain.linearRampToValueAtTime(0.66, t1 + 0.012);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.23);
+    o2.connect(g2); g2.connect(masterGain);
+    o2.start(t1); o2.stop(t1 + 0.26);
 
-    // 摩擦噪声（轻微、持续一点，让“启动”更可感知）
-    const dur = 0.42;
+    // 轻微“金属摩擦”噪声，持续更久一点让你听清楚
+    const dur = 0.62;
     const bufferSize = Math.floor(ctx.sampleRate * dur);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for(let i=0;i<bufferSize;i++){
       const x = i / bufferSize;
       const raw = (Math.random()*2-1);
-      // 轻微抖动+衰减，避免刺耳
-      data[i] = raw * (0.45*(1-x));
+      data[i] = raw * (0.34*(1-x));
     }
     const src = ctx.createBufferSource();
     src.buffer = buffer;
 
     const hp = ctx.createBiquadFilter();
     hp.type = "highpass";
-    hp.frequency.setValueAtTime(900, t0);
+    hp.frequency.setValueAtTime(800, t0);
 
     const bp = ctx.createBiquadFilter();
     bp.type = "bandpass";
-    bp.frequency.setValueAtTime(1900, t0);
-    bp.Q.setValueAtTime(6, t0);
+    bp.frequency.setValueAtTime(1700, t0);
+    bp.Q.setValueAtTime(5, t0);
 
     const ng = ctx.createGain();
     ng.gain.setValueAtTime(0.0001, t0);
-    ng.gain.linearRampToValueAtTime(0.55, t0 + 0.03);
+    ng.gain.linearRampToValueAtTime(0.46, t0 + 0.03);
     ng.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
 
-    src.connect(hp);
-    hp.connect(bp);
-    bp.connect(ng);
-    ng.connect(masterGain);
-
-    src.start(t0);
-    src.stop(t0 + dur);
+    src.connect(hp); hp.connect(bp); bp.connect(ng); ng.connect(masterGain);
+    src.start(t0); src.stop(t0 + dur);
   }
 
   /* =========================
@@ -401,11 +385,9 @@
 
     for(let i=0;i<bufferSize;i++){
       const x = i / bufferSize;
-
       const noise = (Math.random()*2-1);
       const thump = Math.sin(2*Math.PI*52*x) * (1-x);
       const punch = (x < 0.14) ? 1.35 : 1.0;
-
       data[i] = (noise*0.95 + thump*0.50) * (1 - x) * punch;
     }
 
@@ -421,17 +403,15 @@
     gain.gain.setValueAtTime(1.0, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
 
-    src.connect(lp);
-    lp.connect(gain);
-    gain.connect(masterGain);
-
+    src.connect(lp); lp.connect(gain); gain.connect(masterGain);
     src.start();
   }
 
   /* =========================
-     ✅ 纯色闪动（无渐变、无白色）
-     以“纯色全屏”快速切换：黑 → 深红 → 红 → 橘 → 红 → 深红 ...
+     ✅ 纯黑底 + 纯色扩散（中心向外）
+     闪烁顺序：橘红 -> 深橘红 -> 红 -> 黑（循环/加速）
      ========================= */
+
   function resizeFx(){
     const dpr = Math.max(1, window.devicePixelRatio || 1);
     fx.width = Math.floor(innerWidth * dpr);
@@ -452,37 +432,55 @@
     }, 560);
   }
 
-  // 纯色调色板（无白色）
-  const COLORS = [
+  const FLASH_COLORS = [
+    "#ff5a00", // 橘红
+    "#d43b00", // 深橘红
+    "#b00000", // 红
     "#000000", // 黑
-    "#2a0000", // 极深红
-    "#6b0000", // 深红
-    "#b00000", // 红
-    "#ff6a00", // 橘
-    "#b00000", // 红
-    "#6b0000", // 深红
-    "#2a0000", // 极深红
   ];
 
-  function fillSolid(color){
-    const w = innerWidth, h = innerHeight;
-    fxCtx.fillStyle = color;
-    fxCtx.fillRect(0,0,w,h);
+  function fillBlack(){
+    fxCtx.fillStyle = "#000";
+    fxCtx.fillRect(0,0,innerWidth,innerHeight);
   }
 
-  function runSolidFlashFx(onDone){
-    fx.style.opacity = "1";
-    finalRed.style.opacity = "0";
+  // ✅ 纯色“圆形扩散”：用圆形 clip 区域填充纯色，背景永远是黑
+  function drawRadialSolid(color, radiusPx){
+    const w = innerWidth, h = innerHeight;
+    const cx = w/2, cy = h/2;
 
-    // ✅ 第一帧就是黑色，避免出现白底
-    fxCtx.clearRect(0,0,innerWidth,innerHeight);
-    fillSolid("#000000");
+    // 背景始终黑
+    fxCtx.fillStyle = "#000";
+    fxCtx.fillRect(0,0,w,h);
+
+    fxCtx.save();
+    fxCtx.beginPath();
+    fxCtx.arc(cx, cy, radiusPx, 0, Math.PI*2);
+    fxCtx.clip();
+
+    fxCtx.fillStyle = color;
+    fxCtx.fillRect(0,0,w,h);
+    fxCtx.restore();
+  }
+
+  function runSolidRadialFlashFx(onDone){
+    fx.style.opacity = "1";
+    black.style.opacity = "0";
+
+    // ✅ 爆炸开始：立刻隐藏所有文字
+    centerStack.style.display = "none";
+
+    // 第一帧纯黑，避免白色
+    fillBlack();
 
     const t0 = performance.now();
 
-    const phaseFlash = 850;   // 闪动阶段
-    const phaseToRed = 220;   // 淡入最终红底
-    const phaseHold  = 700;   // 红底停留 + 震动
+    const phaseFlash = 980;   // 扩散闪烁阶段
+    const phaseFade  = 240;   // 收尾（回到纯黑）
+    const phaseHold  = 520;   // 纯黑停留 + 震动
+
+    const w = innerWidth, h = innerHeight;
+    const maxR = Math.hypot(w/2, h/2);
 
     let shookA = false;
     let shookB = false;
@@ -491,18 +489,21 @@
       const dt = now - t0;
 
       if(dt <= phaseFlash){
-        // 纯色快速切换（频率与 dt 相关）
         const p = dt / phaseFlash;
 
-        // 随进度增加闪动频率：早期慢一点，后期更密
-        const baseHz = 7;
-        const addHz  = 18 * p;
+        // 半径从中心扩到全屏
+        const r = maxR * Math.min(1, p*1.08);
+
+        // 闪烁频率：随进度加快
+        const baseHz = 5;
+        const addHz  = 20 * p;
         const hz = baseHz + addHz;
 
-        const idx = Math.floor(dt * hz / 1000) % COLORS.length;
-        fillSolid(COLORS[idx]);
+        const idx = Math.floor(dt * hz / 1000) % FLASH_COLORS.length;
+        const col = FLASH_COLORS[idx];
 
-        // 爆炸冲击：早期抖一次
+        drawRadialSolid(col, r);
+
         if(!shookA && dt > 40){
           shookA = true;
           doShakeOnce();
@@ -512,17 +513,15 @@
         return;
       }
 
-      if(dt <= phaseFlash + phaseToRed){
-        const p = (dt - phaseFlash) / phaseToRed;
-        fx.style.opacity = String(1 - 0.9*p);
-        finalRed.style.opacity = String(p);
+      if(dt <= phaseFlash + phaseFade){
+        // 收尾：回到纯黑
+        fillBlack();
         requestAnimationFrame(tick);
         return;
       }
 
-      if(dt <= phaseFlash + phaseToRed + phaseHold){
-        // ✅ 最终阶段：始终红色背景（不是黑色）
-        finalRed.style.opacity = "1";
+      if(dt <= phaseFlash + phaseFade + phaseHold){
+        black.style.opacity = "1";
         if(!shookB){
           shookB = true;
           doShakeOnce();
@@ -532,7 +531,7 @@
       }
 
       fx.style.opacity = "0";
-      finalRed.style.opacity = "1";
+      black.style.opacity = "1";
       if(typeof onDone === "function") onDone();
     }
 
@@ -543,14 +542,14 @@
     if(exploded) return;
     exploded = true;
 
-    // ✅ 倒计时到 0 之后：先停 2 秒
+    // 0 秒之后停 1 秒，再咔嚓
     setTimeout(() => {
       playLatch();
 
-      // ✅ 再停一小段，让咔嚓更清楚
+      // 再等一下，让咔嚓听清楚
       setTimeout(() => {
         playExplosion();
-        runSolidFlashFx(() => {
+        runSolidRadialFlashFx(() => {
           setTimeout(() => {
             location.href = NEXT_URL;
           }, 140);
@@ -573,7 +572,6 @@
       }
 
       if(left <= 0){
-        // ✅ 到 0：停 2 秒 -> 咔嚓 -> 爆炸（同时纯色闪动）-> 红底震动 -> 跳转
         latchThenExplodeAndGo();
         return;
       }
@@ -594,7 +592,7 @@
     exploded = false;
 
     fx.style.opacity = "0";
-    finalRed.style.opacity = "0";
+    black.style.opacity = "0";
 
     clearTimers();
 
