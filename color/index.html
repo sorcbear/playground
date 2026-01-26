@@ -168,7 +168,7 @@
   const TILES = [
     { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
     { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
-    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#2A5A5E" },
+    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#AC968A" },
     { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" }, // ✅ 第四张正确色
   ];
 
@@ -184,10 +184,10 @@
   const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.22 };
   const A_STROKE_FACTOR = 0.18;
 
-  // ✅ L：移动到你图2红框位置（内圈右侧白区）
-  // 如仍需微调，只改这里四个数
-  const L_BOX_REL = { x: 0.66, y: 0.58, w: 0.20, h: 0.16 };
-  const L_STROKE_FACTOR = 0.26;
+
+// ✅ L：更小 + 往白区内收，避免压到黑线
+  const L_BOX_REL = { x: 0.46, y: 0.765, w: 0.145, h: 0.095 };
+  const L_STROKE_FACTOR = 0.17;
 
   const WHITE_TH = 200;
   const BRUSH_RADIUS = 18;
