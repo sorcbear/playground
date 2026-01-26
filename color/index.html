@@ -157,11 +157,10 @@
   const BRUSH_RADIUS = 18;
 
   const BG_URL = "bw.jpg";
-  const SKULL_URL = "skull_bw.png";      // 黑底白骷髅：白色=可涂区域来源
+  const SKULL_URL = "skull_bw.png";
 
   const CORRECT_COLOR = "#AC968A";
 
-  // 8 色（含正确色）
   const COLORS = [
     "#000000",
     "#00e5ff",
@@ -173,14 +172,9 @@
     "#444444"
   ];
 
-  // ===== u 的红框区域（归一化坐标，按图片比例）=====
-  // 你要 u “就在红框范围内”，只需要调这四个值
-  // x/y：左上角；w/h：宽高（0~1）
-  const U_BOX = { x: 0.29, y: 0.18, w: 0.17, h: 0.24 }; // 先给一个接近你截图的位置
-
-  // u 粗细（相对 box 尺寸）
-  const U_STROKE_FACTOR = 0.22; // 越小越细，越大越粗
-  // =====================
+  // 你要的红框区域（归一化）
+  const U_BOX = { x: 0.29, y: 0.18, w: 0.17, h: 0.24 };
+  const U_STROKE_FACTOR = 0.22;
 
   const img = document.getElementById("bg");
   const cv = document.getElementById("paint");
@@ -199,28 +193,22 @@
     return !!currentColor && currentColor.trim().toLowerCase() === CORRECT_COLOR.toLowerCase();
   }
 
-  // ===== 原始 skull 图（不透明），我们会转成“白区 alpha 蒙版”=====
   const skullImg = new Image();
   skullImg.decoding = "async";
   skullImg.src = SKULL_URL;
 
-  // 白区蒙版：白色区域 alpha=255；黑色区域 alpha=0
   const whiteMaskCanvas = document.createElement("canvas");
   const whiteMaskCtx = whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
 
-  // uMask：仅 u 形状区域为 alpha=255
   const uMaskCanvas = document.createElement("canvas");
   const uMaskCtx = uMaskCanvas.getContext("2d");
 
-  // 记录“正确颜色涂过的区域”（关键：实现“随涂随显”）
   const correctPaintCanvas = document.createElement("canvas");
   const correctPaintCtx = correctPaintCanvas.getContext("2d");
 
-  // 交集画布：intersection = correctPaint ∩ uMask
   const interCanvas = document.createElement("canvas");
   const interCtx = interCanvas.getContext("2d");
 
-  // ===== Path2D：u（用 stroke 成字形）=====
   function buildUPath(cx, cy, s){
     const u = new Path2D();
     u.moveTo(cx + (-55)*s, cy + (-65)*s);
@@ -241,14 +229,12 @@
     const imgData = whiteMaskCtx.getImageData(0,0,w,h);
     const data = imgData.data;
 
-    const TH = 200; // 白色阈值
-
+    const TH = 200;
     for(let i=0;i<data.length;i+=4){
       const r=data[i], g=data[i+1], b=data[i+2];
       const lum=(r+g+b)/3;
-      data[i+3] = (lum >= TH) ? 255 : 0; // 只用 alpha
+      data[i+3] = (lum >= TH) ? 255 : 0;
     }
-
     whiteMaskCtx.putImageData(imgData, 0, 0);
   }
 
@@ -259,7 +245,6 @@
     uMaskCtx.setTransform(1,0,0,1,0,0);
     uMaskCtx.clearRect(0,0,w,h);
 
-    // 把 u 放在 U_BOX 内
     const bx = w * U_BOX.x;
     const by = h * U_BOX.y;
     const bw = w * U_BOX.w;
@@ -268,7 +253,7 @@
     const cx = bx + bw * 0.50;
     const cy = by + bh * 0.58;
 
-    const s = Math.min(bw, bh) / 140; // 控制形状尺寸（你要更小就把 140 改大）
+    const s = Math.min(bw, bh) / 140;
     const strokeW = Math.max(10, Math.round(Math.min(bw, bh) * U_STROKE_FACTOR));
 
     const path = buildUPath(cx, cy, s);
@@ -289,10 +274,9 @@
     cv.width  = Math.round(r.width * s);
     cv.height = Math.round(r.height * s);
 
-    // 主画布用 CSS 像素坐标（你的原逻辑）
+    // 主画布：CSS 像素坐标绘制
     ctx.setTransform(s,0,0,s,0,0);
 
-    // 同步所有离屏画布尺寸
     whiteMaskCanvas.width = cv.width;
     whiteMaskCanvas.height = cv.height;
 
@@ -305,17 +289,19 @@
     interCanvas.width = cv.width;
     interCanvas.height = cv.height;
 
-    // 清空“正确涂抹记录”（resize 会重置）
+    // ========= 关键修复：correctPaintCtx 也必须用同样的 transform =========
+    // 清空要在 device 像素下清
     correctPaintCtx.setTransform(1,0,0,1,0,0);
     correctPaintCtx.clearRect(0,0,correctPaintCanvas.width, correctPaintCanvas.height);
+    // 绘制时也用 CSS 像素坐标
+    correctPaintCtx.setTransform(s,0,0,s,0,0);
+    // ===================================================================
 
     rebuildWhiteMask();
     rebuildUMask();
   }
 
-  // ===== 每次涂抹后的裁切/挖洞 =====
   function applyWhiteMask(){
-    // 只保留白色区域
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.globalCompositeOperation = "destination-in";
@@ -324,8 +310,6 @@
   }
 
   function punchUByPaintedArea(){
-    // 关键：只在“正确颜色已涂区域”里显示 u
-    // intersection = correctPaint ∩ uMask
     interCtx.setTransform(1,0,0,1,0,0);
     interCtx.clearRect(0,0,interCanvas.width, interCanvas.height);
 
@@ -335,7 +319,6 @@
     interCtx.globalCompositeOperation = "destination-in";
     interCtx.drawImage(uMaskCanvas, 0, 0);
 
-    // 主画布挖洞：仅对 intersection 生效
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.globalCompositeOperation = "destination-out";
@@ -344,7 +327,7 @@
   }
 
   function dab(x,y){
-    // 1) 画到主画布（显示涂抹颜色）
+    // 主画布上色
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = currentColor;
@@ -353,21 +336,18 @@
     ctx.fill();
     ctx.restore();
 
-    // 2) 如果是正确颜色，同时记录到 correctPaintCanvas
+    // 正确色：记录到 correctPaint（注意：correctPaintCtx 已经是 CSS 坐标系了）
     if(isCorrect()){
       correctPaintCtx.save();
       correctPaintCtx.globalCompositeOperation = "source-over";
-      correctPaintCtx.fillStyle = "white"; // 只需要 alpha
+      correctPaintCtx.fillStyle = "white";
       correctPaintCtx.beginPath();
       correctPaintCtx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
       correctPaintCtx.fill();
       correctPaintCtx.restore();
     }
 
-    // 3) 限制到白色区域
     applyWhiteMask();
-
-    // 4) 随涂随显：只用已涂过的区域去挖 u
     punchUByPaintedArea();
   }
 
@@ -433,8 +413,7 @@
           ? '已选中<strong>正确颜色</strong>：涂抹到的地方将逐渐显示隐藏字母。'
           : '已选中颜色：可以涂抹，但<strong>只有正确颜色</strong>才会显示隐藏字母。';
 
-        // 注意：这里不再“选中就弹出”，完全由 correctPaint 决定显示范围
-        // 如果用户已经用正确色涂过，切换回来时应立即按已涂区域显示：
+        // 不“弹出”，只按已涂区域刷新
         applyWhiteMask();
         punchUByPaintedArea();
       });
