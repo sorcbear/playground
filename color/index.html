@@ -275,6 +275,7 @@
     // 画纯色圆（在 CSS 像素坐标系）
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
     ctx.fillStyle = currentColor;
     ctx.beginPath();
     ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
