@@ -43,7 +43,7 @@
       font-size:var(--fs-body);
       line-height:var(--lh-body);
       color:var(--c-text);
-      overflow:hidden; /* ✅ 防止抖动时出现滚动条 */
+      overflow:hidden;
     }
     button{ font-family:inherit; }
 
@@ -54,14 +54,13 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      justify-content:center;   /* ✅ 上下居中 */
+      justify-content:center;
       padding:18px;
       box-sizing:border-box;
       text-align:center;
       overflow:hidden;
     }
 
-    /* 倒计时阶段的文字层 */
     .centerStack{
       display:none;
       position:absolute;
@@ -70,7 +69,6 @@
       height:100%;
     }
 
-    /* ===== 通用标题样式 ===== */
     .title{
       font-size: var(--fs-hint);
       line-height: var(--lh-hint);
@@ -81,11 +79,8 @@
       width:min(var(--maxw),92vw);
     }
 
-    .title-danger{
-      color: var(--c-danger);
-    }
+    .title-danger{ color: var(--c-danger); }
 
-    /* 倒计时固定在正中 */
     .statusFixed{
       position:absolute;
       left:50%;
@@ -94,7 +89,6 @@
       pointer-events:none;
     }
 
-    /* 提示文字固定在倒计时上方 */
     .hintFixed{
       position:absolute;
       left:50%;
@@ -104,12 +98,11 @@
       pointer-events:none;
     }
 
-    /* ===== 开始按钮区域 ===== */
     .btnRow{
       width:100%;
       display:flex;
       flex-direction:column;
-      align-items:center;       /* ✅ 左右居中 */
+      align-items:center;
     }
 
     button{
@@ -128,7 +121,6 @@
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
 
-    /* ===== 按钮下方提示文字 ===== */
     .btnHint{
       margin-top: calc(var(--lh-body) * 1em);
       font-size: 13px;
@@ -146,10 +138,9 @@
     }
 
     /* =========================
-       ✅ 爆炸覆盖层（闪烁 → 黑屏）
+       ✅ 纯色闪动覆盖层 + 红底震动（无白色、无渐变）
        ========================= */
 
-    /* 闪烁画布 */
     #fx{
       position:fixed;
       inset:0;
@@ -160,17 +151,16 @@
       opacity:0;
     }
 
-    /* 结尾黑屏 */
-    #black{
+    /* ✅ 最后阶段：红色背景（不是黑色） */
+    #finalRed{
       position:fixed;
       inset:0;
-      background:#000;
+      background:#7a0000; /* 深红 */
       opacity:0;
       pointer-events:none;
       z-index:10000;
     }
 
-    /* 抖动 */
     @keyframes shake {
       0%{ transform:translate(0,0); }
       15%{ transform:translate(-9px,7px); }
@@ -200,9 +190,8 @@
 
   </div>
 
-  <!-- ✅ 爆炸覆盖层 -->
   <canvas id="fx"></canvas>
-  <div id="black"></div>
+  <div id="finalRed"></div>
 
 <script>
 (() => {
@@ -212,9 +201,15 @@
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
 
-  // ✅ 全局音量（你要更大声：调这里）
-  // 建议 1.35~1.8 之间；太大会削波失真，已加压缩器做保护
-  const MASTER_VOL = 1.55;
+  /* ✅ 整体音量更大（你要再大就调这里）
+     注意：太大可能在手机扬声器上失真；已加压缩器保护。 */
+  const MASTER_VOL = 2.15;
+
+  /* ✅ 0 到咔嚓的停顿：2 秒 */
+  const PAUSE_BEFORE_LATCH_MS = 2000;
+
+  /* ✅ 咔嚓到爆炸间隔 */
+  const LATCH_TO_BOOM_MS = 260;
 
   const KEYS = [
     {c:"green",n:"so",m:55},{c:"green",n:"la",m:57},{c:"green",n:"si",m:59},
@@ -241,9 +236,8 @@
   const btnRow = document.getElementById("btnRow");
   const startBtn = document.getElementById("startBtn");
 
-  // ✅ 覆盖层元素
   const fx = document.getElementById("fx");
-  const black = document.getElementById("black");
+  const finalRed = document.getElementById("finalRed");
   const fxCtx = fx.getContext("2d", { alpha: true });
 
   let audioCtx = null;
@@ -252,7 +246,6 @@
   let timers = [];
   let exploded = false;
 
-  // ✅ 音频总线（更大声 + 压缩保护）
   let masterGain = null;
   let compressor = null;
 
@@ -261,16 +254,15 @@
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
       compressor = audioCtx.createDynamicsCompressor();
-      compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
+      compressor.threshold.setValueAtTime(-20, audioCtx.currentTime);
       compressor.knee.setValueAtTime(18, audioCtx.currentTime);
-      compressor.ratio.setValueAtTime(6, audioCtx.currentTime);
+      compressor.ratio.setValueAtTime(7, audioCtx.currentTime);
       compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
       compressor.release.setValueAtTime(0.18, audioCtx.currentTime);
 
       masterGain = audioCtx.createGain();
       masterGain.gain.setValueAtTime(MASTER_VOL, audioCtx.currentTime);
 
-      // source -> masterGain -> compressor -> destination
       masterGain.connect(compressor);
       compressor.connect(audioCtx.destination);
     }
@@ -295,9 +287,9 @@
     o.type = "sine";
     o.frequency.setValueAtTime(freq, t);
 
-    // ✅ 倒计时音乐更响：峰值从 0.3 提到 0.55（再由 MASTER_VOL 放大）
+    /* ✅ 倒计时音乐更大声 */
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.55, t + 0.02);
+    g.gain.linearRampToValueAtTime(0.78, t + 0.015);
     g.gain.exponentialRampToValueAtTime(0.0001, t + d);
 
     o.connect(g);
@@ -321,68 +313,82 @@
   }
 
   /* =========================
-     ✅ 0 秒“机关启动”咔嚓音效
-     （短促噪声 + 轻微金属感）
+     ✅ 咔嚓：更长、更清晰的机关启动声
+    （两段“卡扣” + 一点金属摩擦）
      ========================= */
   function playLatch(){
     if(!audioEnabled || !audioCtx) return;
     const ctx = audioCtx;
     const t0 = ctx.currentTime;
 
-    // 短噪声
-    const dur = 0.14;
+    // 段1：机械卡扣（方波短音+下滑）
+    const o1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    o1.type = "square";
+    o1.frequency.setValueAtTime(260, t0);
+    o1.frequency.exponentialRampToValueAtTime(150, t0 + 0.12);
+    g1.gain.setValueAtTime(0.0001, t0);
+    g1.gain.linearRampToValueAtTime(0.75, t0 + 0.01);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+    o1.connect(g1);
+    g1.connect(masterGain);
+    o1.start(t0);
+    o1.stop(t0 + 0.18);
+
+    // 段2：第二次“咔”稍晚一点（更像机关两步到位）
+    const t1 = t0 + 0.18;
+    const o2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    o2.type = "square";
+    o2.frequency.setValueAtTime(210, t1);
+    o2.frequency.exponentialRampToValueAtTime(120, t1 + 0.10);
+    g2.gain.setValueAtTime(0.0001, t1);
+    g2.gain.linearRampToValueAtTime(0.68, t1 + 0.01);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.14);
+    o2.connect(g2);
+    g2.connect(masterGain);
+    o2.start(t1);
+    o2.stop(t1 + 0.16);
+
+    // 摩擦噪声（轻微、持续一点，让“启动”更可感知）
+    const dur = 0.42;
     const bufferSize = Math.floor(ctx.sampleRate * dur);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for(let i=0;i<bufferSize;i++){
       const x = i / bufferSize;
-      // 更“咔嚓”：前段更硬，后段迅速衰减
-      data[i] = (Math.random()*2-1) * (1 - x) * (x < 0.25 ? 1.2 : 0.65);
+      const raw = (Math.random()*2-1);
+      // 轻微抖动+衰减，避免刺耳
+      data[i] = raw * (0.45*(1-x));
     }
     const src = ctx.createBufferSource();
     src.buffer = buffer;
 
-    const bp = ctx.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.setValueAtTime(1600, t0);
-    bp.Q.setValueAtTime(8, t0);
-
     const hp = ctx.createBiquadFilter();
     hp.type = "highpass";
-    hp.frequency.setValueAtTime(600, t0);
+    hp.frequency.setValueAtTime(900, t0);
 
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.linearRampToValueAtTime(0.95, t0 + 0.008);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(1900, t0);
+    bp.Q.setValueAtTime(6, t0);
 
-    // 叠一层很短的方波“机械卡扣”
-    const o = ctx.createOscillator();
-    const og = ctx.createGain();
-    o.type = "square";
-    o.frequency.setValueAtTime(220, t0);
-    o.frequency.exponentialRampToValueAtTime(110, t0 + 0.05);
-    og.gain.setValueAtTime(0.0001, t0);
-    og.gain.linearRampToValueAtTime(0.45, t0 + 0.006);
-    og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t0);
+    ng.gain.linearRampToValueAtTime(0.55, t0 + 0.03);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
 
     src.connect(hp);
     hp.connect(bp);
-    bp.connect(g);
-    g.connect(masterGain);
-
-    o.connect(og);
-    og.connect(masterGain);
+    bp.connect(ng);
+    ng.connect(masterGain);
 
     src.start(t0);
     src.stop(t0 + dur);
-
-    o.start(t0);
-    o.stop(t0 + 0.09);
   }
 
   /* =========================
-     ✅ 爆炸音效（合成）- 更响
+     ✅ 爆炸：更响
      ========================= */
   function playExplosion(){
     if(!audioEnabled || !audioCtx) return;
@@ -396,14 +402,11 @@
     for(let i=0;i<bufferSize;i++){
       const x = i / bufferSize;
 
-      // 噪声 + 低频冲击
       const noise = (Math.random()*2-1);
       const thump = Math.sin(2*Math.PI*52*x) * (1-x);
+      const punch = (x < 0.14) ? 1.35 : 1.0;
 
-      // 初段更猛
-      const punch = (x < 0.12) ? 1.25 : 0.95;
-
-      data[i] = (noise*0.95 + thump*0.45) * (1 - x) * punch;
+      data[i] = (noise*0.95 + thump*0.50) * (1 - x) * punch;
     }
 
     const src = ctx.createBufferSource();
@@ -411,7 +414,7 @@
 
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.setValueAtTime(260, ctx.currentTime);
+    lp.frequency.setValueAtTime(280, ctx.currentTime);
     lp.frequency.exponentialRampToValueAtTime(55, ctx.currentTime + duration);
 
     const gain = ctx.createGain();
@@ -426,8 +429,8 @@
   }
 
   /* =========================
-     ✅ 闪烁蔓延视觉（无网格）
-     中心橘 → 外圈逐层更红 → 最后黑屏 + 抖动
+     ✅ 纯色闪动（无渐变、无白色）
+     以“纯色全屏”快速切换：黑 → 深红 → 红 → 橘 → 红 → 深红 ...
      ========================= */
   function resizeFx(){
     const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -449,74 +452,59 @@
     }, 560);
   }
 
-  function drawFlash(progress, nowMs){
+  // 纯色调色板（无白色）
+  const COLORS = [
+    "#000000", // 黑
+    "#2a0000", // 极深红
+    "#6b0000", // 深红
+    "#b00000", // 红
+    "#ff6a00", // 橘
+    "#b00000", // 红
+    "#6b0000", // 深红
+    "#2a0000", // 极深红
+  ];
+
+  function fillSolid(color){
     const w = innerWidth, h = innerHeight;
-    const cx = w/2, cy = h/2;
-    const maxR = Math.hypot(Math.max(cx, w-cx), Math.max(cy, h-cy));
-
-    // ✅ 你要求：闪烁开始背景必须是黑色
-    fxCtx.clearRect(0,0,w,h);
-    fxCtx.fillStyle = "#000";
+    fxCtx.fillStyle = color;
     fxCtx.fillRect(0,0,w,h);
-
-    // 扩散半径
-    const r = Math.max(1, maxR * progress);
-
-    // 闪烁强度：轻微随机 + 高频抖动（更“爆炸闪”）
-    const t = (nowMs || performance.now()) / 1000;
-    const flicker = 0.78 + 0.14*Math.sin(t*42) + 0.08*Math.sin(t*19) + (Math.random()*0.06);
-    const a0 = Math.max(0.15, Math.min(1.0, flicker));
-
-    // 分层渐变（离散层更符合“外面一层更红”）
-    const g = fxCtx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    g.addColorStop(0.00, `rgba(255,140,0,${(0.95*a0).toFixed(3)})`);  // 橘
-    g.addColorStop(0.18, `rgba(255,70,0,${(0.88*a0).toFixed(3)})`);   // 红橘
-    g.addColorStop(0.34, `rgba(220,0,0,${(0.78*a0).toFixed(3)})`);    // 红
-    g.addColorStop(0.52, `rgba(150,0,0,${(0.66*a0).toFixed(3)})`);    // 深红
-    g.addColorStop(0.72, `rgba(90,0,0,${(0.52*a0).toFixed(3)})`);     // 更深红
-    g.addColorStop(1.00, `rgba(0,0,0,0)`);                            // 边缘透明回黑
-
-    fxCtx.fillStyle = g;
-    fxCtx.fillRect(0,0,w,h);
-
-    // 额外的“热浪亮圈”（让中心更有爆点感）
-    const ringA = 0.18 * a0 * (1 - progress);
-    if(ringA > 0.01){
-      fxCtx.beginPath();
-      fxCtx.arc(cx, cy, Math.min(maxR, r*0.35), 0, Math.PI*2);
-      fxCtx.strokeStyle = `rgba(255,180,80,${ringA.toFixed(3)})`;
-      fxCtx.lineWidth = 6;
-      fxCtx.stroke();
-    }
   }
 
-  function runFlashExplosionFx(onDone){
-    // ✅ 一开始就显示（避免看到白底）
+  function runSolidFlashFx(onDone){
     fx.style.opacity = "1";
-    black.style.opacity = "0";
+    finalRed.style.opacity = "0";
 
-    // 先画一帧纯黑，确保“开始背景是黑色”
-    drawFlash(0.001, performance.now());
+    // ✅ 第一帧就是黑色，避免出现白底
+    fxCtx.clearRect(0,0,innerWidth,innerHeight);
+    fillSolid("#000000");
 
     const t0 = performance.now();
-    const phaseFlash = 780;   // 闪烁蔓延时长
-    const phaseFade  = 260;   // 淡入纯黑
-    const phaseHold  = 520;   // 黑屏停留 + 抖动
 
-    let shook = false;
+    const phaseFlash = 850;   // 闪动阶段
+    const phaseToRed = 220;   // 淡入最终红底
+    const phaseHold  = 700;   // 红底停留 + 震动
+
+    let shookA = false;
+    let shookB = false;
 
     function tick(now){
       const dt = now - t0;
 
       if(dt <= phaseFlash){
+        // 纯色快速切换（频率与 dt 相关）
         const p = dt / phaseFlash;
 
-        // 闪烁蔓延
-        drawFlash(p, now);
+        // 随进度增加闪动频率：早期慢一点，后期更密
+        const baseHz = 7;
+        const addHz  = 18 * p;
+        const hz = baseHz + addHz;
 
-        // 抖动更像爆炸：一开始就抖一下
-        if(!shook && dt > 20){
-          shook = true;
+        const idx = Math.floor(dt * hz / 1000) % COLORS.length;
+        fillSolid(COLORS[idx]);
+
+        // 爆炸冲击：早期抖一次
+        if(!shookA && dt > 40){
+          shookA = true;
           doShakeOnce();
         }
 
@@ -524,19 +512,19 @@
         return;
       }
 
-      if(dt <= phaseFlash + phaseFade){
-        const p = (dt - phaseFlash) / phaseFade;
-        // 闪烁层淡出，黑层淡入
+      if(dt <= phaseFlash + phaseToRed){
+        const p = (dt - phaseFlash) / phaseToRed;
         fx.style.opacity = String(1 - 0.9*p);
-        black.style.opacity = String(p);
+        finalRed.style.opacity = String(p);
         requestAnimationFrame(tick);
         return;
       }
 
-      if(dt <= phaseFlash + phaseFade + phaseHold){
-        black.style.opacity = "1";
-        // 结尾再来一次冲击抖动
-        if(dt <= phaseFlash + phaseFade + 40){
+      if(dt <= phaseFlash + phaseToRed + phaseHold){
+        // ✅ 最终阶段：始终红色背景（不是黑色）
+        finalRed.style.opacity = "1";
+        if(!shookB){
+          shookB = true;
           doShakeOnce();
         }
         requestAnimationFrame(tick);
@@ -544,7 +532,7 @@
       }
 
       fx.style.opacity = "0";
-      black.style.opacity = "1";
+      finalRed.style.opacity = "1";
       if(typeof onDone === "function") onDone();
     }
 
@@ -555,19 +543,21 @@
     if(exploded) return;
     exploded = true;
 
-    // ✅ 0 秒：先“咔嚓”
-    playLatch();
-
-    // ✅ 稍后爆炸：爆炸开始时同时进入闪烁画面（不要网格）
-    const DELAY_MS = 150; // 机关到爆炸的间隔（你要更短可改 100）
+    // ✅ 倒计时到 0 之后：先停 2 秒
     setTimeout(() => {
-      playExplosion();
-      runFlashExplosionFx(() => {
-        setTimeout(() => {
-          location.href = NEXT_URL;
-        }, 120);
-      });
-    }, DELAY_MS);
+      playLatch();
+
+      // ✅ 再停一小段，让咔嚓更清楚
+      setTimeout(() => {
+        playExplosion();
+        runSolidFlashFx(() => {
+          setTimeout(() => {
+            location.href = NEXT_URL;
+          }, 140);
+        });
+      }, LATCH_TO_BOOM_MS);
+
+    }, PAUSE_BEFORE_LATCH_MS);
   }
 
   function startCountdown(){
@@ -583,7 +573,7 @@
       }
 
       if(left <= 0){
-        // ✅ 到 0：咔嚓 -> 爆炸（同时闪烁）-> 黑屏 -> 跳转
+        // ✅ 到 0：停 2 秒 -> 咔嚓 -> 爆炸（同时纯色闪动）-> 红底震动 -> 跳转
         latchThenExplodeAndGo();
         return;
       }
@@ -603,9 +593,8 @@
     musicPlayed = false;
     exploded = false;
 
-    // 重置覆盖层
     fx.style.opacity = "0";
-    black.style.opacity = "0";
+    finalRed.style.opacity = "0";
 
     clearTimers();
 
