@@ -20,6 +20,9 @@
 
       --hint-fs:14px;
       --hint-lh:1.6;
+
+      --top-fs:18px;
+      --top-lh:1.6;
     }
 
     *{ box-sizing:border-box; }
@@ -36,6 +39,13 @@
       padding:var(--pad);
     }
 
+    .topline{
+      font-size:var(--top-fs);
+      line-height:var(--top-lh);
+      font-weight:700;
+      margin:0 0 12px;
+    }
+
     .stage{
       position:relative;
       width:100%;
@@ -43,11 +53,10 @@
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
-      touch-action:none;
+      touch-action:none; /* 移动端拖动不滚屏 */
       background:#eee;
     }
 
-    /* ✅ 不改变你原图比例/位置 */
     .stage img{ width:100%; display:block; }
 
     canvas.overlay{
@@ -99,7 +108,7 @@
       -webkit-tap-highlight-color:transparent;
     }
 
-    /* 选中：白色外圈 */
+    /* 选中：白色外圈（不破坏内部颜色） */
     .swatch.selected{
       box-shadow: 0 0 0 var(--ring) #fff;
     }
@@ -123,7 +132,10 @@
 
 <body>
 <div class="wrap">
+  <div class="topline">请按照正确颜色涂抹每个图白色区域</div>
+
   <div class="stage">
+    <!-- 对外展示：木纹 + 骷髅（位置/比例不改） -->
     <img id="bw" src="bw.jpg" alt="">
     <canvas id="paint" class="overlay"></canvas>
     <div id="loading" class="loading">资源加载中</div>
@@ -140,38 +152,32 @@
 
 <script>
 (() => {
-  // =========================
-  // 参数
-  // =========================
+  // ===================== 核心参数 =====================
   const BRUSH_RADIUS = 18;
 
-  // ✅ 你的规则图：黑=不许涂，白=允许涂（无需透明）
-  const ALLOW_MASK_URL = "skull_bw.png";
+  const LIMIT_BW_URL = "skull_bw.png"; // 黑白限制图：白=可涂，黑=不可涂
+  const U_MASK_URL   = "mask_u.png";   // 透明底 + 白色u笔迹（用来挖洞显示底图）
+  const CORRECT_HEX  = "#ac968a";      // 只有这个颜色才显示 u（大小写无所谓）
 
-  // ✅ u 蒙版：透明底，u 为白色不透明
-  const U_MASK_URL = "mask_u.png";
-
-  // ✅ 钥匙颜色：sRGB Hex
-  const KEY_COLOR = "#ac968a";
-
-  // 8 色调色盘（必须含 KEY_COLOR）
+  // 8 色（不含白色；必须包含 CORRECT_HEX）
   const COLORS = [
     "#000000",
     "#00e5ff",
-    KEY_COLOR,     // ✅ 必须包含
+    "#ff0000",
     "#ffc000",
     "#00b050",
     "#7030a0",
     "#0070c0",
-    "#444444"
+    "#AC968A"   // ✅ 正确色
   ];
+  // ===================================================
 
-  // =========================
-  // DOM
-  // =========================
   const img = document.getElementById("bw");
-  const cv  = document.getElementById("paint");
+  const cv = document.getElementById("paint");
   const ctx = cv.getContext("2d", { alpha:true });
+
+  // 关闭平滑，减少“发灰”观感（更硬朗）
+  ctx.imageSmoothingEnabled = false;
 
   const paletteEl = document.getElementById("palette");
   const hintEl = document.getElementById("hint");
@@ -180,99 +186,133 @@
   let currentColor = null;
   let down = false, last = null;
 
-  // =========================
-  // 资源：允许涂抹 mask（黑白图 -> alpha mask）
-  // =========================
-  const allowImg = new Image();
-  allowImg.decoding = "async";
-  allowImg.src = ALLOW_MASK_URL;
+  // ===== 资源 =====
+  const limitImg = new Image();
+  limitImg.decoding = "async";
+  limitImg.src = LIMIT_BW_URL;
 
+  const uMaskImg = new Image();
+  uMaskImg.decoding = "async";
+  uMaskImg.src = U_MASK_URL;
+
+  // ===== Offscreen：可涂区域硬蒙版（alpha 0/255）=====
   const allowCanvas = document.createElement("canvas");
   const allowCtx = allowCanvas.getContext("2d", { willReadFrequently:true });
 
-  // u 蒙版
-  const uImg = new Image();
-  uImg.decoding = "async";
-  uImg.src = U_MASK_URL;
+  // ===== Offscreen：u 蒙版（用来挖洞）=====
+  const uMaskCanvas = document.createElement("canvas");
+  const uMaskCtx = uMaskCanvas.getContext("2d");
 
-  const uCanvas = document.createElement("canvas");
-  const uCtx = uCanvas.getContext("2d");
-
-  // =========================
-  // 工具
-  // =========================
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
-  function isKey(){
-    return !!currentColor && currentColor.trim().toLowerCase() === KEY_COLOR;
+  function isCorrect(){
+    if(!currentColor) return false;
+    return currentColor.trim().toLowerCase() === CORRECT_HEX;
+  }
+
+  function buildAllowMask(){
+    // 把 skull_bw.png 画到 allowCanvas，并把“白区”转成 alpha=255，其余 alpha=0
+    const w = allowCanvas.width, h = allowCanvas.height;
+
+    allowCtx.setTransform(1,0,0,1,0,0);
+    allowCtx.clearRect(0,0,w,h);
+    allowCtx.imageSmoothingEnabled = false;
+    allowCtx.drawImage(limitImg, 0, 0, w, h);
+
+    const imgData = allowCtx.getImageData(0,0,w,h);
+    const data = imgData.data;
+
+    // 阈值：你这张黑白图边缘很干净，但依然用阈值确保二值化
+    const TH = 200; // 亮度>200 视为白（可涂）
+
+    for(let i=0;i<data.length;i+=4){
+      const r=data[i], g=data[i+1], b=data[i+2];
+      const lum = (r*0.299 + g*0.587 + b*0.114);
+      const a = lum > TH ? 255 : 0;
+      data[i] = 255; data[i+1] = 255; data[i+2] = 255; data[i+3] = a;
+    }
+    allowCtx.putImageData(imgData,0,0);
+  }
+
+  function buildUMask(){
+    const w = uMaskCanvas.width, h = uMaskCanvas.height;
+    uMaskCtx.setTransform(1,0,0,1,0,0);
+    uMaskCtx.clearRect(0,0,w,h);
+    uMaskCtx.imageSmoothingEnabled = false;
+    uMaskCtx.drawImage(uMaskImg, 0, 0, w, h);
   }
 
   function resizeAll(){
     const r = img.getBoundingClientRect();
     const s = dpr();
 
-    // 主画布（覆盖在图片上）
+    // 画布像素尺寸
     cv.width  = Math.round(r.width * s);
     cv.height = Math.round(r.height * s);
-    ctx.setTransform(s,0,0,s,0,0); // 之后用 CSS 像素画笔刷
 
-    // 允许涂抹 mask（设备像素）
+    // 用 CSS 像素坐标绘制
+    ctx.setTransform(s,0,0,s,0,0);
+
+    // offscreen 使用与 cv 相同的像素尺寸（方便直接 drawImage）
     allowCanvas.width  = cv.width;
     allowCanvas.height = cv.height;
+    uMaskCanvas.width  = cv.width;
+    uMaskCanvas.height = cv.height;
 
-    // u mask（设备像素）
-    uCanvas.width  = cv.width;
-    uCanvas.height = cv.height;
-
-    rebuildAllowMask();
-    rebuildUMask();
+    buildAllowMask();
+    buildUMask();
   }
 
-  // 把黑白骷髅图转换为 alpha mask：白区 alpha=1，黑区 alpha=0
-  function rebuildAllowMask(){
-    allowCtx.setTransform(1,0,0,1,0,0);
-    allowCtx.clearRect(0,0,allowCanvas.width, allowCanvas.height);
-    allowCtx.drawImage(allowImg, 0,0, allowCanvas.width, allowCanvas.height);
-
-    const id = allowCtx.getImageData(0,0,allowCanvas.width, allowCanvas.height);
-    const d = id.data;
-
-    // 计算亮度作为 alpha（白->255，黑->0）
-    for(let i=0;i<d.length;i+=4){
-      const r = d[i], g = d[i+1], b = d[i+2];
-      const lum = (0.2126*r + 0.7152*g + 0.0722*b); // 0..255
-      d[i] = 255; d[i+1] = 255; d[i+2] = 255; // 颜色无所谓，关键是 alpha
-      d[i+3] = lum; // alpha
-    }
-    allowCtx.putImageData(id,0,0);
-  }
-
-  function rebuildUMask(){
-    uCtx.setTransform(1,0,0,1,0,0);
-    uCtx.clearRect(0,0,uCanvas.width,uCanvas.height);
-    uCtx.drawImage(uImg, 0,0, uCanvas.width, uCanvas.height);
-  }
-
-  // 核心：每次画完，把涂色裁剪到允许区域；若为 KEY_COLOR，再挖掉 u
-  function applyMasks(){
+  // === 把“已画内容”裁到可涂区域（硬裁）===
+  function clipToAllowed(){
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
-
-    // 1) 只保留允许涂抹区域（destination-in：保留重叠 alpha）
     ctx.globalCompositeOperation = "destination-in";
-    ctx.drawImage(allowCanvas, 0,0);
-
-    // 2) 只有选中钥匙色时，才挖掉 u（destination-out：挖洞露出底图）
-    if(isKey()){
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.drawImage(uCanvas, 0,0);
-    }
-
+    ctx.drawImage(allowCanvas, 0, 0);
     ctx.restore();
   }
 
+  // === 仅当颜色正确时，挖出 u 显示底图（且同样只能出现在白区）===
+  function punchUIfNeeded(){
+    if(!isCorrect()) return;
+
+    ctx.save();
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.drawImage(uMaskCanvas, 0, 0);
+    ctx.restore();
+
+    // 再裁一次，确保 u 也不会跑出白区
+    clipToAllowed();
+  }
+
+  // === 强制“纯色”：把落笔区域 alpha 二值化（0/255）避免任何半透明渐进 ===
+  function hardenPatch(x,y){
+    // x,y 是 CSS 像素
+    const s = dpr();
+    const px = Math.round(x * s);
+    const py = Math.round(y * s);
+    const R  = Math.round((BRUSH_RADIUS + 2) * s);
+
+    const x0 = Math.max(0, px - R);
+    const y0 = Math.max(0, py - R);
+    const x1 = Math.min(cv.width,  px + R);
+    const y1 = Math.min(cv.height, py + R);
+    const w = x1 - x0, h = y1 - y0;
+    if(w<=0 || h<=0) return;
+
+    const imgData = ctx.getImageData(x0, y0, w, h);
+    const data = imgData.data;
+
+    // alpha>0 直接变 255（纯色硬边）
+    for(let i=0;i<data.length;i+=4){
+      data[i+3] = data[i+3] > 0 ? 255 : 0;
+    }
+    ctx.putImageData(imgData, x0, y0);
+  }
+
   function dab(x,y){
-    // 画纯色圆（在 CSS 像素坐标系）
+    // 1) 画纯色圆点
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
@@ -282,7 +322,14 @@
     ctx.fill();
     ctx.restore();
 
-    applyMasks();
+    // 2) 硬化该区域，去掉任何半透明渐变
+    hardenPatch(x,y);
+
+    // 3) 裁到允许区域（白区）
+    clipToAllowed();
+
+    // 4) 颜色正确时挖 u
+    punchUIfNeeded();
   }
 
   function stroke(a,b,c,d){
@@ -298,7 +345,7 @@
 
   function pos(e){
     const r=cv.getBoundingClientRect();
-    const p=(e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+    const p=e;
     return {x:p.clientX-r.left, y:p.clientY-r.top};
   }
 
@@ -306,9 +353,6 @@
     hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br><strong>只有 #AC968A 才会显示隐藏的 u。</strong>';
   }
 
-  // =========================
-  // 事件：画画
-  // =========================
   cv.addEventListener("pointerdown", e=>{
     e.preventDefault();
     if(!currentColor){ warnNeedColor(); return; }
@@ -326,16 +370,15 @@
   }, {passive:false});
 
   window.addEventListener("pointerup", ()=>{
-    down=false; last=null;
+    down=false;
+    last=null;
   }, {passive:true});
 
   window.addEventListener("pointercancel", ()=>{
     down=false; last=null;
   }, {passive:true});
 
-  // =========================
   // 调色盘
-  // =========================
   function renderPalette(){
     paletteEl.innerHTML = "";
     COLORS.forEach(c=>{
@@ -343,43 +386,40 @@
       b.type="button";
       b.className="swatch";
       b.style.setProperty("--c", c);
+
       b.addEventListener("click", ()=>{
         currentColor = c;
         [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
         b.classList.add("selected");
 
-        hintEl.innerHTML = (c.trim().toLowerCase() === KEY_COLOR)
-          ? '已选中<strong>#AC968A</strong>：在骷髅白色区域涂抹将显示隐藏的 u。'
-          : '已选中颜色：只能在骷髅白色区域涂抹。<br><strong>只有 #AC968A 才会显示隐藏的 u。</strong>';
+        hintEl.innerHTML = isCorrect()
+          ? '已选中<strong>#AC968A</strong>：在白色区域涂抹将显示隐藏的 u。'
+          : '已选中颜色：可以涂抹白色区域。但<strong>只有 #AC968A</strong>才会显示隐藏的 u。';
       });
+
       paletteEl.appendChild(b);
     });
   }
-
-  // =========================
-  // 加载与初始化
-  // =========================
-  let okImg=false, okAllow=false, okU=false;
 
   function ready(){
     resizeAll();
     renderPalette();
     loading.classList.add("hide");
-    // 初始也裁一遍（避免空画布受 mask 影响，不裁也行）
-    applyMasks();
   }
 
-  img.addEventListener("load", ()=>{ okImg=true; if(okAllow && okU) ready(); });
-  img.addEventListener("error", ()=>{ loading.textContent="bw.jpg 加载失败"; });
+  let okImg=false, okLimit=false, okU=false;
 
-  allowImg.addEventListener("load", ()=>{ okAllow=true; if(okImg && okU) ready(); });
-  allowImg.addEventListener("error", ()=>{ loading.textContent="skull_bw.png 加载失败"; });
+  img.addEventListener("load", ()=>{ okImg=true; if(okLimit && okU) ready(); });
+  img.addEventListener("error", ()=>{ loading.textContent="底图 bw.jpg 加载失败"; });
 
-  uImg.addEventListener("load", ()=>{ okU=true; if(okImg && okAllow) ready(); });
-  uImg.addEventListener("error", ()=>{ loading.textContent="mask_u.png 加载失败"; });
+  limitImg.addEventListener("load", ()=>{ okLimit=true; if(okImg && okU) ready(); });
+  limitImg.addEventListener("error", ()=>{ loading.textContent="限制图 skull_bw.png 加载失败"; });
+
+  uMaskImg.addEventListener("load", ()=>{ okU=true; if(okImg && okLimit) ready(); });
+  uMaskImg.addEventListener("error", ()=>{ loading.textContent="u蒙版 mask_u.png 加载失败"; });
 
   window.addEventListener("resize", ()=>{
-    if(okImg && okAllow && okU) resizeAll();
+    if(okImg && okLimit && okU) resizeAll();
   });
 })();
 </script>
