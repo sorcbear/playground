@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no">
+
+  <title>Symbol Puzzle</title>
+
+  <style>
+    :root{
+      /* ✅ 同源：Rotate */
+      --maxw: 720px;
+
+      --fs-body: 18px;
+      --lh-body: 1.6;
+
+      --fs-hint: 18px;
+      --lh-hint: 1.6;
+
+      --fs-btn: 18px;
+      --fw-btn: 600;
+      --h-btn: 52px;
+
+      --gap: 18px;
+      --gap-tight: 12px;
+
+      --c-text:#111;
+      --c-border:#000;
+      --c-ok:#0b6b2b;
+
+      --bg:#fff;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--c-text);
+
+      /* ✅ 同源：Rotate 字体栈 */
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+
+      /* ✅ 同源：Rotate */
+      -webkit-text-size-adjust:100%;
+    }
+
+    /* ✅ 同源：Rotate wrap/padding */
+    .container{
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:18px 14px 28px;
+    }
+
+    /* ✅ 同源：Rotate 顶部标题（titleLine 规范） */
+    .title{
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      font-weight:700;
+      margin:4px 0 var(--gap);
+      text-align:left;
+      white-space:pre-wrap;
+    }
+
+    /* 图片：同源节奏 */
+    .image-box{
+      margin:0 0 var(--gap);
+      text-align:center;
+    }
+    .image-box img{
+      max-width:100%;
+      height:auto;
+      display:block;
+      margin:0 auto;
+    }
+
+    /* 小标题间距 */
+    .title.smallGap{
+      margin:0 0 var(--gap-tight);
+    }
+
+    /* 输入行 */
+    .answer{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:nowrap;
+      margin-bottom: calc(var(--gap) * 2);
+    }
+
+    .ansInput{
+      height:40px;
+      padding:0 6px;
+      border:2px solid var(--c-border);
+      border-radius:0;
+      font-size:18px;
+      text-align:center;
+      outline:none;
+      box-shadow:none;
+      -webkit-appearance:none;
+      font-weight:700;
+      font-family:inherit;
+      width: 240px; /* 单输入框：与按钮同宽的视觉节奏 */
+    }
+    .ansInput:focus{ outline:none; box-shadow:none; }
+
+    /* 按钮区 */
+    .panel{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      flex-wrap:nowrap;
+    }
+
+    button{
+      width:240px;
+      height:var(--h-btn);
+      padding:0 18px;
+      box-sizing:border-box;
+      font-size:var(--fs-btn);
+      font-weight:var(--fw-btn);
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+      -webkit-tap-highlight-color:transparent;
+      font-family:inherit;
+      transition:none;
+    }
+
+    @media (hover:hover) and (pointer:fine){
+      button:hover{ background:#000; color:#fff; }
+    }
+
+    button.invert{
+      background:#000;
+      color:#fff;
+    }
+
+    button:disabled{
+      opacity:.45;
+      cursor:default;
+    }
+
+    .msg{
+      margin-top:var(--gap-tight);
+      min-height:1.4em;
+      font-size:14px;
+      line-height:1.6;
+    }
+    .msg.ok{
+      color:var(--c-ok);
+      font-weight:700;
+    }
+
+    @media (max-width:520px){
+      button{ width:46vw; }
+      .ansInput{ width: 100%; }
+      .answer{ justify-content:center; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="title">这个绿色大邮筒正是寻找下一个谜题地点的关键。请使用道具包中的木条和/map/图纸，在图纸中找到现在你所在的绿色大邮筒的位置，然后借助木条，按照下图中的规则，找到下一个谜题地点，请输入正确地点并提交（4个字）。请注意：下个地点只能在每日5点至18点进入，你要抓紧时间了。</div>
+
+    <div class="image-box">
+      <img src="symbol.png" alt="symbol" />
+    </div>
+
+    <div class="title smallGap">正确地点：</div>
+
+    <div class="answer">
+      <input id="place" class="ansInput" placeholder="输入4个字" autocomplete="off" />
+    </div>
+
+    <div class="panel">
+      <button id="submitBtn">提交答案</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";
+    const COUNTDOWN_START = 3;
+
+    const CORRECT = "衡山公园";
+
+    const placeInput = document.getElementById("place");
+    const submitBtn  = document.getElementById("submitBtn");
+    const msg        = document.getElementById("msg");
+
+    let locked=false;
+    let timer=null;
+    let btnTimer=null;
+
+    function setLocked(v){
+      locked=v;
+      submitBtn.disabled=v;
+      placeInput.disabled=v;
+    }
+
+    function setBtnText(text, ms=900){
+      if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+      submitBtn.textContent=text;
+      submitBtn.classList.add("invert");
+      submitBtn.disabled=true;
+
+      btnTimer=setTimeout(()=>{
+        submitBtn.textContent="提交答案";
+        submitBtn.classList.remove("invert");
+        submitBtn.disabled=false;
+        btnTimer=null;
+      }, ms);
+    }
+
+    function normalize(s){
+      return (s || "").replace(/\s+/g,"").trim();
+    }
+
+    function isCorrect(){
+      return normalize(placeInput.value) === CORRECT;
+    }
+
+    submitBtn.onclick=()=>{
+      if(locked) return;
+
+      if(isCorrect()){
+        setLocked(true);
+        let t=COUNTDOWN_START;
+        msg.textContent=`答案正确，即将进入下一题（${t}）`;
+        msg.classList.add("ok");
+
+        timer=setInterval(()=>{
+          t--;
+          if(t>0){
+            msg.textContent=`答案正确，即将进入下一题（${t}）`;
+          }else{
+            clearInterval(timer);
+            location.href=NEXT_URL;
+          }
+        },1000);
+      }else{
+        msg.textContent="";
+        msg.classList.remove("ok");
+        setBtnText("错了，再试一次", 900);
+      }
+    };
+  </script>
+</body>
+</html>
