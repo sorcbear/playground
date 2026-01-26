@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="format-detection" content="telephone=no,email=no,address=no" />
   <title>4 Scratch Boards</title>
 
   <style>
@@ -17,12 +18,18 @@
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      --swatch: clamp(34px, 9vw, 44px);
-      --swatch-gap: clamp(10px, 3vw, 14px);
+      /* ✅ 调色盘更小：避免手机端互相遮挡 */
+      --swatch: clamp(26px, 7.5vw, 36px);
+      --swatch-gap: clamp(8px, 2.2vw, 12px);
+
+      /* 选中边框（黑色） */
       --ring: 4px;
 
       --gap: 18px;
       --tile-gap: 18px;
+
+      /* ✅ 图片外框 */
+      --frame: 3px;
     }
 
     *{ box-sizing:border-box; }
@@ -48,6 +55,7 @@
       font-weight:700;
     }
 
+    /* ✅ 永远 2x2（手机也保持 2 列） */
     .grid{
       display:grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -70,6 +78,9 @@
       -webkit-user-select:none;
       touch-action:none;
       background:#eee;
+
+      /* ✅ 加粗黑色边框 */
+      border: var(--frame) solid #000;
     }
     .stage img{ width:100%; display:block; }
 
@@ -85,8 +96,6 @@
       position:absolute;
       inset:0;
       display:flex;
-      flex-direction:column;
-      gap:10px;
       align-items:center;
       justify-content:center;
       font-size:14px;
@@ -94,7 +103,6 @@
       backdrop-filter:blur(2px);
       padding:12px;
       text-align:center;
-      word-break:break-word;
     }
     .loading.hide{ display:none; }
 
@@ -104,7 +112,7 @@
       align-items:center;
       gap:10px;
       width:100%;
-      overflow:hidden;
+      overflow:hidden; /* ✅ 防止调色盘溢出造成遮挡 */
     }
 
     .palette{
@@ -129,65 +137,50 @@
       cursor:pointer;
       outline:none;
       -webkit-tap-highlight-color:transparent;
+      touch-action: manipulation;
     }
 
+    /* ✅ 选中反馈：仅黑色边框 */
     .swatch.selected{
       box-shadow: 0 0 0 var(--ring) #000;
     }
 
     .hint{ display:none; }
-
-    /* 页面顶部调试条（你确认没问题后可删除） */
-    .debugbar{
-      font-size:12px;
-      line-height:1.5;
-      color:#111;
-      opacity:.7;
-      margin:0 0 12px 0;
-      word-break:break-all;
-    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="debugbar" id="debugbar"></div>
     <p class="title">请按照正确颜色涂抹每个图白色区域。</p>
     <div class="grid" id="grid"></div>
   </div>
 
 <script>
 (() => {
-  // -------------------------
-  // 调色盘基础色
-  // 第1格会被“本格正确色”覆盖
-  // 第2格要求：把灰色(#444444)替换成正确色(#C62622)
-  // -------------------------
-  const BASE_COLORS = [
-    "#000000",
+  // ✅ 所有图的调色盘完全一致（包含两种“正确色”）
+  // t1/t3/t4 正确色 = #2A5A5E
+  // t2 正确色     = #C62622
+  const PALETTE = [
+    "#2A5A5E",
     "#00e5ff",
     "#AC968A",
     "#ffc000",
     "#00b050",
     "#7030a0",
     "#0070c0",
-    "#444444"
+    "#C62622"
   ];
 
   const DEFAULT_CORRECT = "#2A5A5E";
 
-  // ✅ 强制同目录相对路径（避免你页面不是在 /color/ 时相对路径跑飞）
-  const ASSET = (name) => `./${name}`;
-
-  // 4 个图配置（确保文件名大小写与仓库完全一致）
   const TILES = [
-    { key:"t1", bg:ASSET("violin.jpg"),      mask:ASSET("violin_mask.png"),  reveal:{ type:"P" }, correctColor: DEFAULT_CORRECT },
-    { key:"t2", bg:ASSET("avec.jpg"),        mask:ASSET("avec_mask.png"),    reveal:{ type:"A" }, correctColor: "#C62622", replaceGreyWithCorrect:true },
-    { key:"t3", bg:ASSET("bw.jpg"),          mask:ASSET("skull_bw.png"),     reveal:{ type:"U" }, correctColor: DEFAULT_CORRECT },
-    { key:"t4", bg:ASSET("img4_bw.jpg"),     mask:ASSET("img4_mask.png"),    reveal:null,         correctColor: DEFAULT_CORRECT },
+    { key:"t1", bg:"violin.jpg",  mask:"violin_mask.png", reveal:{ type:"P" }, correctColor: DEFAULT_CORRECT },
+    { key:"t2", bg:"avec.jpg",    mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor: "#C62622" },
+    { key:"t3", bg:"bw.jpg",      mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor: DEFAULT_CORRECT },
+    { key:"t4", bg:"img4_bw.jpg", mask:"img4_mask.png",   reveal:null,         correctColor: DEFAULT_CORRECT },
   ];
 
-  // reveal 定位（相对“可涂抹白区 bbox”）
+  // ===== reveal 定位（相对“可涂抹白区”bbox）=====
   const U_BOX_REL = { x: 0.23, y: 0.08, w: 0.20, h: 0.30 };
   const U_STROKE_FACTOR = 0.22;
 
@@ -201,25 +194,9 @@
   const BRUSH_RADIUS = 18;
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
-  function sameHex(a,b){ return (a||"").trim().toLowerCase() === (b||"").trim().toLowerCase(); }
-
-  function buildPaletteColorsForTile(tile){
-    const c = (tile && tile.correctColor) ? tile.correctColor : DEFAULT_CORRECT;
-    const arr = BASE_COLORS.slice();
-    arr[0] = c;
-    if(tile && tile.replaceGreyWithCorrect){
-      const greyIndex = arr.findIndex(x => x.toLowerCase() === "#444444");
-      if(greyIndex >= 0) arr[greyIndex] = c;
-    }
-    return arr;
+  function sameHex(a,b){
+    return (a||"").trim().toLowerCase() === (b||"").trim().toLowerCase();
   }
-
-  // 顶部调试条：展示当前 URL + 每张图实际请求 URL
-  const debugbar = document.getElementById("debugbar");
-  const resolved = (u)=> new URL(u, location.href).href;
-  debugbar.textContent =
-    `URL: ${location.href}\n` +
-    TILES.map(t => `${t.key}: bg=${resolved(t.bg)} | mask=${resolved(t.mask)}`).join("\n");
 
   const grid = document.getElementById("grid");
 
@@ -286,14 +263,13 @@
       this.bind();
       this.renderPalette();
 
-      // ✅ 用 tile 里明确的路径
+      // ✅ 文件都在同目录，直接相对路径即可
       this.img.src = tile.bg;
       this.maskImg.src = tile.mask;
     }
 
     isCorrect(c){
-      const cc = (this.tile && this.tile.correctColor) ? this.tile.correctColor : DEFAULT_CORRECT;
-      return sameHex(c, cc);
+      return sameHex(c, this.tile.correctColor || DEFAULT_CORRECT);
     }
 
     bind(){
@@ -302,10 +278,7 @@
         if(this.maskOK) this.ready();
       });
       this.img.addEventListener("error", ()=>{
-        this.loading.innerHTML =
-          `底图加载失败：<b>${this.tile.bg}</b><br/>` +
-          `实际请求：${new URL(this.tile.bg, location.href).href}<br/>` +
-          `请检查：文件名大小写/是否在同目录/是否已部署`;
+        this.loading.textContent = `底图加载失败：${this.tile.bg}`;
       });
 
       this.maskImg.addEventListener("load", ()=>{
@@ -313,10 +286,7 @@
         if(this.bgOK) this.ready();
       });
       this.maskImg.addEventListener("error", ()=>{
-        this.loading.innerHTML =
-          `遮罩加载失败：<b>${this.tile.mask}</b><br/>` +
-          `实际请求：${new URL(this.tile.mask, location.href).href}<br/>` +
-          `请检查：文件名大小写/是否在同目录/是否已部署`;
+        this.loading.textContent = `遮罩加载失败：${this.tile.mask}`;
       });
 
       this.cv.addEventListener("pointerdown", (e)=>{
@@ -444,6 +414,7 @@
 
     buildPPath(cx, cy, s){
       const p = new Path2D();
+
       const x = cx + (-42)*s;
       const top = cy + (-88)*s;
       const mid = cy + (-6)*s;
@@ -455,11 +426,13 @@
       p.moveTo(x, top);
       p.quadraticCurveTo(cx + (72)*s,  cy + (-92)*s,  cx + (72)*s,  cy + (-28)*s);
       p.quadraticCurveTo(cx + (72)*s,  cy + (38)*s,   x,            mid);
+
       return p;
     }
 
     buildAPath(cx, cy, s){
       const a = new Path2D();
+
       const topY = cy + (-90)*s;
       const baseY = cy + (92)*s;
 
@@ -616,9 +589,7 @@
 
     renderPalette(){
       this.paletteEl.innerHTML = "";
-      const colors = buildPaletteColorsForTile(this.tile);
-
-      colors.forEach(c=>{
+      PALETTE.forEach(c=>{
         const b=document.createElement("button");
         b.type="button";
         b.className="swatch";
@@ -654,11 +625,6 @@
     tiles.forEach(t=>{
       if(t.bgOK && t.maskOK) t.resizeAll();
     });
-  });
-
-  // 如果 JS 整体报错，这里能兜底显示在页面上（否则你只会“看不到”）
-  window.addEventListener("error", (ev)=>{
-    debugbar.textContent += `\n\nJS ERROR: ${ev.message || ev.error}`;
   });
 })();
 </script>
