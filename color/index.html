@@ -153,11 +153,11 @@
 <script>
 (() => {
   // ===================== 核心参数 =====================
-  const BRUSH_RADIUS = 18;
+  const BRUSH_RADIUS_CSS = 18;
 
-  const LIMIT_BW_URL = "skull_bw.png"; // 黑白限制图：白=可涂，黑=不可涂
-  const U_MASK_URL   = "mask_u.png";   // 透明底 + 白色u笔迹（用来挖洞显示底图）
-  const CORRECT_HEX  = "#ac968a";      // 只有这个颜色才显示 u（大小写无所谓）
+  const LIMIT_BW_URL = "skull_bw.png"; // 白=可涂，黑=不可涂
+  const U_MASK_URL   = "mask_u.png";   // 透明底 + 白色u（用来挖洞）
+  const CORRECT_HEX  = "#ac968a";      // 只有这个颜色才显示 u
 
   // 8 色（不含白色；必须包含 CORRECT_HEX）
   const COLORS = [
@@ -168,23 +168,35 @@
     "#00b050",
     "#7030a0",
     "#0070c0",
-    "#AC968A"   // ✅ 正确色
+    "#AC968A"
   ];
-  // ===================================================
+
+  // ====== 定位微调（解决“定位不准确”）======
+  // 先保持 0；如果 skull_bw.png 与 bw.jpg 不同裁切/比例，用这里对齐
+  const LIMIT_SCALE = 1.0;   // 例如 1.02 / 0.98
+  const LIMIT_DX    = 0;     // 像素（CSS像素）正=向右
+  const LIMIT_DY    = 0;     // 像素（CSS像素）正=向下
+
+  // u 蒙版位置微调（把 u 放到 M 左侧白色空白区）
+  const U_SCALE = 1.0;
+  const U_DX    = -90;       // 默认往左移一点（你可再调）
+  const U_DY    = 10;        // 默认略往下
+  // ================================================
 
   const img = document.getElementById("bw");
   const cv = document.getElementById("paint");
   const ctx = cv.getContext("2d", { alpha:true });
-
-  // 关闭平滑，减少“发灰”观感（更硬朗）
-  ctx.imageSmoothingEnabled = false;
 
   const paletteEl = document.getElementById("palette");
   const hintEl = document.getElementById("hint");
   const loading = document.getElementById("loading");
 
   let currentColor = null;
-  let down = false, last = null;
+  let drawing = false;
+  let last = null;
+
+  // 本次笔画的“脏矩形”（用来抬手后硬化 alpha，实现纯色且不影响顺滑）
+  let dirty = null; // {x0,y0,x1,y1} in device pixels
 
   // ===== 资源 =====
   const limitImg = new Image();
@@ -195,7 +207,7 @@
   uMaskImg.decoding = "async";
   uMaskImg.src = U_MASK_URL;
 
-  // ===== Offscreen：可涂区域硬蒙版（alpha 0/255）=====
+  // ===== Offscreen：允许区域蒙版（alpha 0/255）=====
   const allowCanvas = document.createElement("canvas");
   const allowCtx = allowCanvas.getContext("2d", { willReadFrequently:true });
 
@@ -210,21 +222,30 @@
     return currentColor.trim().toLowerCase() === CORRECT_HEX;
   }
 
+  // 把 skull_bw.png 二值化成 alpha 蒙版：白区 alpha=255，否则 0
   function buildAllowMask(){
-    // 把 skull_bw.png 画到 allowCanvas，并把“白区”转成 alpha=255，其余 alpha=0
     const w = allowCanvas.width, h = allowCanvas.height;
 
     allowCtx.setTransform(1,0,0,1,0,0);
     allowCtx.clearRect(0,0,w,h);
     allowCtx.imageSmoothingEnabled = false;
-    allowCtx.drawImage(limitImg, 0, 0, w, h);
+
+    // 将 LIMIT_SCALE/LIMIT_DX/LIMIT_DY 应用到 skull_bw.png
+    const s = dpr();
+    const dx = Math.round(LIMIT_DX * s);
+    const dy = Math.round(LIMIT_DY * s);
+
+    const dw = Math.round(w * LIMIT_SCALE);
+    const dh = Math.round(h * LIMIT_SCALE);
+    const x = Math.round((w - dw)/2 + dx);
+    const y = Math.round((h - dh)/2 + dy);
+
+    allowCtx.drawImage(limitImg, x, y, dw, dh);
 
     const imgData = allowCtx.getImageData(0,0,w,h);
     const data = imgData.data;
 
-    // 阈值：你这张黑白图边缘很干净，但依然用阈值确保二值化
-    const TH = 200; // 亮度>200 视为白（可涂）
-
+    const TH = 200; // 亮度阈值：>TH 视为白（可涂）
     for(let i=0;i<data.length;i+=4){
       const r=data[i], g=data[i+1], b=data[i+2];
       const lum = (r*0.299 + g*0.587 + b*0.114);
@@ -234,26 +255,35 @@
     allowCtx.putImageData(imgData,0,0);
   }
 
+  // 将 mask_u.png 画到 uMaskCanvas，并应用 U_SCALE/U_DX/U_DY
   function buildUMask(){
     const w = uMaskCanvas.width, h = uMaskCanvas.height;
     uMaskCtx.setTransform(1,0,0,1,0,0);
     uMaskCtx.clearRect(0,0,w,h);
     uMaskCtx.imageSmoothingEnabled = false;
-    uMaskCtx.drawImage(uMaskImg, 0, 0, w, h);
+
+    const s = dpr();
+    const dx = Math.round(U_DX * s);
+    const dy = Math.round(U_DY * s);
+
+    const dw = Math.round(w * U_SCALE);
+    const dh = Math.round(h * U_SCALE);
+    const x = Math.round((w - dw)/2 + dx);
+    const y = Math.round((h - dh)/2 + dy);
+
+    uMaskCtx.drawImage(uMaskImg, x, y, dw, dh);
   }
 
   function resizeAll(){
     const r = img.getBoundingClientRect();
     const s = dpr();
 
-    // 画布像素尺寸
     cv.width  = Math.round(r.width * s);
     cv.height = Math.round(r.height * s);
 
-    // 用 CSS 像素坐标绘制
+    // 用 CSS 像素坐标绘制（更直观）
     ctx.setTransform(s,0,0,s,0,0);
 
-    // offscreen 使用与 cv 相同的像素尺寸（方便直接 drawImage）
     allowCanvas.width  = cv.width;
     allowCanvas.height = cv.height;
     uMaskCanvas.width  = cv.width;
@@ -263,7 +293,7 @@
     buildUMask();
   }
 
-  // === 把“已画内容”裁到可涂区域（硬裁）===
+  // 把“当前画面”裁剪到允许区域（只保留白区内的涂抹）
   function clipToAllowed(){
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
@@ -272,7 +302,7 @@
     ctx.restore();
   }
 
-  // === 仅当颜色正确时，挖出 u 显示底图（且同样只能出现在白区）===
+  // 只有正确颜色时挖出 u（显示底图）；并再次裁剪，避免 u 跑出白区
   function punchUIfNeeded(){
     if(!isCorrect()) return;
 
@@ -282,60 +312,74 @@
     ctx.drawImage(uMaskCanvas, 0, 0);
     ctx.restore();
 
-    // 再裁一次，确保 u 也不会跑出白区
     clipToAllowed();
   }
 
-  // === 强制“纯色”：把落笔区域 alpha 二值化（0/255）避免任何半透明渐进 ===
-  function hardenPatch(x,y){
-    // x,y 是 CSS 像素
+  // 记录脏矩形（device pixels）
+  function markDirty(xCss, yCss){
     const s = dpr();
-    const px = Math.round(x * s);
-    const py = Math.round(y * s);
-    const R  = Math.round((BRUSH_RADIUS + 2) * s);
+    const R = Math.round((BRUSH_RADIUS_CSS + 3) * s);
+    const x = Math.round(xCss * s);
+    const y = Math.round(yCss * s);
+    const x0 = Math.max(0, x - R);
+    const y0 = Math.max(0, y - R);
+    const x1 = Math.min(cv.width,  x + R);
+    const y1 = Math.min(cv.height, y + R);
 
-    const x0 = Math.max(0, px - R);
-    const y0 = Math.max(0, py - R);
-    const x1 = Math.min(cv.width,  px + R);
-    const y1 = Math.min(cv.height, py + R);
-    const w = x1 - x0, h = y1 - y0;
+    if(!dirty){
+      dirty = {x0,y0,x1,y1};
+    }else{
+      dirty.x0 = Math.min(dirty.x0, x0);
+      dirty.y0 = Math.min(dirty.y0, y0);
+      dirty.x1 = Math.max(dirty.x1, x1);
+      dirty.y1 = Math.max(dirty.y1, y1);
+    }
+  }
+
+  // 在 pointerup 时一次性“硬化 alpha”，让最终看起来是 100% 纯色（无渐变）
+  function hardenDirtyToSolid(){
+    if(!dirty) return;
+    const x0 = dirty.x0, y0 = dirty.y0;
+    const w = dirty.x1 - dirty.x0;
+    const h = dirty.y1 - dirty.y0;
+    dirty = null;
     if(w<=0 || h<=0) return;
 
     const imgData = ctx.getImageData(x0, y0, w, h);
     const data = imgData.data;
 
-    // alpha>0 直接变 255（纯色硬边）
+    // alpha>0 => 255（把所有半透明边缘“顶满”）
     for(let i=0;i<data.length;i+=4){
-      data[i+3] = data[i+3] > 0 ? 255 : 0;
+      if(data[i+3] > 0) data[i+3] = 255;
     }
     ctx.putImageData(imgData, x0, y0);
   }
 
   function dab(x,y){
-    // 1) 画纯色圆点
+    // 1) 画（涂抹过程保持顺滑）
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
     ctx.fillStyle = currentColor;
     ctx.beginPath();
-    ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
+    ctx.arc(x,y,BRUSH_RADIUS_CSS,0,Math.PI*2);
     ctx.fill();
     ctx.restore();
 
-    // 2) 硬化该区域，去掉任何半透明渐变
-    hardenPatch(x,y);
+    markDirty(x,y);
 
-    // 3) 裁到允许区域（白区）
+    // 2) 只允许白区
     clipToAllowed();
 
-    // 4) 颜色正确时挖 u
+    // 3) 正确色才显示 u
     punchUIfNeeded();
   }
 
   function stroke(a,b,c,d){
     const dx=c-a, dy=d-b;
     const dist=Math.hypot(dx,dy);
-    const step=Math.max(2, BRUSH_RADIUS*0.5);
+    // 步长小一点更顺滑
+    const step=Math.max(1.5, BRUSH_RADIUS_CSS*0.35);
     const n=Math.max(1, Math.ceil(dist/step));
     for(let i=1;i<=n;i++){
       const t=i/n;
@@ -343,40 +387,52 @@
     }
   }
 
-  function pos(e){
+  function posFromEvent(e){
     const r=cv.getBoundingClientRect();
-    const p=e;
-    return {x:p.clientX-r.left, y:p.clientY-r.top};
+    return {x:e.clientX-r.left, y:e.clientY-r.top};
   }
 
   function warnNeedColor(){
     hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br><strong>只有 #AC968A 才会显示隐藏的 u。</strong>';
   }
 
+  // pointer events（用 capture，手感更稳定）
   cv.addEventListener("pointerdown", e=>{
     e.preventDefault();
     if(!currentColor){ warnNeedColor(); return; }
-    down=true;
-    last=pos(e);
+
+    drawing = true;
+    cv.setPointerCapture(e.pointerId);
+
+    last = posFromEvent(e);
     dab(last.x,last.y);
   }, {passive:false});
 
-  window.addEventListener("pointermove", e=>{
-    if(!down) return;
+  cv.addEventListener("pointermove", e=>{
+    if(!drawing) return;
     e.preventDefault();
-    const p=pos(e);
+
+    const p = posFromEvent(e);
     stroke(last.x,last.y,p.x,p.y);
-    last=p;
+    last = p;
   }, {passive:false});
 
-  window.addEventListener("pointerup", ()=>{
-    down=false;
-    last=null;
-  }, {passive:true});
+  function endStroke(){
+    if(!drawing) return;
+    drawing = false;
+    last = null;
 
-  window.addEventListener("pointercancel", ()=>{
-    down=false; last=null;
-  }, {passive:true});
+    // 抬手后一次性硬化：最终效果是纯色且手感不卡
+    hardenDirtyToSolid();
+
+    // 硬化后再确保裁剪与 u 挖洞一致（避免边缘“涨出”）
+    clipToAllowed();
+    punchUIfNeeded();
+  }
+
+  cv.addEventListener("pointerup", endStroke, {passive:true});
+  cv.addEventListener("pointercancel", endStroke, {passive:true});
+  cv.addEventListener("lostpointercapture", endStroke, {passive:true});
 
   // 调色盘
   function renderPalette(){
@@ -389,6 +445,7 @@
 
       b.addEventListener("click", ()=>{
         currentColor = c;
+
         [...paletteEl.children].forEach(x=>x.classList.remove("selected"));
         b.classList.add("selected");
 
