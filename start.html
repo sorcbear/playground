@@ -180,17 +180,13 @@
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
 
-  /* ✅ iPhone 更响：主音量 + 压缩后补偿（makeup）
-     - MASTER_VOL：整体推大
-     - MAKEUP_VOL：压缩后再补一点“平均响度”
-     建议先用这个版本，如果仍小，再把 MASTER_VOL 继续加 0.2~0.4。 */
   const MASTER_VOL = 2.80;
   const MAKEUP_VOL = 1.35;
 
-  // ✅ 0 后停 1 秒再咔嚓
-  const PAUSE_BEFORE_LATCH_MS = 1000;
+  // ✅ 倒计时旋律单独再加一层增益（只影响旋律，不影响咔嚓/爆炸）
+  const MELODY_VOL = 1.65;  // 你要更响：1.8~2.2（太大可能会更“顶”）
 
-  // ✅ 咔嚓到爆炸间隔：0.5 秒（你要求）
+  const PAUSE_BEFORE_LATCH_MS = 1000;
   const LATCH_TO_BOOM_MS = 500;
 
   const NAV_WATCHDOG_MS = 9000;
@@ -230,12 +226,15 @@
   let exploded = false;
 
   // audio chain
-  let preGain = null;       // MASTER_VOL
-  let compressor = null;    // 压缩提升平均响度
-  let makeupGain = null;    // MAKEUP_VOL：压缩后补偿
-  let hpMaster = null;      // ✅ 手机友好：切低频泥巴
-  let presence = null;      // ✅ 手机友好：2kHz 存在感
-  let limiter = null;       // 末端限幅，避免破音
+  let preGain = null;
+  let compressor = null;
+  let makeupGain = null;
+  let hpMaster = null;
+  let presence = null;
+  let limiter = null;
+
+  // ✅ 旋律专用增益（接到 preGain）
+  let melodyBus = null;
 
   let navWatchdog = null;
   let navDone = false;
@@ -266,7 +265,6 @@
       preGain.gain.setValueAtTime(MASTER_VOL, audioCtx.currentTime);
 
       compressor = audioCtx.createDynamicsCompressor();
-      // 更积极一点，拉高平均响度（iPhone 更明显）
       compressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
       compressor.knee.setValueAtTime(18, audioCtx.currentTime);
       compressor.ratio.setValueAtTime(10, audioCtx.currentTime);
@@ -276,9 +274,6 @@
       makeupGain = audioCtx.createGain();
       makeupGain.gain.setValueAtTime(MAKEUP_VOL, audioCtx.currentTime);
 
-      /* ✅ 新增：手机外放“更响”的关键（不改变其它逻辑）
-         1) 高通：砍掉低频泥巴（手机播不出来，还占动态）
-         2) Presence：2.2kHz 小幅抬高，让“机关/爆炸”更靠前更清晰 */
       hpMaster = audioCtx.createBiquadFilter();
       hpMaster.type = "highpass";
       hpMaster.frequency.setValueAtTime(160, audioCtx.currentTime);
@@ -289,7 +284,6 @@
       presence.Q.setValueAtTime(0.9, audioCtx.currentTime);
       presence.gain.setValueAtTime(6.0, audioCtx.currentTime);
 
-      // 末端限幅（轻 limiter）：防止你把音量推大后刺耳破音
       limiter = audioCtx.createDynamicsCompressor();
       limiter.threshold.setValueAtTime(-1.2, audioCtx.currentTime);
       limiter.knee.setValueAtTime(0, audioCtx.currentTime);
@@ -297,7 +291,11 @@
       limiter.attack.setValueAtTime(0.001, audioCtx.currentTime);
       limiter.release.setValueAtTime(0.08, audioCtx.currentTime);
 
-      // ✅ 链路：preGain -> compressor -> makeup -> HP -> presence -> limiter -> out
+      // ✅ 旋律 bus（只加响度，不动其它音效）
+      melodyBus = audioCtx.createGain();
+      melodyBus.gain.setValueAtTime(MELODY_VOL, audioCtx.currentTime);
+      melodyBus.connect(preGain);
+
       preGain.connect(compressor);
       compressor.connect(makeupGain);
       makeupGain.connect(hpMaster);
@@ -323,16 +321,17 @@
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
 
-    o.type = "sine";
+    // ✅ 旋律更“靠前”：换成 triangle，比 sine 更容易在手机外放听清
+    o.type = "triangle";
     o.frequency.setValueAtTime(freq, t);
 
-    // ✅ 旋律再抬一点（但靠 limiter 控制峰值）
+    // ✅ 提升旋律本体响度（再叠加 MELODY_VOL）
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.95, t + 0.012);
+    g.gain.linearRampToValueAtTime(1.25, t + 0.010);
     g.gain.exponentialRampToValueAtTime(0.0001, t + d);
 
     o.connect(g);
-    g.connect(preGain);
+    g.connect(melodyBus); // ✅ 只进旋律 bus
 
     o.start(t);
     o.stop(t + d + 0.05);
@@ -438,9 +437,6 @@
     const src = ctx.createBufferSource();
     src.buffer = buffer;
 
-    /* ✅ 仅调整滤波，让 iPhone 外放更“响更清楚”
-       - 不再把主要能量压到 55Hz（手机听不到）
-       - 起点提高到 1600Hz，落到 420Hz：爆炸更“啪” */
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
     lp.frequency.setValueAtTime(1600, ctx.currentTime);
