@@ -17,9 +17,12 @@
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      --swatch: 44px;
-      --swatch-gap: 14px;
-      --ring: 5px;
+      /* ✅ 调色盘尺寸：用 clamp 让手机也能稳定塞进 2 列 */
+      --swatch: clamp(34px, 9vw, 44px);
+      --swatch-gap: clamp(10px, 3vw, 14px);
+
+      /* ✅ 选中边框（黑色） */
+      --ring: 4px;
 
       --gap: 18px;
       --tile-gap: 18px;
@@ -48,7 +51,7 @@
       font-weight:700;
     }
 
-    /* 2x2 容器 */
+    /* ✅ 永远 2x2（手机也保持 2 列） */
     .grid{
       display:grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -56,16 +59,11 @@
       align-items:start;
     }
 
-    /* ✅ 手机/窄屏：改成 1 列，避免两个调色盘并排挤在一起看起来“重叠” */
-    @media (max-width: 820px){
-      .grid{ grid-template-columns: 1fr; }
-    }
-
     .tile{
       display:flex;
       flex-direction:column;
       gap: 12px;
-      min-width: 0;
+      min-width: 0; /* 防止内容把列撑爆 */
     }
 
     .stage{
@@ -106,6 +104,8 @@
       flex-direction:column;
       align-items:center;
       gap:10px;
+      width:100%;
+      overflow:hidden; /* ✅ 防止调色盘溢出到隔壁列造成“重叠” */
     }
 
     .palette{
@@ -115,8 +115,9 @@
       gap: var(--swatch-gap);
       justify-content:center;
       align-content:center;
+
       width: 100%;
-      max-width: calc(4 * var(--swatch) + 3 * var(--swatch-gap));
+      max-width: min(100%, calc(4 * var(--swatch) + 3 * var(--swatch-gap)));
     }
 
     .swatch{
@@ -131,24 +132,13 @@
       -webkit-tap-highlight-color:transparent;
     }
 
-    /* ✅ 选中反馈：白色边框（并加一层淡黑外圈，保证在白底上也看得见） */
+    /* ✅ 选中反馈：仅黑色边框，不要外圈 */
     .swatch.selected{
-      box-shadow:
-        0 0 0 var(--ring) #fff,
-        0 0 0 calc(var(--ring) + 2px) rgba(0,0,0,.25);
+      box-shadow: 0 0 0 var(--ring) #000;
     }
 
     .hint{
-      font-size:14px;
-      line-height:1.6;
-      opacity:.78;
-      text-align:center;
-      min-height: 1.6em;
-    }
-    .hint strong{ opacity:1; }
-
-    @media (max-width: 520px){
-      :root{ --swatch: 40px; --swatch-gap: 12px; }
+      display:none; /* ✅ 不显示“已选中...”文字 */
     }
   </style>
 </head>
@@ -161,13 +151,11 @@
 
 <script>
 (() => {
-  // =========================
-  // ✅ 正确颜色改为 #2A5A5E（并替代原来的黑色）
-  // =========================
+  // ✅ 正确颜色：#2A5A5E（并替代原来的黑色）
   const CORRECT_COLOR = "#2A5A5E";
 
   const COLORS = [
-    CORRECT_COLOR,   // ✅ 替代黑色
+    CORRECT_COLOR,   // 原黑色位置 -> 正确色
     "#00e5ff",
     "#AC968A",
     "#ffc000",
@@ -177,38 +165,23 @@
     "#444444"
   ];
 
-  // =========================
   // 4 个图配置
-  // =========================
   const TILES = [
-    // 第1个：violin（✅ 画正确色显示 P）
-    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" } },
-
-    // 第2个：占位（你没有文件就会显示加载失败提示）
+    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" } }, // ✅ 画正确色显示 P
     { key:"t2", bg:"img2_bw.jpg", mask:"img2_mask.png", reveal:null },
-
-    // 第3个：骷髅（✅ 画正确色显示 U）
-    { key:"t3", bg:"bw.jpg", mask:"skull_bw.png", reveal:{ type:"U" } },
-
-    // 第4个：占位
+    { key:"t3", bg:"bw.jpg", mask:"skull_bw.png", reveal:{ type:"U" } },        // ✅ 画正确色显示 U
     { key:"t4", bg:"img4_bw.jpg", mask:"img4_mask.png", reveal:null },
   ];
 
-  // =========================
-  // reveal 定位（相对 mask 的 bbox）
-  // 你后面要微调 P 的位置/大小，只改 P_BOX_REL 即可
-  // =========================
+  // reveal 定位（相对 mask bbox）
   const U_BOX_REL = { x: 0.23, y: 0.08, w: 0.20, h: 0.30 };
   const U_STROKE_FACTOR = 0.22;
 
-  // ✅ P 默认放在偏右下（你截图里的 P 大致位置）
+  // P 放在偏右下
   const P_BOX_REL = { x: 0.62, y: 0.70, w: 0.26, h: 0.26 };
   const P_STROKE_FACTOR = 0.20;
 
-  // 白色阈值（mask 有灰边可稍降低）
   const WHITE_TH = 200;
-
-  // 画笔
   const BRUSH_RADIUS = 18;
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
@@ -216,9 +189,6 @@
     return !!c && c.trim().toLowerCase() === CORRECT_COLOR.toLowerCase();
   }
 
-  // =========================
-  // DOM 生成 4 格
-  // =========================
   const grid = document.getElementById("grid");
 
   function makeTileDOM(tile){
@@ -256,29 +226,24 @@
 
       this.currentColor = null;
 
-      // rAF 队列
       this.down = false;
       this.last = null;
       this.pending = null;
       this.rafId = 0;
       this.needPost = false;
 
-      // 资源
       this.bgOK = false;
       this.maskOK = false;
 
       this.maskImg = new Image();
       this.maskImg.decoding = "async";
 
-      // 离屏：白区 mask（alpha=255 可涂）
       this.whiteMaskCanvas = document.createElement("canvas");
       this.whiteMaskCtx = this.whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
 
-      // 记录“正确颜色涂过的区域”（用于 reveal）
       this.correctPaintCanvas = document.createElement("canvas");
       this.correctPaintCtx = this.correctPaintCanvas.getContext("2d");
 
-      // reveal：字母形状 mask + intersection
       this.letterMaskCanvas = document.createElement("canvas");
       this.letterMaskCtx = this.letterMaskCanvas.getContext("2d");
 
@@ -311,13 +276,9 @@
         this.loading.textContent = `遮罩加载失败：${this.tile.mask}`;
       });
 
-      // pointer
       this.cv.addEventListener("pointerdown", (e)=>{
         e.preventDefault();
-        if(!this.currentColor){
-          this.warnNeedColor();
-          return;
-        }
+        if(!this.currentColor) return;
         try{ this.cv.setPointerCapture(e.pointerId); }catch(_){}
         this.down = true;
         this.last = null;
@@ -340,15 +301,6 @@
       };
       this.cv.addEventListener("pointerup", end, {passive:true});
       this.cv.addEventListener("pointercancel", end, {passive:true});
-    }
-
-    warnNeedColor(){
-      this.hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。';
-    }
-
-    clearHint(){
-      // ✅ 不显示“已选中正确颜色/已选中颜色...”这类文字
-      this.hintEl.textContent = "";
     }
 
     posFromPointer(e){
@@ -378,7 +330,6 @@
     }
 
     dabOnly(x,y){
-      // 画点
       this.ctx.save();
       this.ctx.globalCompositeOperation = "source-over";
       this.ctx.fillStyle = this.currentColor;
@@ -387,7 +338,6 @@
       this.ctx.fill();
       this.ctx.restore();
 
-      // ✅ 正确色记录（用于 P / U reveal）
       if(this.tile.reveal && isCorrectColor(this.currentColor)){
         this.correctPaintCtx.save();
         this.correctPaintCtx.globalCompositeOperation = "source-over";
@@ -449,17 +399,24 @@
       return u;
     }
 
+    /* ✅ 更“标准”的 P：加长竖杆，肚更像 P，避免看成 D */
     buildPPath(cx, cy, s){
-      // 一个“手写感”的 P（线条版），配合 stroke 宽度即可
       const p = new Path2D();
-      // 竖杆
-      p.moveTo(cx + (-35)*s, cy + (70)*s);
-      p.lineTo(cx + (-35)*s, cy + (-70)*s);
 
-      // 上半圆肚
-      p.moveTo(cx + (-35)*s, cy + (-70)*s);
-      p.quadraticCurveTo(cx + (55)*s,  cy + (-70)*s,  cx + (55)*s,  cy + (-10)*s);
-      p.quadraticCurveTo(cx + (55)*s,  cy + (50)*s,   cx + (-35)*s, cy + (35)*s);
+      const x = cx + (-42)*s;          // 竖杆 x
+      const top = cy + (-88)*s;        // 更高
+      const mid = cy + (-6)*s;         // 肚子的中线
+      const bottom = cy + (92)*s;      // 更低
+
+      // 竖杆
+      p.moveTo(x, bottom);
+      p.lineTo(x, top);
+
+      // 上半肚：从 top 出发，向右绕回到 mid（不闭合，保持手写线条感）
+      p.moveTo(x, top);
+      p.quadraticCurveTo(cx + (72)*s,  cy + (-92)*s,  cx + (72)*s,  cy + (-28)*s);
+      p.quadraticCurveTo(cx + (72)*s,  cy + (38)*s,   x,            mid);
+
       return p;
     }
 
@@ -482,7 +439,6 @@
 
       this.whiteMaskCtx.putImageData(imgData, 0, 0);
 
-      // reveal 定位需要 bbox
       this.bbox = this.tile.reveal ? this.computeBBoxFromAlpha(imgData, w, h) : null;
     }
 
@@ -538,10 +494,8 @@
       this.cv.width  = Math.round(r.width * s);
       this.cv.height = Math.round(r.height * s);
 
-      // 主画布：CSS 坐标系绘制
       this.ctx.setTransform(s,0,0,s,0,0);
 
-      // 离屏：device 像素
       this.whiteMaskCanvas.width  = this.cv.width;
       this.whiteMaskCanvas.height = this.cv.height;
 
@@ -554,7 +508,6 @@
       this.interCanvas.width  = this.cv.width;
       this.interCanvas.height = this.cv.height;
 
-      // correctPaintCtx：也用 CSS 坐标
       this.correctPaintCtx.setTransform(1,0,0,1,0,0);
       this.correctPaintCtx.clearRect(0,0,this.correctPaintCanvas.width, this.correctPaintCanvas.height);
       this.correctPaintCtx.setTransform(s,0,0,s,0,0);
@@ -577,7 +530,6 @@
     punchLetterByPaintedArea(){
       if(!this.tile.reveal) return;
 
-      // intersection = correctPaint ∩ letterMask
       this.interCtx.setTransform(1,0,0,1,0,0);
       this.interCtx.clearRect(0,0,this.interCanvas.width, this.interCanvas.height);
 
@@ -587,7 +539,6 @@
       this.interCtx.globalCompositeOperation = "destination-in";
       this.interCtx.drawImage(this.letterMaskCanvas, 0, 0);
 
-      // 在涂层挖洞 -> 露出底图，形成字母
       this.ctx.save();
       this.ctx.setTransform(1,0,0,1,0,0);
       this.ctx.globalCompositeOperation = "destination-out";
@@ -611,13 +562,8 @@
 
         b.addEventListener("click", ()=>{
           this.currentColor = c;
-
-          // ✅ 选中白边反馈
           [...this.paletteEl.children].forEach(x=>x.classList.remove("selected"));
           b.classList.add("selected");
-
-          // ✅ 不显示“已选中...”文字
-          this.clearHint();
 
           this.needPost = true;
           this.scheduleFrame();
@@ -633,7 +579,6 @@
     }
   }
 
-  // 创建 4 格
   const tiles = [];
   TILES.forEach(t=>{
     const dom = makeTileDOM(t);
