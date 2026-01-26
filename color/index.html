@@ -53,14 +53,11 @@
       grid-template-columns: 1fr 1fr;
       gap: var(--gap);
     }
-
     @media (max-width:780px){
       .grid{ grid-template-columns: 1fr; }
     }
 
-    .card{
-      border-radius: var(--radius);
-    }
+    .card{ border-radius: var(--radius); }
 
     .stage{
       position:relative;
@@ -69,7 +66,7 @@
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
-      touch-action:none; /* 拖动不滚屏 */
+      touch-action:none;
       background:#eee;
     }
     .stage img{ width:100%; display:block; }
@@ -102,7 +99,7 @@
       gap:8px;
     }
 
-    /* ✅ 2x4 */
+    /* 2x4 */
     .palette{
       display:grid;
       grid-template-columns: repeat(4, var(--swatch));
@@ -146,34 +143,30 @@
 
   <div class="grid">
 
-    <!-- 左上：占位（后面再接入） -->
+    <!-- 左上：占位 -->
     <div class="card">
       <div class="stage">
         <img src="img1.jpg" alt="">
-        <canvas class="overlay" style="display:none;"></canvas>
-        <div class="loading hide"></div>
       </div>
       <div class="paletteWrap">
         <div class="palette" data-palette="p1"></div>
-        <div class="hint">（占位）这张图后面再做涂抹逻辑。</div>
+        <div class="hint">（占位）这张图后面再接涂抹逻辑。</div>
       </div>
     </div>
 
-    <!-- 右上：占位（后面再接入） -->
+    <!-- 右上：占位 -->
     <div class="card">
       <div class="stage">
         <img src="img2.jpg" alt="">
-        <canvas class="overlay" style="display:none;"></canvas>
-        <div class="loading hide"></div>
       </div>
       <div class="paletteWrap">
         <div class="palette" data-palette="p2"></div>
-        <div class="hint">（占位）这张图后面再做涂抹逻辑。</div>
+        <div class="hint">（占位）这张图后面再接涂抹逻辑。</div>
       </div>
     </div>
 
-    <!-- 左下：骷髅（启用涂抹 + 正确色显示 u） -->
-    <div class="card" id="skullCard">
+    <!-- 左下：骷髅（已修复：u 只在涂抹覆盖到的区域出现） -->
+    <div class="card">
       <div class="stage">
         <img id="skullImg" src="bw.jpg" alt="">
         <canvas id="skullCanvas" class="overlay"></canvas>
@@ -188,16 +181,14 @@
       </div>
     </div>
 
-    <!-- 右下：占位（后面再接入） -->
+    <!-- 右下：占位 -->
     <div class="card">
       <div class="stage">
         <img src="img4.jpg" alt="">
-        <canvas class="overlay" style="display:none;"></canvas>
-        <div class="loading hide"></div>
       </div>
       <div class="paletteWrap">
         <div class="palette" data-palette="p4"></div>
-        <div class="hint">（占位）这张图后面再做涂抹逻辑。</div>
+        <div class="hint">（占位）这张图后面再接涂抹逻辑。</div>
       </div>
     </div>
 
@@ -206,7 +197,7 @@
 
 <script>
 (() => {
-  // 统一 8 色
+  // ===== 统一 8 色（每张图各自一套调色盘）=====
   const COLORS = [
     "#000000",
     "#00e5ff",
@@ -218,7 +209,7 @@
     "#AC968A"
   ];
 
-  // 占位图的调色盘只做UI（不连涂抹）
+  // 占位图调色盘：只做“选中反馈”
   document.querySelectorAll('[data-palette]').forEach(el=>{
     el.innerHTML = "";
     COLORS.forEach(c=>{
@@ -234,11 +225,21 @@
     });
   });
 
-  // ================== 左下角骷髅：可涂逻辑（修复“颜色一闪就消失”）==================
-  const BRUSH_RADIUS_CSS = 14;     // ✅ 笔触更细
-  const LIMIT_BW_URL = "skull_bw.png";
-  const U_MASK_URL   = "mask_u.png";
+  // ================== 左下角骷髅：涂抹逻辑（对齐 + 局部显示 u）==================
+  const BRUSH_RADIUS_CSS = 14;
+
+  const LIMIT_BW_URL = "skull_bw.png"; // 白=可涂，黑=不可涂
+  const U_MASK_URL   = "mask_u.png";   // 透明底 + 白色u
   const CORRECT_HEX  = "#ac968a";
+
+  // ✅ 保留“你原来那套”对齐参数（默认 1/0/0）
+  const LIMIT_SCALE = 1.0;
+  const LIMIT_DX = 0;
+  const LIMIT_DY = 0;
+
+  const U_SCALE = 1.0;
+  const U_DX = 0;
+  const U_DY = 0;
 
   const img = document.getElementById("skullImg");
   const cv  = document.getElementById("skullCanvas");
@@ -260,37 +261,63 @@
   uMaskImg.decoding = "async";
   uMaskImg.src = U_MASK_URL;
 
-  // Offscreen：允许区域蒙版（alpha=0/255），以及 alpha 查询缓存
+  // ===== 离屏：允许区（alpha 0/255）=====
   const allowCanvas = document.createElement("canvas");
   const allowCtx = allowCanvas.getContext("2d", { willReadFrequently:true });
-  let allowAlpha = null; // Uint8ClampedArray (alpha channel)
+  let allowAlpha = null;
 
-  // Offscreen：u蒙版（用于挖洞）
+  // ===== 离屏：u mask（整张）=====
   const uMaskCanvas = document.createElement("canvas");
   const uMaskCtx = uMaskCanvas.getContext("2d");
+
+  // ===== 离屏：涂抹层 =====
+  // paintAll：所有颜色
+  // paintCorrect：仅正确色（用来限制 u 的出现范围）
+  const paintAll = document.createElement("canvas");
+  const paintAllCtx = paintAll.getContext("2d", { alpha:true });
+
+  const paintCorrect = document.createElement("canvas");
+  const paintCorrectCtx = paintCorrect.getContext("2d", { alpha:true });
+
+  // ===== 离屏：uIntersect = (uMask ∩ paintCorrect) =====
+  const uIntersect = document.createElement("canvas");
+  const uIntersectCtx = uIntersect.getContext("2d", { alpha:true });
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
   function isCorrect(){
-    if(!currentColor) return false;
-    return currentColor.trim().toLowerCase() === CORRECT_HEX;
+    return !!currentColor && currentColor.trim().toLowerCase() === CORRECT_HEX;
   }
 
-  // ✅ 关键：构建 allowAlpha，用于“只在允许区域落笔”
+  // 统一把一张 mask 图按 scale/dx/dy 对齐画进目标 canvas
+  function drawMaskAligned(targetCtx, maskImg, scale, dxCss, dyCss){
+    const w = targetCtx.canvas.width;
+    const h = targetCtx.canvas.height;
+    const s = dpr();
+
+    const dx = Math.round(dxCss * s);
+    const dy = Math.round(dyCss * s);
+
+    const dw = Math.round(w * scale);
+    const dh = Math.round(h * scale);
+    const x = Math.round((w - dw)/2 + dx);
+    const y = Math.round((h - dh)/2 + dy);
+
+    targetCtx.setTransform(1,0,0,1,0,0);
+    targetCtx.clearRect(0,0,w,h);
+    targetCtx.imageSmoothingEnabled = false;
+    targetCtx.drawImage(maskImg, x, y, dw, dh);
+  }
+
   function buildAllowMask(){
+    drawMaskAligned(allowCtx, limitImg, LIMIT_SCALE, LIMIT_DX, LIMIT_DY);
+
     const w = allowCanvas.width, h = allowCanvas.height;
-
-    allowCtx.setTransform(1,0,0,1,0,0);
-    allowCtx.clearRect(0,0,w,h);
-    allowCtx.imageSmoothingEnabled = true;
-
-    // 直接铺满（你 skull_bw.png 现在是完整画布同尺寸的版本）
-    allowCtx.drawImage(limitImg, 0, 0, w, h);
-
     const imgData = allowCtx.getImageData(0,0,w,h);
     const d = imgData.data;
 
-    // 生成“允许区 alpha”：亮度>40 -> 255 否则 0
+    // ✅ 仍然用阈值法，但不会再出现“一闪就没”的问题
+    // 因为我们不再用 destination-in 去擦整张画布
     const TH = 40;
     for(let i=0;i<d.length;i+=4){
       const r=d[i], g=d[i+1], b=d[i+2];
@@ -300,7 +327,6 @@
     }
     allowCtx.putImageData(imgData,0,0);
 
-    // 缓存 alpha 通道（每次落笔 O(1) 查询）
     allowAlpha = new Uint8ClampedArray(w*h);
     for(let p=0, j=3; p<allowAlpha.length; p++, j+=4){
       allowAlpha[p] = d[j];
@@ -308,11 +334,7 @@
   }
 
   function buildUMask(){
-    const w = uMaskCanvas.width, h = uMaskCanvas.height;
-    uMaskCtx.setTransform(1,0,0,1,0,0);
-    uMaskCtx.clearRect(0,0,w,h);
-    uMaskCtx.imageSmoothingEnabled = false;
-    uMaskCtx.drawImage(uMaskImg, 0, 0, w, h);
+    drawMaskAligned(uMaskCtx, uMaskImg, U_SCALE, U_DX, U_DY);
   }
 
   function resizeAll(){
@@ -323,16 +345,20 @@
     cv.height = Math.round(r.height * s);
     ctx.setTransform(s,0,0,s,0,0);
 
-    allowCanvas.width  = cv.width;
-    allowCanvas.height = cv.height;
-    uMaskCanvas.width  = cv.width;
-    uMaskCanvas.height = cv.height;
+    // 同步离屏尺寸
+    [allowCanvas,uMaskCanvas,paintAll,paintCorrect,uIntersect].forEach(c=>{
+      c.width = cv.width;
+      c.height = cv.height;
+    });
 
     buildAllowMask();
     buildUMask();
+
+    // 画布坐标系：用 CSS 像素绘制
+    paintAllCtx.setTransform(s,0,0,s,0,0);
+    paintCorrectCtx.setTransform(s,0,0,s,0,0);
   }
 
-  // ✅ 只在允许区落笔：不再用 destination-in 去“擦掉”，从根源解决“一闪就没”
   function allowedAt(xCss, yCss){
     if(!allowAlpha) return false;
     const s = dpr();
@@ -342,29 +368,61 @@
     return allowAlpha[y*cv.width + x] > 0;
   }
 
-  function punchU(){
-    if(!isCorrect()) return;
+  // 每次落笔后更新显示：display = paintAll - (uMask ∩ paintCorrect)
+  function redraw(){
+    const w = cv.width, h = cv.height;
+
+    // 1) 主画布清空
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,w,h);
+
+    // 2) 画所有颜色层
+    ctx.globalCompositeOperation = "source-over";
+    ctx.drawImage(paintAll, 0, 0);
+
+    // 3) 如果当前存在正确色痕迹：计算 uIntersect = uMask ∩ paintCorrect
+    //    然后从显示层挖掉它（destination-out）
+    uIntersectCtx.setTransform(1,0,0,1,0,0);
+    uIntersectCtx.clearRect(0,0,w,h);
+    uIntersectCtx.globalCompositeOperation = "source-over";
+    uIntersectCtx.drawImage(uMaskCanvas, 0, 0);
+    uIntersectCtx.globalCompositeOperation = "destination-in";
+    uIntersectCtx.drawImage(paintCorrect, 0, 0);
+
     ctx.globalCompositeOperation = "destination-out";
-    ctx.drawImage(uMaskCanvas, 0, 0);
+    ctx.drawImage(uIntersect, 0, 0);
+
     ctx.restore();
   }
 
   function dab(x,y){
+    if(!currentColor) return;
     if(!allowedAt(x,y)) return;
 
-    ctx.save();
-    ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = currentColor;
-    ctx.beginPath();
-    ctx.arc(x,y,BRUSH_RADIUS_CSS,0,Math.PI*2);
-    ctx.fill();
-    ctx.restore();
+    // 画到 paintAll
+    paintAllCtx.save();
+    paintAllCtx.globalCompositeOperation = "source-over";
+    paintAllCtx.globalAlpha = 1;
+    paintAllCtx.fillStyle = currentColor;
+    paintAllCtx.beginPath();
+    paintAllCtx.arc(x,y,BRUSH_RADIUS_CSS,0,Math.PI*2);
+    paintAllCtx.fill();
+    paintAllCtx.restore();
 
-    // 正确色才挖 u
-    punchU();
+    // 若是正确色，同时画到 paintCorrect（只记录覆盖区域，不需要颜色，写白即可）
+    if(isCorrect()){
+      paintCorrectCtx.save();
+      paintCorrectCtx.globalCompositeOperation = "source-over";
+      paintCorrectCtx.globalAlpha = 1;
+      paintCorrectCtx.fillStyle = "#fff";
+      paintCorrectCtx.beginPath();
+      paintCorrectCtx.arc(x,y,BRUSH_RADIUS_CSS,0,Math.PI*2);
+      paintCorrectCtx.fill();
+      paintCorrectCtx.restore();
+    }
+
+    redraw();
   }
 
   function stroke(a,b,c,d){
@@ -384,7 +442,7 @@
   }
 
   function warnNeedColor(){
-    hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br><strong>只有 #AC968A 才会显示隐藏的 u。</strong>';
+    hintEl.innerHTML = '请先在下方<strong>选择一种颜色</strong>，再开始涂抹。<br><strong>只有 #AC968A</strong> 才会显示隐藏的 u。';
   }
 
   cv.addEventListener("pointerdown", e=>{
@@ -426,8 +484,8 @@
         b.classList.add("selected");
 
         hintEl.innerHTML = isCorrect()
-          ? '已选中<strong>#AC968A</strong>：现在涂抹将显示隐藏的 u。'
-          : '已选中颜色：可以涂抹白色区域。但<strong>只有 #AC968A</strong>才会显示隐藏的 u。';
+          ? '已选中<strong>#AC968A</strong>：涂到哪里，u 就只在涂到的位置显示。'
+          : '已选中颜色：可以涂抹白色区域。但<strong>只有 #AC968A</strong> 才会显示隐藏的 u。';
       });
       paletteEl.appendChild(b);
     });
@@ -437,6 +495,7 @@
     resizeAll();
     renderPalette();
     loading.classList.add("hide");
+    redraw(); // 初始清一次
   }
 
   let okImg=false, okLimit=false, okU=false;
