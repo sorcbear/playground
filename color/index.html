@@ -22,12 +22,7 @@
       --swatch-gap: 14px;
       --ring: 5px;
 
-      --h-btn: 52px;
       --gap: 18px;
-      --gap-tight: 12px;
-
-      --ok:#0b6b2b;
-      --danger:#b00020;
     }
 
     *{ box-sizing:border-box; }
@@ -53,10 +48,10 @@
       font-weight:700;
     }
 
+    /* ✅ 去掉图外沿黑边框：不再给 panel 画边框 */
     .panel{
-      border:2px solid var(--border);
-      border-radius:0;
-      padding: 12px;
+      border:0;
+      padding:0;
     }
 
     .stage{
@@ -157,7 +152,7 @@
   const BRUSH_RADIUS = 18;
 
   const BG_URL = "bw.jpg";
-  const SKULL_URL = "skull_bw.png";
+  const SKULL_URL = "skull_bw.png"; // 黑底白骷髅：白色=可涂区域来源
 
   const CORRECT_COLOR = "#AC968A";
 
@@ -172,9 +167,15 @@
     "#444444"
   ];
 
-  // 你要的红框区域（归一化）
-  const U_BOX = { x: 0.29, y: 0.18, w: 0.17, h: 0.24 };
+  // ✅ U 在“骷髅白区bbox”里的相对位置（不是整图）
+  // 你要更靠左/右/上/下，就改 x/y；要更大/更小，改 w/h
+  const U_BOX_REL = { x: 0.23, y: 0.08, w: 0.20, h: 0.30 };
+
+  // U 粗细（相对 U_BOX）
   const U_STROKE_FACTOR = 0.22;
+
+  // 白色阈值（skull_bw.png 若边缘偏灰可稍微降低）
+  const WHITE_TH = 200;
 
   const img = document.getElementById("bg");
   const cv = document.getElementById("paint");
@@ -186,6 +187,7 @@
 
   let currentColor = null;
   let down = false, last = null;
+  let skullBBox = null; // {minx,miny,maxx,maxy} in device pixels
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
 
@@ -197,15 +199,19 @@
   skullImg.decoding = "async";
   skullImg.src = SKULL_URL;
 
+  // 白区蒙版：白色区域 alpha=255；黑色区域 alpha=0
   const whiteMaskCanvas = document.createElement("canvas");
   const whiteMaskCtx = whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
 
+  // uMask：仅 u 形状区域为 alpha=255
   const uMaskCanvas = document.createElement("canvas");
   const uMaskCtx = uMaskCanvas.getContext("2d");
 
+  // 记录“正确颜色涂过的区域”（用于“随涂随显”）
   const correctPaintCanvas = document.createElement("canvas");
   const correctPaintCtx = correctPaintCanvas.getContext("2d");
 
+  // intersection = correctPaint ∩ uMask
   const interCanvas = document.createElement("canvas");
   const interCtx = interCanvas.getContext("2d");
 
@@ -216,6 +222,34 @@
     u.quadraticCurveTo(cx + (0)*s,   cy + (70)*s,  cx + (28)*s,  cy + (48)*s);
     u.quadraticCurveTo(cx + (58)*s,  cy + (15)*s,  cx + (55)*s,  cy + (-65)*s);
     return u;
+  }
+
+  function computeBBoxFromAlpha(imgData, w, h){
+    const data = imgData.data;
+    const step = 3; // 采样步长，越小越精确越慢
+    let minx = w, miny = h, maxx = -1, maxy = -1;
+
+    for(let y=0; y<h; y+=step){
+      for(let x=0; x<w; x+=step){
+        const i = (y*w + x) * 4;
+        const a = data[i+3];
+        if(a > 0){
+          if(x < minx) minx = x;
+          if(y < miny) miny = y;
+          if(x > maxx) maxx = x;
+          if(y > maxy) maxy = y;
+        }
+      }
+    }
+    if(maxx < 0) return null;
+    // 扩一点边界，防止 U 靠边被裁
+    const pad = Math.round(Math.min(w,h) * 0.01);
+    return {
+      minx: Math.max(0, minx - pad),
+      miny: Math.max(0, miny - pad),
+      maxx: Math.min(w-1, maxx + pad),
+      maxy: Math.min(h-1, maxy + pad),
+    };
   }
 
   function rebuildWhiteMask(){
@@ -229,13 +263,16 @@
     const imgData = whiteMaskCtx.getImageData(0,0,w,h);
     const data = imgData.data;
 
-    const TH = 200;
     for(let i=0;i<data.length;i+=4){
       const r=data[i], g=data[i+1], b=data[i+2];
       const lum=(r+g+b)/3;
-      data[i+3] = (lum >= TH) ? 255 : 0;
+      data[i+3] = (lum >= WHITE_TH) ? 255 : 0;
     }
+
     whiteMaskCtx.putImageData(imgData, 0, 0);
+
+    // ✅ 用白区 alpha 计算骷髅 bbox（给 U 定位用）
+    skullBBox = computeBBoxFromAlpha(imgData, w, h);
   }
 
   function rebuildUMask(){
@@ -245,16 +282,24 @@
     uMaskCtx.setTransform(1,0,0,1,0,0);
     uMaskCtx.clearRect(0,0,w,h);
 
-    const bx = w * U_BOX.x;
-    const by = h * U_BOX.y;
-    const bw = w * U_BOX.w;
-    const bh = h * U_BOX.h;
+    if(!skullBBox){
+      // fallback：如果 bbox 读不到，就退回到整图
+      skullBBox = { minx:0, miny:0, maxx:w-1, maxy:h-1 };
+    }
 
-    const cx = bx + bw * 0.50;
-    const cy = by + bh * 0.58;
+    const bw = (skullBBox.maxx - skullBBox.minx);
+    const bh = (skullBBox.maxy - skullBBox.miny);
 
-    const s = Math.min(bw, bh) / 140;
-    const strokeW = Math.max(10, Math.round(Math.min(bw, bh) * U_STROKE_FACTOR));
+    const bx = skullBBox.minx + bw * U_BOX_REL.x;
+    const by = skullBBox.miny + bh * U_BOX_REL.y;
+    const boxW = bw * U_BOX_REL.w;
+    const boxH = bh * U_BOX_REL.h;
+
+    const cx = bx + boxW * 0.50;
+    const cy = by + boxH * 0.58;
+
+    const s = Math.min(boxW, boxH) / 140;
+    const strokeW = Math.max(10, Math.round(Math.min(boxW, boxH) * U_STROKE_FACTOR));
 
     const path = buildUPath(cx, cy, s);
 
@@ -274,9 +319,10 @@
     cv.width  = Math.round(r.width * s);
     cv.height = Math.round(r.height * s);
 
-    // 主画布：CSS 像素坐标绘制
+    // 主画布：用 CSS 像素坐标绘制（transform=s）
     ctx.setTransform(s,0,0,s,0,0);
 
+    // 离屏画布：device 像素尺寸
     whiteMaskCanvas.width = cv.width;
     whiteMaskCanvas.height = cv.height;
 
@@ -289,19 +335,17 @@
     interCanvas.width = cv.width;
     interCanvas.height = cv.height;
 
-    // ========= 关键修复：correctPaintCtx 也必须用同样的 transform =========
-    // 清空要在 device 像素下清
+    // ✅ 关键：correctPaintCtx 也必须和主画布一样用 CSS 坐标系
     correctPaintCtx.setTransform(1,0,0,1,0,0);
     correctPaintCtx.clearRect(0,0,correctPaintCanvas.width, correctPaintCanvas.height);
-    // 绘制时也用 CSS 像素坐标
     correctPaintCtx.setTransform(s,0,0,s,0,0);
-    // ===================================================================
 
     rebuildWhiteMask();
     rebuildUMask();
   }
 
   function applyWhiteMask(){
+    // 只保留 skull 白色区域（黑色区域完全不可涂）
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.globalCompositeOperation = "destination-in";
@@ -310,6 +354,7 @@
   }
 
   function punchUByPaintedArea(){
+    // intersection = correctPaint ∩ uMask
     interCtx.setTransform(1,0,0,1,0,0);
     interCtx.clearRect(0,0,interCanvas.width, interCanvas.height);
 
@@ -319,6 +364,7 @@
     interCtx.globalCompositeOperation = "destination-in";
     interCtx.drawImage(uMaskCanvas, 0, 0);
 
+    // 在主画布“已上色层”里挖洞 -> 露出底图 bw.jpg 的白色（形成 U）
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.globalCompositeOperation = "destination-out";
@@ -327,7 +373,7 @@
   }
 
   function dab(x,y){
-    // 主画布上色
+    // 上色
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = currentColor;
@@ -336,7 +382,7 @@
     ctx.fill();
     ctx.restore();
 
-    // 正确色：记录到 correctPaint（注意：correctPaintCtx 已经是 CSS 坐标系了）
+    // 只有正确色才记“揭示轨迹”
     if(isCorrect()){
       correctPaintCtx.save();
       correctPaintCtx.globalCompositeOperation = "source-over";
@@ -413,7 +459,7 @@
           ? '已选中<strong>正确颜色</strong>：涂抹到的地方将逐渐显示隐藏字母。'
           : '已选中颜色：可以涂抹，但<strong>只有正确颜色</strong>才会显示隐藏字母。';
 
-        // 不“弹出”，只按已涂区域刷新
+        // ✅ 不会“选中就弹出”，只按已涂区域刷新
         applyWhiteMask();
         punchUByPaintedArea();
       });
