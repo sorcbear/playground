@@ -28,6 +28,7 @@
       --c-text:#111;
       --c-border:#000;
       --c-ok:#0b6b2b;
+      --c-danger:#b00020; /* ✅ 红色强调 */
 
       --bg:#fff;
     }
@@ -58,6 +59,11 @@
       margin:4px 0 var(--gap);
       text-align:left;
       white-space:pre-wrap;
+    }
+
+    /* ✅ 红色强调（无下划线） */
+    .red{
+      color:var(--c-danger);
     }
 
     .image-box{
@@ -162,20 +168,18 @@
   <div class="container">
 
     <div class="title">
-这个绿色大邮筒正是寻找下一个谜题地点的关键。请使用道具包中的<u>木条</u>和<u>/map</u>图纸，在图纸中找到现在你所在的绿色大邮筒的位置，然后借助木条，按照下图中的规则，找到下一个谜题地点，请输入正确地点并提交（4个字）。请注意：下个地点只能在每日5点至18点进入，你要抓紧时间了。
+这个绿色大邮筒正是寻找下一个谜题地点的关键。请使用道具包中的<span class="red">木条</span>和<span class="red">/map</span>图纸，在图纸中找到现在你所在的绿色大邮筒的位置，然后借助木条，按照下图中的规则，找到下一个谜题地点，请输入正确地点并提交（4个字）。请注意：下个地点只能在每日5点至18点进入，你要抓紧时间了。
     </div>
 
     <div class="image-box">
       <img src="symbol.png" alt="symbol" />
     </div>
 
-    <!-- ✅ 同一行 -->
     <div class="answer-line">
       <div class="label">正确地点：</div>
       <input id="place" class="ansInput" placeholder="输入4个字" autocomplete="off" />
     </div>
 
-    <!-- ✅ 同一行两个按钮 -->
     <div class="panel">
       <button id="hintBtn">获得提示</button>
       <button id="submitBtn">提交答案</button>
