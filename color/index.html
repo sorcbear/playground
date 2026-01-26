@@ -18,9 +18,10 @@
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      --swatch: clamp(24px, 7.2vw, 34px);
-      --swatch-gap: clamp(8px, 2.4vw, 12px);
-      --ring: 3px;
+      /* ✅ 调色板：更大、更松 */
+      --swatch: clamp(34px, 9vw, 52px);
+      --swatch-gap: clamp(12px, 3.6vw, 20px);
+      --ring: 4px;
 
       --gap: 18px;
 
@@ -64,41 +65,42 @@
       white-space:pre-wrap;
     }
 
-    /* ✅ 田字格：无 gap，只有黑色边框 */
+    /* ✅ 田字格：无 gap，黑底防 subpixel 白缝 */
     .board{
       width:100%;
-      background:#000;                 /* ✅ 防 subpixel 白缝：缝也会是黑的 */
+      background:#000;
       border: var(--frame) solid #000;
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap: 0;
-      align-items:start;
-      align-content:start;
       overflow:hidden;
     }
 
     .cell{
       position:relative;
-      background:#fff;
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
       touch-action:none;
       min-width:0;
 
-      /* ✅ 强制每格正方形（你 1280x1280 更稳） */
+      /* ✅ 每格正方形（你 1280x1280 最稳） */
       aspect-ratio: 1 / 1;
 
-      /* ✅ 防止任何“行内基线”产生微小空隙 */
+      /* ✅ 防止行内基线带来的微小空隙 */
       font-size:0;
       line-height:0;
+
+      /* ✅ 让渲染更稳定（移动端减少抖动/细缝） */
+      transform: translateZ(0);
+      background:#fff;
     }
 
     /* ✅ 内部分割线：只画中间那两条 */
     .cell.rline{ border-right: var(--frame) solid #000; }
     .cell.bline{ border-bottom: var(--frame) solid #000; }
 
-    /* ✅ 底图：绝对定位 + cover 铺满，避免 height:auto 造成留白 */
+    /* ✅ 底图：绝对定位铺满 */
     .cell img{
       position:absolute;
       inset:0;
@@ -106,15 +108,18 @@
       height:100%;
       object-fit:cover;
       display:block;
+      -webkit-user-drag:none;
+      user-select:none;
     }
 
-    /* ✅ overlay：轻微超出 1px，专门消灭子像素四周露白 */
+    /* ✅ overlay：必须与底图完全同尺寸（不要 inset:-1px） */
     canvas.overlay{
       position:absolute;
-      inset:-1px;
-      width:calc(100% + 2px);
-      height:calc(100% + 2px);
+      inset:0;
+      width:100%;
+      height:100%;
       display:block;
+      transform: translateZ(0);
     }
 
     .loading{
@@ -133,14 +138,14 @@
     .loading.hide{ display:none; }
 
     .paletteWrap{
-      margin-top: 14px;
+      margin-top: 16px;
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:10px;
+      gap:12px;
       width:100%;
       overflow:visible;
-      padding: 10px 0 6px;
+      padding: 12px 0 8px;
     }
 
     .palette{
@@ -724,13 +729,17 @@
     }
 
     resizeAll(){
-      /* ✅ 用 canvas 覆盖区域做基准，确保 mask 对齐 */
-      const r = this.cv.getBoundingClientRect();
+      /* ✅ 关键修复：用 .cell（root）的尺寸做基准，永远和底图同一套几何 */
+      const r = this.root.getBoundingClientRect();
       const s = dpr();
 
-      this.cv.width  = Math.round(r.width * s);
-      this.cv.height = Math.round(r.height * s);
+      const cssW = Math.max(1, r.width);
+      const cssH = Math.max(1, r.height);
 
+      this.cv.width  = Math.round(cssW * s);
+      this.cv.height = Math.round(cssH * s);
+
+      /* 画图用 CSS 像素坐标（便于 pointer 坐标直接用） */
       this.ctx.setTransform(s,0,0,s,0,0);
 
       this.whiteMaskCanvas.width  = this.cv.width;
