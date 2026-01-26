@@ -227,7 +227,9 @@
 
     allowCtx.setTransform(1,0,0,1,0,0);
     allowCtx.clearRect(0,0,w,h);
-    allowCtx.imageSmoothingEnabled = false;
+
+  // 允许缩放时做平滑，避免灰边被阈值误杀（你也可以保留 false）
+    allowCtx.imageSmoothingEnabled = true;
 
     const s = dpr();
     const dx = Math.round(LIMIT_DX * s);
@@ -243,16 +245,19 @@
     const imgData = allowCtx.getImageData(0,0,w,h);
     const data = imgData.data;
 
-    const TH = 200;
+  // ✅ 更宽松的阈值 + 结合原图 alpha
+  // 只要像素不是完全透明，并且亮度超过 40，就认为可涂
+    const TH = 40;
+
     for(let i=0;i<data.length;i+=4){
-      const r=data[i], g=data[i+1], b=data[i+2];
+      const r=data[i], g=data[i+1], b=data[i+2], a0=data[i+3];
       const lum = (r*0.299 + g*0.587 + b*0.114);
-      const a = lum > TH ? 255 : 0;
-      data[i]=255; data[i+1]=255; data[i+2]=255; data[i+3]=a;
+
+      const allow = (a0 > 10) && (lum > TH);
+      data[i] = 255; data[i+1] = 255; data[i+2] = 255; data[i+3] = allow ? 255 : 0;
     }
     allowCtx.putImageData(imgData,0,0);
   }
-
   // ✅ u 蒙版：按画布尺寸同尺度绘制（和 allow 一样的对齐逻辑）
   function buildUMask(){
     const w = uMaskCanvas.width, h = uMaskCanvas.height;
