@@ -1,845 +1,450 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="format-detection" content="telephone=no,address=no,email=no">
-  <title>4 Scratch Boards</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Color Puzzle Grid</title>
 
-  <style>
+<style>
+  :root{
+    --maxw: 980px;
+
+    --fs-body: 18px;
+    --lh-body: 1.7;
+
+    --c-text:#111;
+    --c-border:#000;
+    --bg:#fff;
+
+    --outerLine:4px;   /* 黑框粗细 */
+    --radius:0px;      /* 你之前统一是直角 */
+
+    --gap: 24px;       /* 田字格之间的间距：你想更紧就改小；想无缝就设 0 */
+    --tileMax: 440px;  /* 每格最大显示宽度（会自适应缩小） */
+
+    --pal-h: 44px;
+    --pal-gap: 10px;
+    --pal-pad: 14px;
+
+    --swatch: 26px;
+    --swatch-border: 2px;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    background:var(--bg);
+    color:var(--c-text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+                "PingFang SC","Microsoft YaHei",Arial,sans-serif;
+    font-size:var(--fs-body);
+    line-height:var(--lh-body);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* iOS：禁用自动识别电话/地址样式 */
+  a, a:visited{ color:inherit; text-decoration:none; }
+  *{
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .wrap{
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 22px 16px 40px;
+  }
+
+  .title{
+    margin: 0 0 18px 0;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.7;
+  }
+
+  /* 田字格容器 */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gap);
+    align-items:start;
+  }
+
+  /* 单格 */
+  .tile{
+    width: 100%;
+    max-width: var(--tileMax);
+    justify-self: center;
+  }
+
+  /* 黑框：注意这里“无内边距”，canvas 会贴边 */
+  .frame{
+    border: var(--outerLine) solid var(--c-border);
+    border-radius: var(--radius);
+    background:#fff;
+    overflow:hidden; /* 保证不出现缝/溢出 */
+  }
+
+  /* canvas 贴边显示 */
+  canvas.paint{
+    display:block;
+    width:100%;
+    aspect-ratio: 1 / 1; /* 你都是正方形，强制 1:1 */
+    height:auto;
+    touch-action: none;  /* 关键：手机涂抹不跟随页面滚动 */
+    user-select:none;
+  }
+
+  /* 调色盘：在黑框下方，与 tile 分离，不影响黑框贴边 */
+  .palette{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap: var(--pal-gap);
+    padding: var(--pal-pad) 0 0;
+  }
+
+  .swatch{
+    width: var(--swatch);
+    height: var(--swatch);
+    border: var(--swatch-border) solid var(--c-border);
+    border-radius: 0;
+    background: #fff;
+    cursor:pointer;
+    position:relative;
+  }
+
+  /* 选中反馈：白色外框（你之前要求的那种） */
+  .swatch.selected::after{
+    content:"";
+    position:absolute;
+    inset: -6px;
+    border: 2px solid #fff;
+    outline: 2px solid #000;
+    pointer-events:none;
+  }
+
+  /* 小屏优化 */
+  @media (max-width: 720px){
     :root{
-      --maxw: 980px;
-      --bg:#fff;
-      --text:#111;
-
-      --fs-body: 18px;
-      --lh-body: 1.6;
-
-      --hint-fs:18px;
-      --hint-lh:1.6;
-
-      --swatch: clamp(24px, 7.2vw, 34px);
-      --swatch-gap: clamp(8px, 2.4vw, 12px);
-      --ring: 3px;
-
-      --gap: 18px;
-
-      --frame: 4px;
-
-      --fs-btn: 18px;
-      --fw-btn: 600;
-      --h-btn: 52px;
-      --w-btn: 240px;
-
-      --c-border:#000;
-      --c-ok:#0b6b2b;
-      --c-danger:#b00020;
+      --gap: 16px;
+      --tileMax: 9999px;
     }
-
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--text);
-      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-      font-size:var(--fs-body);
-      line-height:var(--lh-body);
-      -webkit-text-size-adjust:100%;
+    .grid{
+      grid-template-columns: 1fr; /* 手机竖屏改成一列更稳（你若坚持两列，把这行删掉） */
     }
+  }
 
-    .wrap{
-      max-width:var(--maxw);
-      margin:0 auto;
-      padding:18px 14px 28px;
-    }
-
-    .title{
-      margin:4px 0 var(--gap);
-      font-size:var(--hint-fs);
-      line-height:var(--hint-lh);
-      font-weight:700;
-      text-align:left;
-      white-space:pre-wrap;
-    }
-
-    /* ✅ 田字格：无 gap，只有黑色边框 */
-    .board{
-      width:100%;
-      background:#fff;
-      border: var(--frame) solid #000;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0;
-
-      /* ✅ 关键：不要 stretch，否则会产生“边框内白空隙” */
-      align-items:start;
-      align-content:start;
-
-      overflow:hidden;
-    }
-
-    .cell{
-      position:relative;
-      background:#fff;
-      overflow:hidden;
-      user-select:none;
-      -webkit-user-select:none;
-      touch-action:none;
-      min-width:0;
-
-      /* ✅ 防止任何“行内基线”产生微小空隙 */
-      font-size:0;
-      line-height:0;
-    }
-
-    /* ✅ 内部分割线：只画中间那两条 */
-    .cell.rline{ border-right: var(--frame) solid #000; }
-    .cell.bline{ border-bottom: var(--frame) solid #000; }
-
-    .cell img{
-      width:100%;
-      height:auto;
-      display:block;
-    }
-
-    canvas.overlay{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      display:block;
-    }
-
-    .loading{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:14px;
-      line-height:1.4;
-      background:rgba(255,255,255,.78);
-      backdrop-filter:blur(2px);
-      padding:12px;
-      text-align:center;
-    }
-    .loading.hide{ display:none; }
-
-    .paletteWrap{
-      margin-top: 14px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:10px;
-      width:100%;
-      overflow:visible;
-      padding: 10px 0 6px;
-    }
-
-    .palette{
-      display:grid;
-      grid-template-columns: repeat(4, var(--swatch));
-      grid-auto-rows: var(--swatch);
-      gap: var(--swatch-gap);
-      justify-content:center;
-      align-content:center;
-      width: 100%;
-      max-width: min(100%, calc(4 * var(--swatch) + 3 * var(--swatch-gap)));
-    }
-
-    .swatch{
-      width:var(--swatch);
-      height:var(--swatch);
-      border-radius:999px;
-      background:var(--c);
-      border:none;
-      padding:0;
-      cursor:pointer;
-      outline:none;
-      -webkit-tap-highlight-color:transparent;
-    }
-    .swatch.selected{ box-shadow: 0 0 0 var(--ring) #000; }
-
-    .answerBlock{
-      margin-top: 18px;
-      display:flex;
-      flex-direction:column;
-      gap: 18px;
-    }
-
-    .answerRow{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      flex-wrap:wrap;
-    }
-
-    .answerLabel{
-      font-size: var(--hint-fs);
-      line-height: var(--hint-lh);
-      font-weight:700;
-      margin:0;
-    }
-
-    .ansInput{
-      width:4em;
-      height:40px;
-      padding:0 6px;
-      border:2px solid var(--c-border);
-      font-weight:700;
-      font-family:inherit;
-      border-radius:0;
-      font-size:18px;
-      text-align:center;
-      outline:none;
-      box-shadow:none;
-      -webkit-appearance:none;
-      appearance:none;
-      line-height:40px;
-    }
-    .ansInput:focus{ outline:none; box-shadow:none; }
-
-    .actions{
-      display:flex;
-      gap:12px;
-      justify-content:center;
-      flex-wrap:nowrap;
-      align-items:center;
-    }
-
-    button.uiBtn{
-      width:var(--w-btn);
-      height:var(--h-btn);
-      padding:0 18px;
-      box-sizing:border-box;
-      font-size:var(--fs-btn);
-      font-weight:600;
-      background:#fff;
-      color:#000;
-      border:2px solid var(--c-border);
-      cursor:pointer;
-      border-radius:0;
-      font-family:inherit;
-      -webkit-tap-highlight-color:transparent;
-    }
-
-    @media (hover:hover) and (pointer:fine){
-      button.uiBtn:hover{ background:#000; color:#fff; }
-    }
-
-    button.uiBtn.invert{
-      background:#000;
-      color:#fff;
-    }
-
-    button.uiBtn:disabled{
-      opacity:.45;
-      cursor:default;
-    }
-
-    .msg{
-      min-height: 1.4em;
-      font-size:14px;
-      margin-top: 0;
-    }
-    .msg.ok{ color: var(--c-ok); font-weight:700; }
-    .msg.bad{ color: var(--c-danger); font-weight:700; }
-
-    .hintBox{
-      display:none;
-      border-left: 4px solid #000;
-      padding: 10px 12px;
-      background: #fff;
-      font-size: 16px;
-      line-height: 1.7;
-    }
-    .hintBox.show{ display:block; }
-
-    @media (max-width:520px){
-      button.uiBtn{ width:46vw; }
-    }
-  </style>
+  /* 你如果手机也要两列，删掉上面 @media 里 grid-template-columns 那一行即可 */
+</style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="title">请继续往天平路康平路路口方向前进，在到达路口之前，你要仔细留意马路两边的街景。你会先后在街面上看到以下4个图案。请选择正确的颜色涂抹每个图缺失色彩的区域，找到正确的线索。</div>
+    <p class="title">
+      请继续往天平路康平路路口方向前进，在到达路口之前，你要仔细留意马路两边的街景。你会先后在街面上看到以下4个图案。请选择正确的颜色涂抹每个图缺失色彩的区域，找到正确的线索。
+    </p>
 
-    <div class="board" id="board"></div>
-
-    <div class="paletteWrap">
-      <div class="palette" id="palette"></div>
-    </div>
-
-    <div class="answerBlock">
-      <div class="answerRow">
-        <div class="answerLabel">请输入隐藏的字母（不用区分大小写）：</div>
-        <input id="ans" class="ansInput" type="text" inputmode="latin" autocomplete="off" autocapitalize="none"
-               spellcheck="false" maxlength="4" />
-      </div>
-
-      <div class="actions">
-        <button class="uiBtn" id="btnHint" type="button">获得提示</button>
-        <button class="uiBtn" id="btnSubmit" type="button">提交答案</button>
-      </div>
-
-      <div class="hintBox" id="hintBox"></div>
-      <div class="msg" id="msg"></div>
-    </div>
+    <div class="grid" id="grid"></div>
   </div>
 
 <script>
 (() => {
-  const PALETTE_COLORS = [
-    "#2A5A5E",
-    "#C62622",
-    "#E2C164",
-    "#00E5FF",
-    "#7030A0",
-    "#FF4FA0",
-    "#0070C0",
-    "#9B857A"
-  ];
-
+  /* =========================
+     1) 配置：改成你的文件名
+     ========================= */
   const TILES = [
-    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
-    { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
-    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#9B857A" },
-    { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" },
+    { id:"skull", img:"bw1_1280.jpg", mask:"skull_mask.png" },
+    { id:"avec",  img:"avec.jpg",      mask:"avec_mask.png"  },
+    { id:"lion",  img:"lion.jpg",      mask:"lion_mask.png"  },
+    { id:"violin",img:"violin.jpg",    mask:"violin_mask.png"},
   ];
 
-  const U_BOX_REL = { x: 0.20, y: 0.08, w: 0.20, h: 0.30 };
-  const U_STROKE_FACTOR = 0.22;
+  /* 你的调色盘（可按需调整） */
+  const PALETTE = [
+    { name:"black",  color:"#000000" },
+    { name:"white",  color:"#ffffff" },
+    { name:"red",    color:"#d32f2f" },
+    { name:"blue",   color:"#1976d2" },
+    { name:"green",  color:"#2e7d32" },
+    { name:"yellow", color:"#f9a825" },
+    { name:"orange", color:"#ef6c00" },
+    { name:"purple", color:"#6a1b9a" },
+  ];
 
-  const P_BOX_REL = { x: 0.62, y: 0.70, w: 0.26, h: 0.26 };
-  const P_STROKE_FACTOR = 0.20;
+  /* 画笔参数 */
+  const BRUSH_R = 18;          // 半径
+  const BRUSH_SOFT = 0.55;     // 软边比例（0~1）
+  const STORAGE_PREFIX = "paint_tile_v1_";
 
-  const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.22 };
-  const A_STROKE_FACTOR = 0.18;
+  const grid = document.getElementById("grid");
 
-  const L_BOX_REL = { x: 0.61, y: 0.67, w: 0.10, h: 0.07 };
-  const L_STROKE_FACTOR = 0.137;
-
-  const WHITE_TH = 200;
-  const BRUSH_RADIUS = 18;
-
-  const ANSWER = "paul";
-  const HINT_TEXT = "线索：四个图里被“挖出来”的字母，按顺序组成答案。";
-
-  function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
-  function sameHex(a,b){
-    return (a||"").trim().toLowerCase() === (b||"").trim().toLowerCase();
+  /* =========================
+     2) 工具
+     ========================= */
+  function loadImage(src){
+    return new Promise((resolve, reject) => {
+      const im = new Image();
+      im.decoding = "async";
+      im.onload = () => resolve(im);
+      im.onerror = reject;
+      im.src = src + (src.includes("?") ? "" : `?v=${Date.now()}`); // 防缓存：你上线后可删除
+    });
   }
 
-  const board = document.getElementById("board");
-  const palette = document.getElementById("palette");
-
-  const ans = document.getElementById("ans");
-  const btnHint = document.getElementById("btnHint");
-  const btnSubmit = document.getElementById("btnSubmit");
-  const hintBox = document.getElementById("hintBox");
-  const msg = document.getElementById("msg");
-
-  function setMsg(text, cls){
-    msg.className = "msg" + (cls ? (" " + cls) : "");
-    msg.textContent = text || "";
+  function makeEl(tag, cls){
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    return el;
   }
 
-  function flashInvert(btn, ms=120){
-    btn.classList.add("invert");
-    setTimeout(()=>btn.classList.remove("invert"), ms);
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  /* canvas 坐标换算：把 pointer 坐标换算到 canvas 像素坐标 */
+  function getCanvasXY(canvas, clientX, clientY){
+    const r = canvas.getBoundingClientRect();
+    const x = (clientX - r.left) * (canvas.width  / r.width);
+    const y = (clientY - r.top ) * (canvas.height / r.height);
+    return { x, y };
   }
 
-  const SUBMIT_TEXT = "提交答案";
-  let btnTimer = null;
-  function setBtnText(text, ms=900){
-    if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
-
-    btnSubmit.textContent = text;
-    btnSubmit.classList.add("invert");
-    btnSubmit.disabled = true;
-
-    btnTimer = setTimeout(()=>{
-      btnSubmit.textContent = SUBMIT_TEXT;
-      btnSubmit.classList.remove("invert");
-      btnSubmit.disabled = false;
-      btnTimer = null;
-    }, ms);
+  /* =========================
+     3) Tile 渲染：关键点
+        - canvas.width/height = 底图像素尺寸（例如 1280）
+        - 底图与 mask 采用同一套“cover 变换”绘制到 canvas
+        - 用户涂色画到一张 layer，再用 mask alpha 裁掉（destination-in）
+     ========================= */
+  function drawImageCover(ctx, img, W, H){
+    // cover：保证铺满，不变形，必要时裁剪边缘
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const s = Math.max(W / iw, H / ih);
+    const dw = iw * s, dh = ih * s;
+    const dx = (W - dw) / 2;
+    const dy = (H - dh) / 2;
+    ctx.drawImage(img, dx, dy, dw, dh);
   }
 
-  let CURRENT_COLOR = null;
+  function buildTileDom(tile){
+    const wrap = makeEl("div", "tile");
 
-  function renderGlobalPalette(){
-    palette.innerHTML = "";
-    PALETTE_COLORS.forEach(c=>{
-      const b = document.createElement("button");
+    const frame = makeEl("div", "frame");
+    const canvas = makeEl("canvas", "paint");
+    frame.appendChild(canvas);
+
+    const pal = makeEl("div", "palette");
+
+    wrap.appendChild(frame);
+    wrap.appendChild(pal);
+
+    grid.appendChild(wrap);
+
+    return { wrap, frame, canvas, pal };
+  }
+
+  function buildPalette(palEl, onPick){
+    palEl.innerHTML = "";
+    let selectedIdx = 0;
+
+    const swatches = PALETTE.map((p, idx) => {
+      const b = makeEl("button", "swatch");
       b.type = "button";
-      b.className = "swatch";
-      b.style.setProperty("--c", c);
-
-      b.addEventListener("click", ()=>{
-        CURRENT_COLOR = c;
-        [...palette.children].forEach(x=>x.classList.remove("selected"));
+      b.style.background = p.color;
+      b.setAttribute("aria-label", p.name);
+      if (idx === 0) b.classList.add("selected");
+      b.onclick = () => {
+        selectedIdx = idx;
+        swatches.forEach(s => s.classList.remove("selected"));
         b.classList.add("selected");
-      });
-
-      palette.appendChild(b);
-    });
-  }
-  renderGlobalPalette();
-
-  function makeCellDOM(tile, idx){
-    const cell = document.createElement("div");
-    cell.className = "cell";
-
-    const isLeft = (idx % 2 === 0);
-    const isTop  = (idx < 2);
-    if(isLeft) cell.classList.add("rline");
-    if(isTop)  cell.classList.add("bline");
-
-    cell.dataset.key = tile.key;
-    cell.innerHTML = `
-      <img class="bg" alt="" />
-      <canvas class="overlay"></canvas>
-      <div class="loading">资源加载中</div>
-    `;
-    return cell;
-  }
-
-  class ScratchTile{
-    constructor(tile, root){
-      this.tile = tile;
-      this.root = root;
-
-      this.img = root.querySelector("img.bg");
-      this.cv  = root.querySelector("canvas.overlay");
-      this.ctx = this.cv.getContext("2d", { alpha:true });
-
-      this.loading = root.querySelector(".loading");
-
-      this.down = false;
-      this.last = null;
-      this.pending = null;
-      this.rafId = 0;
-      this.needPost = false;
-
-      this.bgOK = false;
-      this.maskOK = false;
-
-      this.maskImg = new Image();
-      this.maskImg.decoding = "async";
-
-      this.whiteMaskCanvas = document.createElement("canvas");
-      this.whiteMaskCtx = this.whiteMaskCanvas.getContext("2d", { willReadFrequently:true });
-
-      this.correctPaintCanvas = document.createElement("canvas");
-      this.correctPaintCtx = this.correctPaintCanvas.getContext("2d");
-
-      this.letterMaskCanvas = document.createElement("canvas");
-      this.letterMaskCtx = this.letterMaskCanvas.getContext("2d");
-
-      this.interCanvas = document.createElement("canvas");
-      this.interCtx = this.interCanvas.getContext("2d");
-
-      this.bbox = null;
-
-      this.bind();
-
-      this.img.src = tile.bg;
-      this.maskImg.src = tile.mask;
-    }
-
-    isCorrect(c){
-      return sameHex(c, this.tile.correctColor);
-    }
-
-    bind(){
-      this.img.addEventListener("load", ()=>{
-        this.bgOK = true;
-        if(this.maskOK) this.ready();
-      });
-      this.img.addEventListener("error", ()=>{
-        this.loading.textContent = `底图加载失败：${this.tile.bg}`;
-      });
-
-      this.maskImg.addEventListener("load", ()=>{
-        this.maskOK = true;
-        if(this.bgOK) this.ready();
-      });
-      this.maskImg.addEventListener("error", ()=>{
-        this.loading.textContent = `遮罩加载失败：${this.tile.mask}`;
-      });
-
-      this.cv.addEventListener("pointerdown", (e)=>{
-        e.preventDefault();
-        if(!CURRENT_COLOR) return;
-        try{ this.cv.setPointerCapture(e.pointerId); }catch(_){}
-        this.down = true;
-        this.last = null;
-        this.pending = this.posFromPointer(e);
-        this.scheduleFrame();
-      }, {passive:false});
-
-      this.cv.addEventListener("pointermove", (e)=>{
-        if(!this.down) return;
-        e.preventDefault();
-        this.pending = this.posFromPointer(e);
-        this.scheduleFrame();
-      }, {passive:false});
-
-      const end = ()=>{
-        this.down = false;
-        this.last = null;
-        this.pending = null;
-        if(this.needPost) this.scheduleFrame();
+        onPick(PALETTE[selectedIdx].color);
       };
-      this.cv.addEventListener("pointerup", end, {passive:true});
-      this.cv.addEventListener("pointercancel", end, {passive:true});
+      palEl.appendChild(b);
+      return b;
+    });
+
+    onPick(PALETTE[selectedIdx].color);
+  }
+
+  function restoreLayerToCanvas(layerCanvas, dstCtx){
+    dstCtx.clearRect(0,0, layerCanvas.width, layerCanvas.height);
+    dstCtx.drawImage(layerCanvas, 0, 0);
+  }
+
+  function saveLayerPNG(tileId, layerCanvas){
+    try{
+      const key = STORAGE_PREFIX + tileId;
+      const data = layerCanvas.toDataURL("image/png");
+      localStorage.setItem(key, data);
+    }catch(e){}
+  }
+
+  async function loadLayerPNG(tileId){
+    const key = STORAGE_PREFIX + tileId;
+    const data = localStorage.getItem(key);
+    if(!data) return null;
+    return await loadImage(data);
+  }
+
+  async function initTile(tile){
+    const { canvas, pal } = buildTileDom(tile);
+
+    // 先加载底图+mask
+    const [img, mask] = await Promise.all([
+      loadImage(tile.img),
+      loadImage(tile.mask),
+    ]);
+
+    // 画布像素大小：直接等于底图像素（关键）
+    const W = img.naturalWidth;
+    const H = img.naturalHeight;
+    canvas.width = W;
+    canvas.height = H;
+
+    const ctx = canvas.getContext("2d", { alpha:true });
+
+    // 背景层：底图（固定不变）
+    const bgCanvas = document.createElement("canvas");
+    bgCanvas.width = W; bgCanvas.height = H;
+    const bg = bgCanvas.getContext("2d");
+
+    bg.clearRect(0,0,W,H);
+    drawImageCover(bg, img, W, H);
+
+    // mask alpha 层（固定不变）
+    const maskCanvas = document.createElement("canvas");
+    maskCanvas.width = W; maskCanvas.height = H;
+    const mctx = maskCanvas.getContext("2d");
+    mctx.clearRect(0,0,W,H);
+    drawImageCover(mctx, mask, W, H);
+
+    // 用户涂色层（可变）
+    const layerCanvas = document.createElement("canvas");
+    layerCanvas.width = W; layerCanvas.height = H;
+    const lctx = layerCanvas.getContext("2d");
+
+    // 如果有存档，恢复到 layer
+    const saved = await loadLayerPNG(tile.id);
+    if(saved){
+      lctx.clearRect(0,0,W,H);
+      drawImageCover(lctx, saved, W, H);
+      // 再用 mask 裁一遍，避免旧版本脏边
+      lctx.globalCompositeOperation = "destination-in";
+      lctx.drawImage(maskCanvas, 0, 0);
+      lctx.globalCompositeOperation = "source-over";
     }
 
-    posFromPointer(e){
-      const r=this.cv.getBoundingClientRect();
-      return {x: e.clientX - r.left, y: e.clientY - r.top};
+    // 当前颜色
+    let curColor = "#000";
+    buildPalette(pal, (c) => curColor = c);
+
+    // 刷新显示：bg + layer（layer 已被 mask 限制）
+    function render(){
+      ctx.clearRect(0,0,W,H);
+      ctx.drawImage(bgCanvas, 0, 0);
+      ctx.drawImage(layerCanvas, 0, 0);
+    }
+    render();
+
+    // 画软边圆刷
+    function stampBrush(x, y){
+      const r = BRUSH_R;
+      const inner = r * (1 - clamp(BRUSH_SOFT, 0, 0.95));
+      const g = lctx.createRadialGradient(x, y, inner, x, y, r);
+      g.addColorStop(0, curColor);
+      g.addColorStop(1, "rgba(0,0,0,0)");
+
+      lctx.save();
+      lctx.globalCompositeOperation = "source-over";
+      lctx.fillStyle = g;
+      lctx.beginPath();
+      lctx.arc(x, y, r, 0, Math.PI * 2);
+      lctx.fill();
+      lctx.restore();
+
+      // 用 mask 限制可涂区域（关键：每次都裁，保证永不出界）
+      lctx.save();
+      lctx.globalCompositeOperation = "destination-in";
+      lctx.drawImage(maskCanvas, 0, 0);
+      lctx.restore();
     }
 
-    scheduleFrame(){
-      if(!this.rafId) this.rafId = requestAnimationFrame(()=>this.frame());
+    // 事件：pointer
+    let drawing = false;
+    let last = null;
+    let raf = 0;
+
+    function scheduleRender(){
+      if(raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        render();
+      });
     }
 
-    frame(){
-      this.rafId = 0;
+    function onDown(e){
+      e.preventDefault();
+      canvas.setPointerCapture?.(e.pointerId);
+      drawing = true;
 
-      if(this.down && this.pending){
-        if(!this.last){
-          this.last = this.pending;
-          this.dabOnly(this.last.x, this.last.y);
-        }else{
-          this.strokeOnly(this.last.x, this.last.y, this.pending.x, this.pending.y);
-          this.last = this.pending;
-        }
-        this.pending = null;
+      const p = getCanvasXY(canvas, e.clientX, e.clientY);
+      last = p;
+
+      stampBrush(p.x, p.y);
+      scheduleRender();
+    }
+
+    function onMove(e){
+      if(!drawing) return;
+      e.preventDefault();
+
+      const p = getCanvasXY(canvas, e.clientX, e.clientY);
+      if(!last){
+        last = p;
+        stampBrush(p.x, p.y);
+        scheduleRender();
+        return;
       }
 
-      if(this.needPost) this.postProcess();
-    }
+      // 插值：保证涂抹顺滑
+      const dx = p.x - last.x;
+      const dy = p.y - last.y;
+      const dist = Math.hypot(dx, dy);
+      const step = Math.max(4, BRUSH_R * 0.35);
+      const n = Math.max(1, Math.floor(dist / step));
 
-    dabOnly(x,y){
-      const color = CURRENT_COLOR;
-
-      this.ctx.save();
-      this.ctx.globalCompositeOperation = "source-over";
-      this.ctx.fillStyle = color;
-      this.ctx.beginPath();
-      this.ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
-      this.ctx.fill();
-      this.ctx.restore();
-
-      if(this.tile.reveal && this.isCorrect(color)){
-        this.correctPaintCtx.save();
-        this.correctPaintCtx.globalCompositeOperation = "source-over";
-        this.correctPaintCtx.fillStyle = "white";
-        this.correctPaintCtx.beginPath();
-        this.correctPaintCtx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
-        this.correctPaintCtx.fill();
-        this.correctPaintCtx.restore();
-      }
-
-      this.needPost = true;
-    }
-
-    strokeOnly(a,b,c,d){
-      const dx=c-a, dy=d-b;
-      const dist=Math.hypot(dx,dy);
-      const step=Math.max(2, BRUSH_RADIUS*0.5);
-      const n=Math.max(1, Math.ceil(dist/step));
       for(let i=1;i<=n;i++){
-        const t=i/n;
-        this.dabOnly(a+dx*t, b+dy*t);
-      }
-    }
-
-    computeBBoxFromAlpha(imgData, w, h){
-      const data = imgData.data;
-      const step = 3;
-      let minx = w, miny = h, maxx = -1, maxy = -1;
-
-      for(let y=0; y<h; y+=step){
-        for(let x=0; x<w; x+=step){
-          const i = (y*w + x) * 4;
-          const a = data[i+3];
-          if(a > 0){
-            if(x < minx) minx = x;
-            if(y < miny) miny = y;
-            if(x > maxx) maxx = x;
-            if(y > maxy) maxy = y;
-          }
-        }
-      }
-      if(maxx < 0) return null;
-
-      const pad = Math.round(Math.min(w,h) * 0.01);
-      return {
-        minx: Math.max(0, minx - pad),
-        miny: Math.max(0, miny - pad),
-        maxx: Math.min(w-1, maxx + pad),
-        maxy: Math.min(h-1, maxy + pad),
-      };
-    }
-
-    buildUPath(cx, cy, s){
-      const u = new Path2D();
-      u.moveTo(cx + (-55)*s, cy + (-65)*s);
-      u.quadraticCurveTo(cx + (-58)*s, cy + (15)*s,  cx + (-28)*s, cy + (48)*s);
-      u.quadraticCurveTo(cx + (0)*s,   cy + (70)*s,  cx + (28)*s,  cy + (48)*s);
-      u.quadraticCurveTo(cx + (58)*s,  cy + (15)*s,  cx + (55)*s,  cy + (-65)*s);
-      return u;
-    }
-
-    buildPPath(cx, cy, s){
-      const p = new Path2D();
-      const x = cx + (-42)*s;
-      const top = cy + (-88)*s;
-      const mid = cy + (-6)*s;
-      const bottom = cy + (92)*s;
-
-      p.moveTo(x, bottom);
-      p.lineTo(x, top);
-
-      p.moveTo(x, top);
-      p.quadraticCurveTo(cx + (72)*s,  cy + (-92)*s,  cx + (72)*s,  cy + (-28)*s);
-      p.quadraticCurveTo(cx + (72)*s,  cy + (38)*s,   x,            mid);
-
-      return p;
-    }
-
-    buildAPath(cx, cy, s){
-      const a = new Path2D();
-      const topY = cy + (-90)*s;
-      const baseY = cy + (92)*s;
-      const leftX = cx + (-70)*s;
-      const rightX = cx + (70)*s;
-
-      a.moveTo(leftX, baseY);
-      a.lineTo(cx + (-6)*s, topY);
-
-      a.moveTo(rightX, baseY);
-      a.lineTo(cx + (6)*s, topY);
-
-      const barY = cy + (8)*s;
-      a.moveTo(cx + (-40)*s, barY);
-      a.lineTo(cx + (42)*s, barY);
-
-      return a;
-    }
-
-    buildLPath(cx, cy, s){
-      const l = new Path2D();
-      const topY = cy + (-92)*s;
-      const baseY = cy + (92)*s;
-      const leftX = cx + (-60)*s;
-      const rightX = cx + (60)*s;
-
-      l.moveTo(leftX, topY);
-      l.lineTo(leftX, baseY);
-
-      l.moveTo(leftX, baseY);
-      l.lineTo(rightX, baseY);
-
-      return l;
-    }
-
-    rebuildWhiteMask(){
-      const w = this.whiteMaskCanvas.width;
-      const h = this.whiteMaskCanvas.height;
-
-      this.whiteMaskCtx.setTransform(1,0,0,1,0,0);
-      this.whiteMaskCtx.clearRect(0,0,w,h);
-      this.whiteMaskCtx.drawImage(this.maskImg, 0, 0, w, h);
-
-      const imgData = this.whiteMaskCtx.getImageData(0,0,w,h);
-      const data = imgData.data;
-
-      for(let i=0;i<data.length;i+=4){
-        const r=data[i], g=data[i+1], b=data[i+2];
-        const lum=(r+g+b)/3;
-        data[i+3] = (lum >= WHITE_TH) ? 255 : 0;
+        const t = i / n;
+        stampBrush(last.x + dx*t, last.y + dy*t);
       }
 
-      this.whiteMaskCtx.putImageData(imgData, 0, 0);
-      this.bbox = this.tile.reveal ? this.computeBBoxFromAlpha(imgData, w, h) : null;
+      last = p;
+      scheduleRender();
     }
 
-    rebuildLetterMask(){
-      const w = this.letterMaskCanvas.width;
-      const h = this.letterMaskCanvas.height;
-
-      this.letterMaskCtx.setTransform(1,0,0,1,0,0);
-      this.letterMaskCtx.clearRect(0,0,w,h);
-
-      if(!this.tile.reveal) return;
-
-      const bbox = this.bbox || { minx:0, miny:0, maxx:w-1, maxy:h-1 };
-      const bw = (bbox.maxx - bbox.minx);
-      const bh = (bbox.maxy - bbox.miny);
-
-      const t = this.tile.reveal.type;
-
-      let boxRel = U_BOX_REL;
-      let strokeFactor = U_STROKE_FACTOR;
-
-      if(t === "P"){ boxRel = P_BOX_REL; strokeFactor = P_STROKE_FACTOR; }
-      else if(t === "A"){ boxRel = A_BOX_REL; strokeFactor = A_STROKE_FACTOR; }
-      else if(t === "L"){ boxRel = L_BOX_REL; strokeFactor = L_STROKE_FACTOR; }
-
-      const bx = bbox.minx + bw * boxRel.x;
-      const by = bbox.miny + bh * boxRel.y;
-      const boxW = bw * boxRel.w;
-      const boxH = bh * boxRel.h;
-
-      const cx = bx + boxW * 0.50;
-      const cy = by + boxH * 0.52;
-
-      const s = Math.min(boxW, boxH) / 140;
-      const strokeW = Math.max(12, Math.round(Math.min(boxW, boxH) * strokeFactor));
-
-      const path = (t === "P") ? this.buildPPath(cx, cy, s)
-                : (t === "A") ? this.buildAPath(cx, cy, s)
-                : (t === "L") ? this.buildLPath(cx, cy, s)
-                              : this.buildUPath(cx, cy, s);
-
-      this.letterMaskCtx.save();
-      this.letterMaskCtx.strokeStyle = "white";
-      this.letterMaskCtx.lineWidth = strokeW;
-      this.letterMaskCtx.lineCap = "round";
-      this.letterMaskCtx.lineJoin = "round";
-      this.letterMaskCtx.stroke(path);
-      this.letterMaskCtx.restore();
+    function onUp(e){
+      if(!drawing) return;
+      e.preventDefault();
+      drawing = false;
+      last = null;
+      saveLayerPNG(tile.id, layerCanvas);
     }
 
-    resizeAll(){
-      /* ✅ 关键：用 canvas 的实际覆盖区域做尺寸基准，确保 mask 对齐 */
-      const r = this.cv.getBoundingClientRect();
-      const s = dpr();
-
-      this.cv.width  = Math.round(r.width * s);
-      this.cv.height = Math.round(r.height * s);
-
-      this.ctx.setTransform(s,0,0,s,0,0);
-
-      this.whiteMaskCanvas.width  = this.cv.width;
-      this.whiteMaskCanvas.height = this.cv.height;
-
-      this.correctPaintCanvas.width  = this.cv.width;
-      this.correctPaintCanvas.height = this.cv.height;
-
-      this.letterMaskCanvas.width  = this.cv.width;
-      this.letterMaskCanvas.height = this.cv.height;
-
-      this.interCanvas.width  = this.cv.width;
-      this.interCanvas.height = this.cv.height;
-
-      this.correctPaintCtx.setTransform(1,0,0,1,0,0);
-      this.correctPaintCtx.clearRect(0,0,this.correctPaintCanvas.width, this.correctPaintCanvas.height);
-      this.correctPaintCtx.setTransform(s,0,0,s,0,0);
-
-      this.rebuildWhiteMask();
-      this.rebuildLetterMask();
-
-      this.needPost = true;
-      this.scheduleFrame();
-    }
-
-    applyWhiteMask(){
-      this.ctx.save();
-      this.ctx.setTransform(1,0,0,1,0,0);
-      this.ctx.globalCompositeOperation = "destination-in";
-      this.ctx.drawImage(this.whiteMaskCanvas, 0, 0);
-      this.ctx.restore();
-    }
-
-    punchLetterByPaintedArea(){
-      if(!this.tile.reveal) return;
-
-      this.interCtx.setTransform(1,0,0,1,0,0);
-      this.interCtx.clearRect(0,0,this.interCanvas.width, this.interCanvas.height);
-
-      this.interCtx.globalCompositeOperation = "source-over";
-      this.interCtx.drawImage(this.correctPaintCanvas, 0, 0);
-
-      this.interCtx.globalCompositeOperation = "destination-in";
-      this.interCtx.drawImage(this.letterMaskCanvas, 0, 0);
-
-      this.ctx.save();
-      this.ctx.setTransform(1,0,0,1,0,0);
-      this.ctx.globalCompositeOperation = "destination-out";
-      this.ctx.drawImage(this.interCanvas, 0, 0);
-      this.ctx.restore();
-    }
-
-    postProcess(){
-      this.applyWhiteMask();
-      this.punchLetterByPaintedArea();
-      this.needPost = false;
-    }
-
-    ready(){
-      this.resizeAll();
-      this.loading.classList.add("hide");
-    }
+    canvas.addEventListener("pointerdown", onDown, { passive:false });
+    canvas.addEventListener("pointermove", onMove, { passive:false });
+    canvas.addEventListener("pointerup", onUp, { passive:false });
+    canvas.addEventListener("pointercancel", onUp, { passive:false });
+    canvas.addEventListener("pointerleave", onUp, { passive:false });
   }
 
-  const tiles = [];
-  TILES.forEach((t, idx)=>{
-    const cell = makeCellDOM(t, idx);
-    board.appendChild(cell);
-    tiles.push(new ScratchTile(t, cell));
-  });
-
-  window.addEventListener("resize", ()=>{
-    tiles.forEach(t=>{
-      if(t.bgOK && t.maskOK) t.resizeAll();
-    });
-  });
-
-  btnHint.addEventListener("click", ()=>{
-    flashInvert(btnHint, 120);
-    hintBox.textContent = HINT_TEXT;
-    hintBox.classList.toggle("show");
-    setMsg("", "");
-  });
-
-  function normalize4(s){
-    return (s || "")
-      .toString()
-      .trim()
-      .replace(/\s+/g, "")
-      .slice(0, 4)
-      .toLowerCase();
-  }
-
-  ans.addEventListener("input", ()=>{
-    ans.value = ans.value.replace(/[^a-zA-Z]/g, "").slice(0,4);
-  });
-
-  btnSubmit.addEventListener("click", ()=>{
-    const v = normalize4(ans.value);
-
-    if(v.length !== 4){
-      setMsg("", "");
-      setBtnText("请输入 4 个字母", 900);
-      return;
+  (async function init(){
+    // 串行初始化，避免低端机同时解码卡顿
+    for(const t of TILES){
+      try{
+        await initTile(t);
+      }catch(e){
+        console.error("Failed to init tile:", t, e);
+      }
     }
-
-    if(v === ANSWER){
-      setMsg("正确。", "ok");
-      setBtnText("正确。", 900);
-    }else{
-      setMsg("", "");
-      setBtnText("不正确，再试一次", 900);
-    }
-  });
+  })();
 })();
 </script>
 </body>
