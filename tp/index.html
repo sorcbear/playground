@@ -20,6 +20,12 @@
       --line-w: 8px;
 
       --cap-sz: 34px;   /* 顶部方块大小 */
+
+      /* ✅ 与最新 Save 一致：间距变量（桌面/默认） */
+      --gap-cap-btn: 24px;   /* cap 到第一个按钮 */
+      --gap-btn: 20px;       /* 按钮之间 */
+      --pad-top: 14px;       /* map 内部顶部留白 */
+      --pad-bottom: 14px;    /* map 内部底部留白 */
     }
 
     *{ box-sizing:border-box; }
@@ -38,6 +44,7 @@
       display:flex;
       flex-direction:column;
       align-items:center;
+      justify-content:center;          /* ✅ 页面整体居中（与参考代码一致） */
       padding:16px 16px 32px;
     }
 
@@ -108,6 +115,22 @@
       user-select:none;
     }
     .btn:hover{ background:#000; color:#fff; }
+
+    /* ✅ iPhone/窄屏：与最新 Save 一致（更高、间距更大、线更长） */
+    @media (max-width: 520px){
+      :root{
+        --gap-cap-btn: 34px;
+        --gap-btn: 30px;
+        --pad-top: 18px;
+        --pad-bottom: 18px;
+      }
+      .map{
+        width: 100%;
+        max-width: 420px;
+        height: min(68svh, 560px);
+        aspect-ratio: auto;
+      }
+    }
   </style>
 </head>
 
@@ -125,15 +148,14 @@
   </div>
 
   <script>
-    // ===== 假存档：不读存档、不设限制，直接显示两个按钮 =====
+    // ===== 假存档：固定显示 2 个按钮，但布局/顶部距离完全对齐“最新 Save”算法 =====
 
-    // 顶部黑方块（永远显示）
-    const CAP = { x: 50.0, y: 10.0 };
+    const X = 50.0;
 
     // 只显示两个按钮：起点、天平路（链接与你原来一致）
     const VIS = [
-      { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", x:50.0, y:26.0 },
-      { text:"天平路", url:"https://sorcbear.github.io/playground/circle", x:50.0, y:46.0 }
+      { text:"起点",   url:"https://sorcbear.github.io/playground/rotate" },
+      { text:"天平路", url:"https://sorcbear.github.io/playground/circle" }
     ];
 
     function makeBtn(n){
@@ -154,6 +176,47 @@
       return d;
     }
 
+    function cssNum(varName, fallback){
+      const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    // ✅ 与“最新 Save”一致：根据 map 实际高度动态排布（只影响显示）
+    function computeLayout(mapH, visLen){
+      const cap = cssNum("--cap-sz", 34);
+      const btnH = cssNum("--btn-h", 56);
+
+      const topPad = cssNum("--pad-top", 14);
+      const bottomPad = cssNum("--pad-bottom", 14);
+
+      let gapCapBtn = cssNum("--gap-cap-btn", 24);
+      let gapBtn    = cssNum("--gap-btn", 20);
+
+      const fixed = topPad + cap + (visLen * btnH) + bottomPad;
+      const needGaps = gapCapBtn + (Math.max(0, visLen - 1) * gapBtn);
+      const availGaps = Math.max(0, mapH - fixed);
+
+      const scale = needGaps > 0 ? Math.max(0.55, Math.min(1, availGaps / needGaps)) : 1;
+      gapCapBtn *= scale;
+      gapBtn *= scale;
+
+      const capY = topPad + cap / 2;
+
+      let y = capY + cap / 2 + gapCapBtn + btnH / 2;
+
+      const ys = [];
+      for (let i = 0; i < visLen; i++){
+        ys.push(y);
+        y += btnH + gapBtn;
+      }
+
+      return {
+        capYPct: (capY / mapH) * 100,
+        yPctList: ys.map(v => (v / mapH) * 100)
+      };
+    }
+
     function render(){
       const map = document.getElementById("map");
       const wires = document.getElementById("wires");
@@ -161,8 +224,7 @@
       map.querySelectorAll(".node").forEach(el => el.remove());
       wires.innerHTML = "";
 
-      const lw = parseFloat(getComputedStyle(document.documentElement)
-        .getPropertyValue("--line-w")) || 8;
+      const lw = cssNum("--line-w", 8);
 
       function addLine(x1,y1,x2,y2){
         const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
@@ -177,30 +239,45 @@
         wires.appendChild(ln);
       }
 
-      // 1) 顶部黑方块
+      const mapH = map.getBoundingClientRect().height || 1;
+      const layout = computeLayout(mapH, Math.max(1, VIS.length));
+
+      // 1) cap（顶部黑方块）
       const capNode = document.createElement("div");
       capNode.className = "node";
-      capNode.style.left = CAP.x + "%";
-      capNode.style.top  = CAP.y + "%";
+      capNode.style.left = X + "%";
+      capNode.style.top  = layout.capYPct + "%";
       capNode.appendChild(makeCap());
       map.appendChild(capNode);
 
-      // 2) 两个按钮
-      for (const n of VIS){
+      // 2) buttons（2 个）
+      for (let i = 0; i < VIS.length; i++){
+        const n = VIS[i];
         const wrap = document.createElement("div");
         wrap.className = "node";
-        wrap.style.left = n.x + "%";
-        wrap.style.top  = n.y + "%";
+        wrap.style.left = X + "%";
+        wrap.style.top  = layout.yPctList[i] + "%";
         wrap.appendChild(makeBtn(n));
         map.appendChild(wrap);
       }
 
-      // 3) 画线：方块 -> 起点 -> 天平路
-      addLine(CAP.x, CAP.y, VIS[0].x, VIS[0].y);
-      addLine(VIS[0].x, VIS[0].y, VIS[1].x, VIS[1].y);
+      // 3) wires：cap -> 起点 -> 天平路
+      addLine(X, layout.capYPct, X, layout.yPctList[0]);
+      for (let i = 1; i < VIS.length; i++){
+        addLine(X, layout.yPctList[i-1], X, layout.yPctList[i]);
+      }
     }
 
     render();
+
+    // ✅ 与最新 Save 一致：尺寸变化时重排更稳
+    let raf = 0;
+    function scheduleRender(){
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(render);
+    }
+    window.addEventListener("resize", scheduleRender, { passive:true });
+    window.addEventListener("orientationchange", scheduleRender, { passive:true });
   </script>
 </body>
 </html>
