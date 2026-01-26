@@ -43,6 +43,7 @@
       font-size:var(--fs-body);
       line-height:var(--lh-body);
       color:var(--c-text);
+      overflow:hidden; /* ✅ 防止抖动时出现滚动条 */
     }
     button{ font-family:inherit; }
 
@@ -129,7 +130,7 @@
 
     /* ===== 按钮下方提示文字 ===== */
     .btnHint{
-      margin-top: calc(var(--lh-body) * 1em); /* ✅ 空 3 行 */
+      margin-top: calc(var(--lh-body) * 1em); /* ✅ 空 1 行（你原注释写 3 行，但实际是 1 行高度；保持不改逻辑） */
       font-size: 13px;
       color: var(--c-muted);
       text-align: center;
@@ -143,6 +144,44 @@
         --fs-hint: 17px;
       }
     }
+
+    /* =========================
+       ✅ 爆炸覆盖层（网格 → 黑屏）
+       ========================= */
+
+    /* 网格爆炸画布 */
+    #fx{
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100vh;
+      pointer-events:none;
+      z-index:9999;
+      opacity:0;
+    }
+
+    /* 结尾黑屏 */
+    #black{
+      position:fixed;
+      inset:0;
+      background:#000;
+      opacity:0;
+      pointer-events:none;
+      z-index:10000;
+    }
+
+    /* 抖动 */
+    @keyframes shake {
+      0%{ transform:translate(0,0); }
+      15%{ transform:translate(-8px,6px); }
+      30%{ transform:translate(7px,-6px); }
+      45%{ transform:translate(-6px,-8px); }
+      60%{ transform:translate(6px,8px); }
+      75%{ transform:translate(-4px,6px); }
+      90%{ transform:translate(4px,-6px); }
+      100%{ transform:translate(0,0); }
+    }
+    .shake{ animation:shake 0.55s ease-in-out; }
   </style>
 </head>
 
@@ -157,13 +196,16 @@
     <div class="btnRow" id="btnRow">
       <button id="startBtn">开始游戏</button>
 
-      <!-- ✅ 新增：按钮下方提示 -->
       <div class="btnHint">
         请打开手机声音后，再点击开始
       </div>
     </div>
 
   </div>
+
+  <!-- ✅ 爆炸覆盖层 -->
+  <canvas id="fx"></canvas>
+  <div id="black"></div>
 
 <script>
 (() => {
@@ -198,10 +240,16 @@
   const btnRow = document.getElementById("btnRow");
   const startBtn = document.getElementById("startBtn");
 
+  // ✅ 爆炸层元素
+  const fx = document.getElementById("fx");
+  const black = document.getElementById("black");
+  const fxCtx = fx.getContext("2d", { alpha: true });
+
   let audioCtx = null;
   let audioEnabled = false;
   let musicPlayed = false;
   let timers = [];
+  let exploded = false;
 
   function ensureAudio(){
     if(!audioCtx){
@@ -247,22 +295,209 @@
     timers = [];
   }
 
+  /* =========================
+     ✅ 爆炸音效（合成）
+     ========================= */
+  function playExplosion(){
+    if(!audioEnabled || !audioCtx) return;
+    const ctx = audioCtx;
+
+    const duration = 0.85;
+    const bufferSize = Math.floor(ctx.sampleRate * duration);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for(let i=0;i<bufferSize;i++){
+      const t = i / bufferSize;
+      const noise = (Math.random()*2-1);
+      const thump = Math.sin(2*Math.PI*55*t) * (1-t);
+      data[i] = (noise*0.9 + thump*0.35);
+    }
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(240, ctx.currentTime);
+    lp.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + duration);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(1.0, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+    src.connect(lp);
+    lp.connect(gain);
+    gain.connect(ctx.destination);
+
+    src.start();
+  }
+
+  /* =========================
+     ✅ 网格爆炸绘制
+     ========================= */
+  function resizeFx(){
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    fx.width = Math.floor(innerWidth * dpr);
+    fx.height = Math.floor(innerHeight * dpr);
+    fx.style.width = innerWidth + "px";
+    fx.style.height = innerHeight + "px";
+    fxCtx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener("resize", resizeFx);
+  resizeFx();
+
+  // 分层“外圈更红”的离散环：更贴近你描述
+  function colorAt(distNorm, progress){
+    const front = Math.min(1, progress * 1.12);
+    if(distNorm > front) return null;
+
+    // 分层：每层宽度（越小层越多）
+    const step = 0.09;
+    const ring = Math.min(1, Math.floor((distNorm / Math.max(0.0001, front)) / step) * step);
+
+    // ring: 0..1 越外越红越深
+    const r = Math.round(255 - 135*ring);
+    const g = Math.round(140 - 140*ring);
+    const b = 0;
+
+    // 透明度：外圈更实
+    const a = 0.35 + 0.60*ring;
+    return `rgba(${r},${g},${b},${a.toFixed(3)})`;
+  }
+
+  function drawGrid(progress){
+    const w = innerWidth, h = innerHeight;
+
+    // 格子尺寸（越大越“像素爆炸”）
+    // 轻度设备兜底：并发核数低则格子更大，减少绘制量
+    const hc = navigator.hardwareConcurrency || 8;
+    const cell = (hc <= 4) ? 32 : 26;
+
+    const cx = w/2, cy = h/2;
+    const maxD = Math.hypot(Math.max(cx, w-cx), Math.max(cy, h-cy));
+
+    fxCtx.clearRect(0,0,w,h);
+
+    // 暗底提升“热”
+    fxCtx.fillStyle = "rgba(0,0,0,0.10)";
+    fxCtx.fillRect(0,0,w,h);
+
+    for(let y=0; y<h; y+=cell){
+      for(let x=0; x<w; x+=cell){
+        const gx = x + cell/2;
+        const gy = y + cell/2;
+        const d = Math.hypot(gx-cx, gy-cy);
+        const dn = Math.min(1, d/maxD);
+
+        const col = colorAt(dn, progress);
+        if(!col) continue;
+
+        fxCtx.fillStyle = col;
+        fxCtx.fillRect(x, y, cell, cell);
+      }
+    }
+
+    // 网格线（更“网格图”）
+    fxCtx.strokeStyle = "rgba(0,0,0,0.10)";
+    fxCtx.lineWidth = 1;
+    for(let x=0; x<=w; x+=cell){
+      fxCtx.beginPath(); fxCtx.moveTo(x,0); fxCtx.lineTo(x,h); fxCtx.stroke();
+    }
+    for(let y=0; y<=h; y+=cell){
+      fxCtx.beginPath(); fxCtx.moveTo(0,y); fxCtx.lineTo(w,y); fxCtx.stroke();
+    }
+  }
+
+  function doShakeOnce(){
+    document.documentElement.classList.add("shake");
+    document.body.classList.add("shake");
+    setTimeout(() => {
+      document.documentElement.classList.remove("shake");
+      document.body.classList.remove("shake");
+    }, 560);
+  }
+
+  function runExplosionFx(onDone){
+    fx.style.opacity = "1";
+    black.style.opacity = "0";
+
+    const t0 = performance.now();
+    const phase1 = 650; // 网格扩散
+    const phase2 = 220; // 淡出网格 -> 淡入黑屏
+    const phase3 = 550; // 黑屏 + 抖动
+
+    function tick(now){
+      const dt = now - t0;
+
+      if(dt <= phase1){
+        const p = dt / phase1;
+        drawGrid(p);
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      if(dt <= phase1 + phase2){
+        const p = (dt - phase1) / phase2;
+        fx.style.opacity = String(1 - 0.65*p);
+        black.style.opacity = String(p);
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      if(dt <= phase1 + phase2 + phase3){
+        black.style.opacity = "1";
+        doShakeOnce();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      fx.style.opacity = "0";
+      black.style.opacity = "1";
+      if(typeof onDone === "function") onDone();
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  function explodeAndGo(){
+    if(exploded) return;
+    exploded = true;
+
+    // ✅ 立刻爆炸音效
+    playExplosion();
+
+    // ✅ 立刻视觉爆炸（网格→黑屏→抖动），结束后跳转
+    runExplosionFx(() => {
+      // 给黑屏留一个很短的“余韵”，再跳转
+      setTimeout(() => {
+        location.href = NEXT_URL;
+      }, 120);
+    });
+  }
+
   function startCountdown(){
     let left = COUNTDOWN_SEC;
+
     const tick = () => {
       statusEl.textContent = `倒计时：${left}`;
+
       if(left === 8 && !musicPlayed){
         musicPlayed = true;
         hintEl.style.display = "block";
         playMelody();
       }
+
       if(left <= 0){
-        location.href = NEXT_URL;
+        // ✅ 到 0 后立刻爆炸，不再直接跳转
+        explodeAndGo();
         return;
       }
+
       left--;
       timers.push(setTimeout(tick, 1000));
     };
+
     tick();
   }
 
@@ -272,7 +507,14 @@
     centerStack.style.display = "block";
     hintEl.style.display = "none";
     musicPlayed = false;
+    exploded = false;
+
+    // 重置覆盖层
+    fx.style.opacity = "0";
+    black.style.opacity = "0";
+
     clearTimers();
+
     try{ await enableAudio(); }catch(e){}
     startCountdown();
   }
