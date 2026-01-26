@@ -12,7 +12,7 @@
       --bg:#fff;
       --text:#111;
 
-      /* ✅ 按你给的 Square UI：18px / 1.6 */
+      /* ✅ 同源：Rotate/Post Puzzle */
       --fs-body: 18px;
       --lh-body: 1.6;
 
@@ -26,20 +26,18 @@
       --ring: 3px;
 
       --gap: 18px;
+      --gap-tight: 12px;
 
-      /* ✅ 横向两图更近：让每个图更大一点 */
+      /* 两列更近 */
       --grid-col-gap: 12px;
-
-      /* ✅ 行间距保持你原来的“多一行”感觉 */
       --grid-row-gap: 36px;
 
-      /* ✅ 红框标注的间隔：调小一点（图 ↔ 调色盘） */
-      --stage-palette-gap: 14px;
+      /* ✅ 关键：图 ↔ 调色盘距离（想更近就继续减小） */
+      --stage-palette-gap: 10px;
 
-      /* 每张图的黑色外边框 */
       --frame: 4px;
 
-      /* ✅ 按钮（完全对齐你给的 Square 规范） */
+      /* ✅ 按钮：同源 */
       --fs-btn: 18px;
       --fw-btn: 600;
       --h-btn: 52px;
@@ -66,7 +64,7 @@
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
-      padding:18px 14px 28px; /* ✅ 对齐 Square wrap */
+      padding:18px 14px 28px;
     }
 
     .title{
@@ -89,7 +87,7 @@
     .tile{
       display:flex;
       flex-direction:column;
-      gap: var(--stage-palette-gap);
+      gap: var(--stage-palette-gap); /* ✅ 就是这个控制“图和调色盘距离” */
       min-width:0;
       padding-bottom: 2px;
     }
@@ -102,7 +100,7 @@
       -webkit-user-select:none;
       touch-action:none;
       background:#fff;
-      border: var(--frame) solid transparent; /* ✅ 未 ready 前不画边框 */
+      border: var(--frame) solid transparent;
     }
     .stage.ready{ border-color:#000; }
 
@@ -136,8 +134,9 @@
       align-items:center;
       gap:10px;
       width:100%;
-      overflow:visible;            /* ✅ 不裁切选中外圈 */
-      padding: 10px 0 10px;        /* ✅ 上下都留边，不互相遮挡 */
+      overflow:visible;
+      /* ✅ 也会影响“上沿距离”：上 padding 越小越贴近 */
+      padding: 6px 0 10px;
     }
 
     .palette{
@@ -164,7 +163,7 @@
     }
     .swatch.selected{ box-shadow: 0 0 0 var(--ring) #000; }
 
-    /* ===== 底部答案区 ===== */
+    /* ===== 底部答案区（同源节奏）===== */
     .answerBlock{
       margin-top: 18px;
       display:flex;
@@ -187,12 +186,9 @@
     }
 
     .ansInput{
-      width:4em;                /* ✅ Square 同款观感 */
       height:40px;
       padding:0 6px;
       border:2px solid var(--c-border);
-      font-weight:700;
-      font-family:inherit;
       border-radius:0;
       font-size:18px;
       text-align:center;
@@ -200,43 +196,42 @@
       box-shadow:none;
       -webkit-appearance:none;
       appearance:none;
+      font-weight:700;
+      font-family:inherit;
+      width:4em;
       line-height:40px;
     }
     .ansInput:focus{ outline:none; box-shadow:none; }
 
-    /* ✅ 按钮区：必须一行（移动端也尽量一行） */
     .actions{
-      margin-top: 0;
       display:flex;
       gap:12px;
       justify-content:center;
-      flex-wrap:nowrap;          /* ✅ 关键：不换行 */
+      flex-wrap:nowrap;
       align-items:center;
     }
 
-    /* ✅ Square 同款按钮 */
     button.uiBtn{
       width:var(--w-btn);
       height:var(--h-btn);
       padding:0 18px;
       box-sizing:border-box;
       font-size:var(--fs-btn);
-      font-weight:600;
+      font-weight:var(--fw-btn);
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
-      font-family:inherit;
       -webkit-tap-highlight-color:transparent;
+      font-family:inherit;
+      transition:none;
     }
 
-    /* PC hover（和 Square 一样用 media 限定） */
     @media (hover:hover) and (pointer:fine){
       button.uiBtn:hover{ background:#000; color:#fff; }
     }
 
-    /* JS 控制的点击反馈（Square 同款 invert） */
     button.uiBtn.invert{
       background:#000;
       color:#fff;
@@ -248,27 +243,22 @@
     }
 
     .msg{
-      min-height: 1.4em;
+      margin-top:var(--gap-tight);
+      min-height:1.4em;
       font-size:14px;
-      margin-top: 0;
+      line-height:1.6;
     }
-    .msg.ok{ color: var(--c-ok); font-weight:700; }
-    .msg.bad{ color: var(--c-danger); font-weight:700; }
-
-    .hintBox{
-      display:none;
-      border-left: 4px solid #000;
-      padding: 10px 12px;
-      background: #fff;
-      font-size: 16px;
-      line-height: 1.7;
+    .msg.ok{
+      color:var(--c-ok);
+      font-weight:700;
     }
-    .hintBox.show{ display:block; }
 
-    /* ✅ Square 同款移动端按钮宽度策略：保证两按钮一行 */
     @media (max-width:520px){
       button.uiBtn{ width:46vw; }
     }
+
+    /* hintBox 保留但不使用（与“完全同款跳转提示页”不冲突） */
+    .hintBox{ display:none; }
   </style>
 </head>
 
@@ -298,32 +288,26 @@
 <script>
 (() => {
   // =========================
-  // ✅ 四张图统一调色盘（完全一致）
+  // ✅ 调色盘
   // =========================
   const PALETTE_COLORS = [
-    "#2A5A5E", // correct (t1)
-    "#C62622", // correct (t2)
-    "#E2C164", // correct (t4)
-    "#00E5FF", // 浅蓝
-    "#7030A0", // 紫
-    "#FF4FA0", // 淡粉
-    "#0070C0", // 深蓝
-    "#9B857A"  // ✅ 骷髅：同色系“深一点点”（原 #AC968A）
+    "#2A5A5E",
+    "#C62622",
+    "#E2C164",
+    "#00E5FF",
+    "#7030A0",
+    "#FF4FA0",
+    "#0070C0",
+    "#9B857A"
   ];
 
-  // =========================
-  // ✅ 每张图自己的正确色（用于“挖字母”记录）
-  // =========================
   const TILES = [
     { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
     { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
-    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#9B857A" }, // ✅ 同步改深
+    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#9B857A" },
     { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" },
   ];
 
-  // =========================
-  // reveal 定位（相对“可涂抹白区”bbox）
-  // =========================
   const U_BOX_REL = { x: 0.20, y: 0.08, w: 0.20, h: 0.30 };
   const U_STROKE_FACTOR = 0.22;
 
@@ -339,8 +323,15 @@
   const WHITE_TH = 200;
   const BRUSH_RADIUS = 18;
 
+  // =========================
+  // ✅ 底部答案 & 跳转（按 Post Puzzle 反馈“完全同款”）
+  // =========================
   const ANSWER = "paul";
-  const HINT_TEXT = "线索：四个图里被“挖出来”的字母，按顺序组成答案。";
+
+  // 你把这里换成你的提示页 / 下一页
+  const HINT_URL = "https://sorcbear.github.io/playground/XXXX/hint";
+  const NEXT_URL = "https://sorcbear.github.io/playground/XXXX/";
+  const COUNTDOWN_START = 3;
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
   function sameHex(a,b){
@@ -352,32 +343,32 @@
   const ans = document.getElementById("ans");
   const btnHint = document.getElementById("btnHint");
   const btnSubmit = document.getElementById("btnSubmit");
-  const hintBox = document.getElementById("hintBox");
   const msg = document.getElementById("msg");
 
-  function setMsg(text, cls){
-    msg.className = "msg" + (cls ? (" " + cls) : "");
-    msg.textContent = text || "";
-  }
+  let locked = false;
+  let timer = null;
+  let btnTimer = null;
 
-  // ✅ Square 同款：短暂黑底白字反馈
   function flashInvert(btn, ms=120){
     btn.classList.add("invert");
     setTimeout(()=>btn.classList.remove("invert"), ms);
   }
 
-  // ✅ Square 同款：错误反馈用（按钮文案 + invert + disable，自动恢复）
-  const SUBMIT_TEXT = "提交答案";
-  let btnTimer = null;
-  function setBtnText(text, ms=900){
-    if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+  function setLocked(v){
+    locked = v;
+    btnSubmit.disabled = v;
+    btnHint.disabled = v;
+    ans.disabled = v;
+  }
 
+  function setBtnText(text, ms=900){
+    if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
     btnSubmit.textContent = text;
     btnSubmit.classList.add("invert");
     btnSubmit.disabled = true;
 
     btnTimer = setTimeout(()=>{
-      btnSubmit.textContent = SUBMIT_TEXT;
+      btnSubmit.textContent = "提交答案";
       btnSubmit.classList.remove("invert");
       btnSubmit.disabled = false;
       btnTimer = null;
@@ -608,7 +599,6 @@
       p.moveTo(x, top);
       p.quadraticCurveTo(cx + (72)*s,  cy + (-92)*s,  cx + (72)*s,  cy + (-28)*s);
       p.quadraticCurveTo(cx + (72)*s,  cy + (38)*s,   x,            mid);
-
       return p;
     }
 
@@ -628,7 +618,6 @@
       const barY = cy + (8)*s;
       a.moveTo(cx + (-40)*s, barY);
       a.lineTo(cx + (42)*s, barY);
-
       return a;
     }
 
@@ -644,7 +633,6 @@
 
       l.moveTo(leftX, baseY);
       l.lineTo(rightX, baseY);
-
       return l;
     }
 
@@ -819,13 +807,14 @@
     });
   });
 
-  // ===== 底部交互（逻辑不改，只把按钮反馈做成 Square 同款）=====
-  btnHint.addEventListener("click", ()=>{
-    flashInvert(btnHint, 120);
-    hintBox.textContent = HINT_TEXT;
-    hintBox.classList.toggle("show");
-    setMsg("", "");
-  });
+  // =========================
+  // ✅ 底部交互：完全同款 Post Puzzle
+  // =========================
+  btnHint.onclick = ()=>{
+    if(locked) return;
+    flashInvert(btnHint,120);
+    setTimeout(()=>location.href = HINT_URL,120);
+  };
 
   function normalize4(s){
     return (s || "")
@@ -836,27 +825,39 @@
       .toLowerCase();
   }
 
+  function isCorrect(){
+    const v = normalize4(ans.value);
+    return v === ANSWER;
+  }
+
   ans.addEventListener("input", ()=>{
     ans.value = ans.value.replace(/[^a-zA-Z]/g, "").slice(0,4);
   });
 
-  btnSubmit.addEventListener("click", ()=>{
-    const v = normalize4(ans.value);
+  btnSubmit.onclick = ()=>{
+    if(locked) return;
 
-    if(v.length !== 4){
-      setMsg("", "");
-      setBtnText("请输入 4 个字母", 900);
-      return;
-    }
+    if(isCorrect()){
+      setLocked(true);
+      let t = COUNTDOWN_START;
+      msg.textContent = `答案正确，即将进入下一题（${t}）`;
+      msg.classList.add("ok");
 
-    if(v === ANSWER){
-      setMsg("正确。", "ok");
-      setBtnText("正确。", 900);
+      timer = setInterval(()=>{
+        t--;
+        if(t>0){
+          msg.textContent = `答案正确，即将进入下一题（${t}）`;
+        }else{
+          clearInterval(timer);
+          location.href = NEXT_URL;
+        }
+      },1000);
     }else{
-      setMsg("", "");
-      setBtnText("不正确，再试一次", 900);
+      msg.textContent = "";
+      msg.classList.remove("ok");
+      setBtnText("错了，再试一次",900);
     }
-  });
+  };
 })();
 </script>
 </body>
