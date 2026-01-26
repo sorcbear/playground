@@ -131,10 +131,6 @@
       }
     }
 
-    /* =========================
-       ✅ 爆炸覆盖层：纯色方形扩散（无渐变、无白色）
-       ========================= */
-
     #fx{
       position:fixed;
       inset:0;
@@ -184,14 +180,19 @@
   const NOTE_GAP_SEC = 0.25;
   const NOTE_DUR_SEC = 0.22;
 
-  const MASTER_VOL = 2.15;
+  /* ✅ iPhone 更响：主音量 + 压缩后补偿（makeup）
+     - MASTER_VOL：整体推大
+     - MAKEUP_VOL：压缩后再补一点“平均响度”
+     建议先用这个版本，如果仍小，再把 MASTER_VOL 继续加 0.2~0.4。 */
+  const MASTER_VOL = 2.80;
+  const MAKEUP_VOL = 1.35;
 
   // ✅ 0 后停 1 秒再咔嚓
   const PAUSE_BEFORE_LATCH_MS = 1000;
-  // ✅ 咔嚓到爆炸间隔
-  const LATCH_TO_BOOM_MS = 320;
 
-  // ✅ 爆炸流程启动后：无论如何最多 N 秒必跳转，防止“黑屏卡死”
+  // ✅ 咔嚓到爆炸间隔：0.5 秒（你要求）
+  const LATCH_TO_BOOM_MS = 500;
+
   const NAV_WATCHDOG_MS = 9000;
 
   const KEYS = [
@@ -228,8 +229,11 @@
   let timers = [];
   let exploded = false;
 
-  let masterGain = null;
-  let compressor = null;
+  // audio chain
+  let preGain = null;     // MASTER_VOL
+  let compressor = null;  // 压缩提升平均响度
+  let makeupGain = null;  // MAKEUP_VOL：压缩后补偿
+  let limiter = null;     // 末端限幅，避免破音
 
   let navWatchdog = null;
   let navDone = false;
@@ -256,18 +260,32 @@
     if(!audioCtx){
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+      preGain = audioCtx.createGain();
+      preGain.gain.setValueAtTime(MASTER_VOL, audioCtx.currentTime);
+
       compressor = audioCtx.createDynamicsCompressor();
-      compressor.threshold.setValueAtTime(-20, audioCtx.currentTime);
+      // 更积极一点，拉高平均响度（iPhone 更明显）
+      compressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
       compressor.knee.setValueAtTime(18, audioCtx.currentTime);
-      compressor.ratio.setValueAtTime(7, audioCtx.currentTime);
+      compressor.ratio.setValueAtTime(10, audioCtx.currentTime);
       compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
-      compressor.release.setValueAtTime(0.18, audioCtx.currentTime);
+      compressor.release.setValueAtTime(0.22, audioCtx.currentTime);
 
-      masterGain = audioCtx.createGain();
-      masterGain.gain.setValueAtTime(MASTER_VOL, audioCtx.currentTime);
+      makeupGain = audioCtx.createGain();
+      makeupGain.gain.setValueAtTime(MAKEUP_VOL, audioCtx.currentTime);
 
-      masterGain.connect(compressor);
-      compressor.connect(audioCtx.destination);
+      // 末端限幅（轻 limiter）：防止你把音量推大后刺耳破音
+      limiter = audioCtx.createDynamicsCompressor();
+      limiter.threshold.setValueAtTime(-1.2, audioCtx.currentTime);
+      limiter.knee.setValueAtTime(0, audioCtx.currentTime);
+      limiter.ratio.setValueAtTime(20, audioCtx.currentTime);
+      limiter.attack.setValueAtTime(0.001, audioCtx.currentTime);
+      limiter.release.setValueAtTime(0.08, audioCtx.currentTime);
+
+      preGain.connect(compressor);
+      compressor.connect(makeupGain);
+      makeupGain.connect(limiter);
+      limiter.connect(audioCtx.destination);
     }
     return audioCtx;
   }
@@ -290,12 +308,13 @@
     o.type = "sine";
     o.frequency.setValueAtTime(freq, t);
 
+    // ✅ 旋律再抬一点（但靠 limiter 控制峰值）
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.78, t + 0.015);
+    g.gain.linearRampToValueAtTime(0.95, t + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t + d);
 
     o.connect(g);
-    g.connect(masterGain);
+    g.connect(preGain);
 
     o.start(t);
     o.stop(t + d + 0.05);
@@ -325,12 +344,12 @@
     o1.frequency.setValueAtTime(260, t0);
     o1.frequency.exponentialRampToValueAtTime(150, t0 + 0.12);
     g1.gain.setValueAtTime(0.0001, t0);
-    g1.gain.linearRampToValueAtTime(0.75, t0 + 0.01);
-    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+    g1.gain.linearRampToValueAtTime(0.95, t0 + 0.008);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
     o1.connect(g1);
-    g1.connect(masterGain);
+    g1.connect(preGain);
     o1.start(t0);
-    o1.stop(t0 + 0.18);
+    o1.stop(t0 + 0.20);
 
     const t1 = t0 + 0.18;
     const o2 = ctx.createOscillator();
@@ -339,12 +358,12 @@
     o2.frequency.setValueAtTime(210, t1);
     o2.frequency.exponentialRampToValueAtTime(120, t1 + 0.10);
     g2.gain.setValueAtTime(0.0001, t1);
-    g2.gain.linearRampToValueAtTime(0.68, t1 + 0.01);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.14);
+    g2.gain.linearRampToValueAtTime(0.88, t1 + 0.008);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.16);
     o2.connect(g2);
-    g2.connect(masterGain);
+    g2.connect(preGain);
     o2.start(t1);
-    o2.stop(t1 + 0.16);
+    o2.stop(t1 + 0.18);
 
     const dur = 0.42;
     const bufferSize = Math.floor(ctx.sampleRate * dur);
@@ -353,7 +372,7 @@
     for(let i=0;i<bufferSize;i++){
       const x = i / bufferSize;
       const raw = (Math.random()*2-1);
-      data[i] = raw * (0.45*(1-x));
+      data[i] = raw * (0.55*(1-x));
     }
     const src = ctx.createBufferSource();
     src.buffer = buffer;
@@ -369,13 +388,13 @@
 
     const ng = ctx.createGain();
     ng.gain.setValueAtTime(0.0001, t0);
-    ng.gain.linearRampToValueAtTime(0.55, t0 + 0.03);
+    ng.gain.linearRampToValueAtTime(0.72, t0 + 0.02);
     ng.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
 
     src.connect(hp);
     hp.connect(bp);
     bp.connect(ng);
-    ng.connect(masterGain);
+    ng.connect(preGain);
 
     src.start(t0);
     src.stop(t0 + dur);
@@ -385,7 +404,7 @@
     if(!audioEnabled || !audioCtx) return;
     const ctx = audioCtx;
 
-    const duration = 0.85;
+    const duration = 0.90;
     const bufferSize = Math.floor(ctx.sampleRate * duration);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -393,9 +412,9 @@
     for(let i=0;i<bufferSize;i++){
       const x = i / bufferSize;
       const noise = (Math.random()*2-1);
-      const thump = Math.sin(2*Math.PI*52*x) * (1-x);
-      const punch = (x < 0.14) ? 1.35 : 1.0;
-      data[i] = (noise*0.95 + thump*0.50) * (1 - x) * punch;
+      const thump = Math.sin(2*Math.PI*50*x) * (1-x);
+      const punch = (x < 0.16) ? 1.55 : 1.0;
+      data[i] = (noise*1.05 + thump*0.60) * (1 - x) * punch;
     }
 
     const src = ctx.createBufferSource();
@@ -403,7 +422,7 @@
 
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.setValueAtTime(280, ctx.currentTime);
+    lp.frequency.setValueAtTime(300, ctx.currentTime);
     lp.frequency.exponentialRampToValueAtTime(55, ctx.currentTime + duration);
 
     const gain = ctx.createGain();
@@ -412,7 +431,7 @@
 
     src.connect(lp);
     lp.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(preGain);
 
     src.start();
   }
@@ -437,16 +456,13 @@
     }, 560);
   }
 
-  // ✅ 颜色顺序：橘红 -> 深橘红 -> 红 -> 黑（扩散完就是黑）
-  // 全程纯色块，不做渐变
   const RINGS = [
-    "#ff6a00", // 橘红
-    "#c84500", // 深橘红
-    "#b00000", // 红
-    "#000000", // 黑（终态）
+    "#ff6a00",
+    "#c84500",
+    "#b00000",
+    "#000000",
   ];
 
-  // ✅ 方形扩散：用 Chebyshev 距离（max(|dx|,|dy|)）
   function squareDistNorm(x, y, cx, cy, maxD){
     const dx = Math.abs(x - cx);
     const dy = Math.abs(y - cy);
@@ -456,22 +472,15 @@
   function drawSquareExpand(progress){
     const w = innerWidth, h = innerHeight;
     const cx = w/2, cy = h/2;
-
-    // maxD：从中心到最远边界的 Chebyshev 距离
     const maxD = Math.max(cx, w - cx, cy, h - cy);
 
-    // cell：越大越像“像素块扩散”，也更省性能
     const hc = navigator.hardwareConcurrency || 8;
     const cell = (hc <= 4) ? 28 : 22;
 
-    // 背景始终先铺黑（保证无白色）
     fxCtx.fillStyle = "#000";
     fxCtx.fillRect(0,0,w,h);
 
-    // 扩散前沿（0..1）
     const front = Math.min(1, progress);
-
-    // 分层厚度（越小层越多）
     const step = 0.085;
 
     for(let y=0; y<h; y+=cell){
@@ -480,42 +489,30 @@
         const gy = y + cell/2;
 
         const dn = squareDistNorm(gx, gy, cx, cy, maxD);
-
         if(dn > front) continue;
 
-        // 在 front 内：按“环”分段，离中心越近越先被染色
-        const ratio = dn / Math.max(0.0001, front); // 0..1
+        const ratio = dn / Math.max(0.0001, front);
         const band = Math.min(1, Math.floor(ratio / step) * step);
 
-        // 让颜色从外到内逐渐走向黑（最后终态黑）
-        // 这里用 band 推索引：更靠外(接近1)更接近黑
         const idx = Math.min(RINGS.length - 1, Math.floor(band * (RINGS.length)));
-        const col = RINGS[idx];
-
-        fxCtx.fillStyle = col;
+        fxCtx.fillStyle = RINGS[idx];
         fxCtx.fillRect(x, y, cell, cell);
       }
     }
   }
 
-  // ✅ 爆炸阶段：方形向外扩散，结束即纯黑；只在中途震动一次；完成后直接跳转
   function runSquareExplosionFx(onDone){
     fx.style.opacity = "1";
-
-    // 进入爆炸：隐藏所有文字层（你要求“纯色画面”）
     centerStack.style.display = "none";
 
     const t0 = performance.now();
-
-    const phaseExpand = 920;   // 扩散总时长
-    const phaseHoldBlack = 220; // 黑屏停留一点点再跳转
-
+    const phaseExpand = 920;
+    const phaseHoldBlack = 220;
     const TOTAL_MS = phaseExpand + phaseHoldBlack;
 
     let shook = false;
     let doneCalled = false;
 
-    // ✅ rAF 可能被系统暂停：加一个“总时长兜底”
     const hardTimeout = setTimeout(() => {
       if(doneCalled) return;
       doneCalled = true;
@@ -536,7 +533,6 @@
         const p = dt / phaseExpand;
         drawSquareExpand(p);
 
-        // ✅ 只在扩散中途震一次（不在末尾震）
         if(!shook && p > 0.42){
           shook = true;
           doShakeOnce();
@@ -546,7 +542,6 @@
         return;
       }
 
-      // 扩散完成：保持纯黑（你说“变成黑色就扩散完了”）
       fxCtx.fillStyle = "#000";
       fxCtx.fillRect(0,0,innerWidth,innerHeight);
 
@@ -565,7 +560,6 @@
     if(exploded) return;
     exploded = true;
 
-    // ✅ 防卡死：爆炸流程启动就开看门狗
     startNavWatchdog();
 
     setTimeout(() => {
@@ -575,7 +569,6 @@
         playExplosion();
 
         runSquareExplosionFx(() => {
-          // 最后强制跳转（双保险：即使 onDone 正常，也走这里）
           stopNavWatchdog();
           setTimeout(forceNavigate, 80);
         });
@@ -628,10 +621,8 @@
     startCountdown();
   }
 
-  // 如果用户切后台导致定时器/动画乱序，回来时也确保不“永远卡住”
   document.addEventListener("visibilitychange", () => {
     if(!document.hidden && exploded && !navDone){
-      // 爆炸流程已经开始但没跳走：给它一个更短兜底
       startNavWatchdog();
     }
   });
