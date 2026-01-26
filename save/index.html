@@ -10,7 +10,7 @@
       --fs-body: 18px;
 
       --btn-h: 56px;
-      --btn-w: 140px;   /* ✅ 文字按钮更宽一点更稳 */
+      --btn-w: 140px;
       --bg:#fff;
       --c-border:#000;
 
@@ -19,7 +19,7 @@
 
       --line-w: 8px;
 
-      --cap-sz: 34px;   /* 顶部方块大小 */
+      --cap-sz: 34px;
     }
 
     *{ box-sizing:border-box; }
@@ -69,7 +69,6 @@
       transform:translate(-50%,-50%);
     }
 
-    /* 顶部黑方块（非按钮） */
     .cap{
       width: var(--cap-sz);
       height: var(--cap-sz);
@@ -79,7 +78,6 @@
     }
     .cap svg{ width:100%; height:100%; display:block; }
 
-    /* ✅ 文字按钮（无图标） */
     .btn{
       width:var(--btn-w);
       height:var(--btn-h);
@@ -116,7 +114,6 @@
     <div class="notice">为保留进度，请勿使用浏览器无痕模式。</div>
 
     <div class="map" id="map">
-      <!-- 统一 0~100 坐标系 -->
       <svg class="wires" id="wires"
            viewBox="0 0 100 100"
            preserveAspectRatio="none"
@@ -138,19 +135,16 @@
       return !!(safeGet(localStorage, key) || safeGet(sessionStorage, key));
     }
 
-    // ===== 纵向布局（从上到下）=====
-    // 顶部黑方块（永远显示）
-    const CAP = { x: 50.0, y: 10.0 };
+    // ===== 节点定义（x 固定 50%，y 由 JS 动态计算）=====
+    const X = 50.0;
 
-    // 四个按钮都在 x=50%，纵向依次排列
     const NODES = [
-      { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null,            x:50.0, y:26.0 },
-      { text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE, x:50.0, y:46.0 },
-      { text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE, x:50.0, y:66.0 },
-      { text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL,    x:50.0, y:86.0 }
+      { text:"起点",   url:"https://sorcbear.github.io/playground/rotate", need:null },
+      { text:"天平路", url:"https://sorcbear.github.io/playground/circle", need:K_UNLOCK_CIRCLE },
+      { text:"康平路", url:"https://sorcbear.github.io/playground/square", need:K_UNLOCK_SQUARE },
+      { text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",    need:K_UNLOCK_PPL }
     ];
 
-    // 顺序推进：没解锁就停止显示后面的
     function visibleNodes(){
       const out=[];
       for (const n of NODES){
@@ -164,7 +158,7 @@
       const btn = document.createElement("button");
       btn.className = "btn";
       btn.type = "button";
-      btn.textContent = n.text;     // ✅ 只显示文字
+      btn.textContent = n.text;
       btn.onclick = () => location.href = n.url;
       return btn;
     }
@@ -178,6 +172,52 @@
       return d;
     }
 
+    function cssNum(varName, fallback){
+      const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    // 根据 map 实际高度，动态排布：cap + N 个按钮，保证不重叠
+    function computeLayout(mapH, visLen){
+      const cap = cssNum("--cap-sz", 34);
+      const btnH = cssNum("--btn-h", 56);
+
+      const topPad = 12;     // 顶部留白（像素）
+      const bottomPad = 12;  // 底部留白（像素）
+
+      // 期望间距（像素），不够就自动压缩间距（按钮高度不变）
+      let gapCapBtn = 18;
+      let gapBtn = 18;
+
+      const fixed = topPad + cap + (visLen * btnH) + bottomPad;
+      const needGaps = gapCapBtn + (Math.max(0, visLen - 1) * gapBtn);
+      const availGaps = Math.max(0, mapH - fixed);
+
+      // 缩放间距，但不缩到太离谱
+      const scale = needGaps > 0 ? Math.max(0.35, Math.min(1, availGaps / needGaps)) : 1;
+      gapCapBtn *= scale;
+      gapBtn *= scale;
+
+      // cap 中心 y（像素）
+      const capY = topPad + cap / 2;
+
+      // 第一个按钮中心 y（像素）
+      let y = capY + cap / 2 + gapCapBtn + btnH / 2;
+
+      const ys = [];
+      for (let i = 0; i < visLen; i++){
+        ys.push(y);
+        y += btnH + gapBtn;
+      }
+
+      // 转成百分比（相对 map 高度）
+      const capYPct = (capY / mapH) * 100;
+      const yPctList = ys.map(v => (v / mapH) * 100);
+
+      return { capYPct, yPctList };
+    }
+
     function render(){
       const map = document.getElementById("map");
       const wires = document.getElementById("wires");
@@ -185,8 +225,7 @@
       map.querySelectorAll(".node").forEach(el => el.remove());
       wires.innerHTML = "";
 
-      const lw = parseFloat(getComputedStyle(document.documentElement)
-        .getPropertyValue("--line-w")) || 8;
+      const lw = cssNum("--line-w", 8);
 
       function addLine(x1,y1,x2,y2){
         const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
@@ -201,37 +240,41 @@
         wires.appendChild(ln);
       }
 
-      // 1) 顶部黑方块（永远显示）
+      const vis = visibleNodes();
+      const mapH = map.getBoundingClientRect().height || 1;
+      const layout = computeLayout(mapH, Math.max(1, vis.length)); // 至少 1 个（起点）
+
+      // 1) cap
       const capNode = document.createElement("div");
       capNode.className = "node";
-      capNode.style.left = CAP.x + "%";
-      capNode.style.top  = CAP.y + "%";
+      capNode.style.left = X + "%";
+      capNode.style.top  = layout.capYPct + "%";
       capNode.appendChild(makeCap());
       map.appendChild(capNode);
 
-      // 2) 纵向按钮（按解锁逐个显示）
-      const vis = visibleNodes();
-      for (const n of vis){
+      // 2) buttons（按 vis 渲染，y 用动态百分比）
+      for (let i = 0; i < vis.length; i++){
+        const n = vis[i];
         const wrap = document.createElement("div");
         wrap.className = "node";
-        wrap.style.left = n.x + "%";
-        wrap.style.top  = n.y + "%";
+        wrap.style.left = X + "%";
+        wrap.style.top  = layout.yPctList[i] + "%";
         wrap.appendChild(makeBtn(n));
         map.appendChild(wrap);
       }
 
-      // 3) 画线：方块 -> 起点（永远画）
-      addLine(CAP.x, CAP.y, NODES[0].x, NODES[0].y);
+      // 3) wires：cap -> 第一个按钮（起点）
+      addLine(X, layout.capYPct, X, layout.yPctList[0]);
 
-      // 4) 后续逐段画线（只画已显示的节点之间的线）
+      // 4) 后续按钮之间的线（仅画已显示的）
       for (let i = 1; i < vis.length; i++){
-        const a = NODES[i-1];
-        const b = NODES[i];
-        addLine(a.x, a.y, b.x, b.y);
+        addLine(X, layout.yPctList[i-1], X, layout.yPctList[i]);
       }
     }
 
+    // 首次渲染 + 尺寸变化时重排（手机旋转/地址栏收起都会触发）
     render();
+    window.addEventListener("resize", () => render(), { passive:true });
   </script>
 </body>
 </html>
