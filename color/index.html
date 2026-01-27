@@ -23,7 +23,7 @@
 
       /* ✅ 选中白圈厚度：想更细就改 2px */
       --ring: 4px;
-      --ring-inset: 6px
+      --ring-inset: 4px
 
       --gap: 18px;
       --frame: 4px;
@@ -155,31 +155,31 @@
       max-width: min(100%, calc(4 * var(--swatch) + 3 * var(--swatch-gap)));
     }
 
-    .swatch{
+     .swatch{
     width:var(--swatch);
     height:var(--swatch);
     border-radius:999px;
-    background:var(--c);
+    background: var(--c);
     border:none;
     padding:0;
     cursor:pointer;
     outline:none;
     -webkit-tap-highlight-color:transparent;
-
-
-    position:relative; /* ✅ 给 ::after 定位 */
-    overflow:hidden; /* ✅ 保证白圈不会跑到外面 */
     }
 
 
-/* ✅ 选中：用伪元素画“内嵌白圈”（像你图2那样） */
-    .swatch.selected::after{
-    content:"";
-    position:absolute;
-    inset: var(--ring-inset); /* ✅ 内缩距离 */
-    border: var(--ring) solid var(--c-swatch-ring); /* ✅ 白圈厚度 */
-    border-radius:999px;
-    pointer-events:none;
+/* ✅ 选中：外原色 + 白环 + 内原色（同心、不会偏） */
+    .swatch.selected{
+    background:
+    radial-gradient(circle at center,
+/* 内圈原色 */
+    var(--c) 0 calc(50% - var(--ring-inset) - var(--ring-w)),
+/* 白色圆环 */
+    var(--c-swatch-ring) calc(50% - var(--ring-inset) - var(--ring-w))
+    calc(50% - var(--ring-inset)),
+/* 外圈原色 */
+    var(--c) calc(50% - var(--ring-inset)) 100%
+    );
     }
 
     .answerBlock{
