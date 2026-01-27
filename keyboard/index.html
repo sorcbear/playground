@@ -27,8 +27,8 @@
   --c-border:#000;
   --c-danger:#b00020;
 
-  /* ✅ 统一绿色：按钮/进度/成功/启用声音 全部同一个变量 */
-  --c-green:#12b76a;
+  /* ✅ 稍微更深一点的绿 */
+  --c-green:#0ea965;
 
   --bg:#fff;
 }
@@ -54,7 +54,7 @@ body{
   padding:18px 14px 28px;
 }
 
-/* 标题 UI */
+/* 顶部说明（合并后的整段） */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
@@ -62,6 +62,10 @@ body{
   margin:4px 0 var(--gap-tight);
   text-align:left;
   white-space:pre-wrap;
+}
+.title .greenWord{
+  color:var(--c-green);
+  font-weight:800;
 }
 
 .statusTitle{
@@ -72,27 +76,8 @@ body{
   white-space:pre-wrap;
 }
 
-.statusFail{
-  color:var(--c-danger);
-  font-weight:800;
-}
-.statusOk{
-  color:var(--c-green);
-  font-weight:800;
-}
-
-/* 说明行：略小 + 加粗 */
-.subnote{
-  font-size:14px;
-  line-height:1.5;
-  font-weight:700;
-  margin:0 0 var(--gap);
-  white-space:pre-wrap;
-}
-.subnote .greenWord{
-  color:var(--c-green);
-  font-weight:800;
-}
+.statusFail{ color:var(--c-danger); font-weight:800; }
+.statusOk{ color:var(--c-green); font-weight:800; }
 
 /* 顶部栏 */
 .topbar{
@@ -131,7 +116,7 @@ button{
 button.invert{ background:#000; color:#fff; }
 button:disabled{ opacity:.45; cursor:default; }
 
-/* ✅ 顶部两个按钮：用“按内容自适应”，并给不同按钮不同最小宽度 */
+/* 顶部两个按钮：按内容自适应 */
 .btnSmall{
   width:auto;
   height:44px;
@@ -139,22 +124,17 @@ button:disabled{ opacity:.45; cursor:default; }
   font-size:16px;
   white-space:nowrap;
 }
+.btnAudio{ min-width: 132px; }
+.btnReset{ min-width: 72px; }
 
-/* 启动声音稍宽、重置更窄 */
-.btnAudio{ min-width: 132px; }  /* “启动声音/声音已启用” 都不挤 */
-.btnReset{ min-width: 72px;  }  /* “重置” 只有2字就窄 */
-
-/* ✅ 启动声音：保持原色绿底，字纯黑；禁用也不变淡 */
+/* 启动声音：深绿底，字黑；禁用不变淡 */
 .okBtn{
   background:var(--c-green);
   border:2px solid var(--c-green);
   color:#000;
   font-weight:800;
 }
-.okBtn:disabled{
-  opacity:1;
-  cursor:default;
-}
+.okBtn:disabled{ opacity:1; cursor:default; }
 @media (hover:hover) and (pointer:fine){
   .okBtn:hover{ background:var(--c-green); color:#000; }
 }
@@ -201,7 +181,7 @@ button:disabled{ opacity:.45; cursor:default; }
 <body>
 <div class="wrap">
 
-  <div class="title">拿出道具包里的五线谱，按照正确的曲谱顺序（8,4,6）演奏乐曲。相邻两次点击间隔需≤ 5 秒（超时算作失败将重置）。</div>
+  <div class="title">拿出道具包里的五线谱，按照正确的曲谱顺序（8,4,6）演奏乐曲。相邻两次点击间隔需≤ 5 秒（超时算作失败将重置）。弹奏前需点击“<span class="greenWord">启动声音</span>”，手机建议横屏操作。</div>
 
   <div class="topbar">
     <div class="statusTitle" id="status">未开始</div>
@@ -210,8 +190,6 @@ button:disabled{ opacity:.45; cursor:default; }
       <button id="resetBtn" class="btnSmall btnReset">重置</button>
     </div>
   </div>
-
-  <div class="subnote">弹奏前需点击“<span class="greenWord">启动声音</span>”，手机可横屏操作。</div>
 
   <div class="kbd" id="kbd">
     <div class="kbd-inner">
@@ -552,7 +530,7 @@ button:disabled{ opacity:.45; cursor:default; }
     }
 
     if(globalIdx !== needIdx){
-      fail("音符错误");
+      fail("音符错误，请再弹一次");
       return;
     }
 
