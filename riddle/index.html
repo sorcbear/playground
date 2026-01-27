@@ -8,6 +8,7 @@
 
   <style>
     :root{
+      /* ===== 同源（Rotate）基础 ===== */
       --maxw: 720px;
 
       --fs-body: 18px;
@@ -23,7 +24,7 @@
       --h-input: 40px;
 
       --gap: 18px;
-      --gap-tight: 4px;
+      --gap-tight: 12px;
 
       --c-text:#111;
       --c-border:#000;
@@ -33,17 +34,7 @@
       --bg:#fff;
     }
 
-    /* =========================
-       ✅ 全局清零：禁止任何缩进
-       ========================= */
-    *{
-      box-sizing:border-box;
-      margin-left:0;
-      margin-right:0;
-      padding-left:0;
-      padding-right:0;
-    }
-
+    *{ box-sizing:border-box; }
     html,body{ height:100%; }
 
     body{
@@ -59,34 +50,32 @@
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
-      padding:18px 14px 28px; /* 这是整体页面留白，不是文字缩进 */
+      padding:18px 14px 28px;
     }
 
-    /* 标题 */
+    /* ===== 标题同源（titleLine） ===== */
     .titleLine{
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
       font-weight:700;
-      margin-top:0;
-      margin-bottom:var(--gap);
+      margin:4px 0 var(--gap);
       text-align:left;
       white-space:pre-wrap;
     }
 
-    /* 对话区：不允许任何段落感 */
+    /* 斜体对白：与 address 页一致（不加粗、斜体、紧贴） */
     .quotes{
-      margin:0;
-      padding:0;
+      margin-top:1em;
     }
     .quote{
       margin:0;
-      padding:0;
       font-style:italic;
       font-weight:400;
       color:#000;
       white-space:pre-wrap;
     }
 
+    /* ===== 表单区 ===== */
     .formBlock{
       margin-top:var(--gap);
     }
@@ -99,6 +88,13 @@
       margin-top:var(--gap-tight);
     }
 
+    .label{
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      font-weight:700;
+    }
+
+    /* 输入框：同源（与你之前一贯的方框输入一致） */
     .ansInput{
       height:var(--h-input);
       line-height:var(--h-input);
@@ -112,17 +108,21 @@
       font-weight:700;
       font-family:inherit;
       text-align:center;
+
       box-shadow:none;
       -webkit-appearance:none;
       appearance:none;
+      -webkit-tap-highlight-color:transparent;
       caret-color:#000;
     }
+    .ansInput:focus{ outline:none; box-shadow:none; }
 
+    /* ✅ 仅新增：placeholder 样式（不改任何间距/UI结构） */
     .ansInput::placeholder{
       color:#888;
       font-weight:700;
       text-align:center;
-      opacity:1;
+      opacity:1; /* iOS */
     }
     .ansInput::-webkit-input-placeholder{
       color:#888;
@@ -130,8 +130,10 @@
       text-align:center;
     }
 
+    /* 宽度：4字答案 */
     .w4{ width:6.2em; }
 
+    /* A/B/C/D 位置对齐 */
     .abcdn{
       width:1.6em;
       text-align:center;
@@ -141,6 +143,7 @@
       user-select:none;
     }
 
+    /* ===== 按钮：同源 Square/Rotate 按钮 ===== */
     .panel{
       margin-top:var(--gap);
       display:flex;
@@ -153,6 +156,7 @@
       width:240px;
       height:var(--h-btn);
       padding:0 18px;
+      box-sizing:border-box;
       font-size:var(--fs-btn);
       font-weight:var(--fw-btn);
       background:#fff;
@@ -160,9 +164,10 @@
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
+      -webkit-tap-highlight-color:transparent;
       font-family:inherit;
       user-select:none;
-      transition:none;
+      transition:none; /* 瞬切 */
     }
 
     @media (hover:hover) and (pointer:fine){
@@ -199,46 +204,44 @@
 <body>
   <div class="wrap">
 
-    <div class="titleLine">
-四君子正是四位建筑师，他们正在衡山宾馆大堂争论谁的作品最能代表上海的气质。
+    <!-- ✅ 不要“建筑师的下午茶”，正文直接作为标题UI -->
+    <div class="titleLine">四君子正是四位建筑师，他们正在衡山宾馆大堂争论谁的作品最能代表上海的气质。</div>
+
+    <!-- ✅ 这四句：不加粗、斜体、紧贴（address风格） -->
+    <div class="quotes" aria-label="对话">
+      <div class="quote">A ： “我为那个‘上海滩名号最响的人’画了一座宫殿。虽然他从来没有住进来过。”</div>
+      <div class="quote">B ： “我用家乡的一个大区毕卡第（Picardie）为我的作品命名。”</div>
+      <div class="quote">C： “我堆砌了一座坚固的堡垒。它曾经拥有一个来自纽约的名字。”</div>
+      <div class="quote">D： “我不想争第一，我只是为了让我的父亲有个家。”</div>
     </div>
 
-    <div class="quotes">
-      <div class="quote">A：“我为那个‘上海滩名号最响的人’画了一座宫殿。虽然他从来没有住进来过。”</div>
-      <div class="quote">B：“我用家乡的一个大区毕卡第（Picardie）为我的作品命名。”</div>
-      <div class="quote">C：“我堆砌了一座坚固的堡垒。它曾经拥有一个来自纽约的名字。”</div>
-      <div class="quote">D：“我不想争第一，我只是为了让我的父亲有个家。”</div>
-    </div>
-
+    <!-- ✅ 题目1：标题UI -->
     <div class="formBlock">
-      <div class="titleLine" style="margin-bottom:0;">
-上述4位建筑师在对话中提及的建筑分别是哪4个？（大堂墙面似乎有些线索，答案都为4个字）
-      </div>
+      <div class="titleLine" style="margin-bottom:0;">上述4位建筑师在对话中提及的建筑分别是哪4个？（大堂墙面似乎有些线索，答案都为4个字）</div>
 
       <div class="row">
         <div class="abcdn">A</div>
-        <input id="ansA" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
+        <input id="ansA" class="ansInput w4" placeholder="答案4个字" autocomplete="off" spellcheck="false" aria-label="A答案（4个字）" />
       </div>
       <div class="row">
         <div class="abcdn">B</div>
-        <input id="ansB" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
+        <input id="ansB" class="ansInput w4" placeholder="答案4个字" autocomplete="off" spellcheck="false" aria-label="B答案（4个字）" />
       </div>
       <div class="row">
         <div class="abcdn">C</div>
-        <input id="ansC" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
+        <input id="ansC" class="ansInput w4" placeholder="答案4个字" autocomplete="off" spellcheck="false" aria-label="C答案（4个字）" />
       </div>
       <div class="row">
         <div class="abcdn">D</div>
-        <input id="ansD" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
+        <input id="ansD" class="ansInput w4" placeholder="答案4个字" autocomplete="off" spellcheck="false" aria-label="D答案（4个字）" />
       </div>
     </div>
 
+    <!-- ✅ 题目2：标题UI + 输入框 -->
     <div class="formBlock">
-      <div class="titleLine" style="margin-bottom:0;">
-上述建筑中，哪个与其他3个处于不同年代？
-      </div>
+      <div class="titleLine" style="margin-bottom:0;">上述建筑中，哪个与其他3个处于不同年代？</div>
       <div class="row">
-        <input id="ansOdd" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
+        <input id="ansOdd" class="ansInput w4" placeholder="答案4个字" autocomplete="off" spellcheck="false" aria-label="不同年代的建筑（4个字）" />
       </div>
     </div>
 
@@ -251,13 +254,16 @@
   </div>
 
   <script>
+    // ✅ 取消冻结逻辑：本页不再设置冻结
+
     const HINT_URL = "https://sorcbear.github.io/playground/riddle/hint";
     const NEXT_URL = "https://sorcbear.github.io/playground/painting/";
     const COUNTDOWN_START = 3;
 
+    // 正确答案（按你给的）
     const CORRECT = {
       A: "东湖宾馆",
-      B: "衡山宾馆",
+      B: "衡山宾馆",   // 你写“衡山宾馆/衡山酒店”，这里按“衡山宾馆”为标准答案
       C: "上海大厦",
       D: "瑞金宾馆",
       ODD: "瑞金宾馆"
@@ -275,8 +281,16 @@
 
     let locked = false;
     let timer = null;
+    let btnTimer = null;
 
-    function clean(v){ return (v || "").replace(/\s/g,""); }
+    function clean(v){
+      return (v || "").replace(/\s/g,"");
+    }
+
+    function flashInvert(btn, ms=120){
+      btn.classList.add("invert");
+      setTimeout(()=>btn.classList.remove("invert"), ms);
+    }
 
     function setLocked(v){
       locked = v;
@@ -289,45 +303,74 @@
       ansOdd.disabled = v;
     }
 
+    function setBtnText(text, ms=900){
+      if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+
+      submitBtn.textContent = text;
+      submitBtn.classList.add("invert");
+      submitBtn.disabled = true;
+
+      btnTimer = setTimeout(()=>{
+        submitBtn.textContent = "提交答案";
+        submitBtn.classList.remove("invert");
+        submitBtn.disabled = false;
+        btnTimer = null;
+      }, ms);
+    }
+
+    // 提示：先反馈，再跳转（同源按钮反馈）
+    hintBtn.onclick = ()=>{
+      if (locked) return;
+      flashInvert(hintBtn,120);
+      setTimeout(()=>location.href = HINT_URL,120);
+    };
+
     function isCorrect(){
       const a = clean(ansA.value);
       const b = clean(ansB.value);
       const c = clean(ansC.value);
       const d = clean(ansD.value);
       const o = clean(ansOdd.value);
-      return a==="东湖宾馆" &&
-             (b==="衡山宾馆"||b==="衡山酒店") &&
-             c==="上海大厦" &&
-             d==="瑞金宾馆" &&
-             o==="瑞金宾馆";
+
+      // B 允许“衡山宾馆”或“衡山酒店”
+      const bOk = (b === "衡山宾馆" || b === "衡山酒店");
+
+      return a === CORRECT.A
+        && bOk
+        && c === CORRECT.C
+        && d === CORRECT.D
+        && o === CORRECT.ODD;
     }
 
     submitBtn.onclick = ()=>{
       if (locked) return;
+
       if (isCorrect()){
         setLocked(true);
-        localStorage.setItem("pg_unlock_paper_v1","1");
-        let t=COUNTDOWN_START;
-        msg.textContent=`答案正确，即将进入下一题（${t}）`;
+
+        localStorage.setItem("pg_unlock_paper_v1", "1");
+
+        let t = COUNTDOWN_START;
+        msg.textContent = `答案正确，即将进入下一题（${t}）`;
         msg.classList.add("ok");
-        timer=setInterval(()=>{
+
+        if (timer) clearInterval(timer);
+        timer = setInterval(()=>{
           t--;
-          if(t>0){
-            msg.textContent=`答案正确，即将进入下一题（${t}）`;
+          if (t > 0){
+            msg.textContent = `答案正确，即将进入下一题（${t}）`;
           }else{
             clearInterval(timer);
-            location.href=NEXT_URL;
+            location.href = NEXT_URL;
           }
-        },1000);
+        }, 1000);
+
       }else{
-        msg.textContent="";
+        msg.textContent = "";
         msg.classList.remove("ok");
-        submitBtn.textContent="错了，再试一次";
-        setTimeout(()=>submitBtn.textContent="提交答案",900);
+        setBtnText("错了，再试一次", 900);
       }
     };
-
-    hintBtn.onclick=()=>location.href=HINT_URL;
   </script>
 </body>
 </html>
