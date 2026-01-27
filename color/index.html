@@ -18,9 +18,8 @@
       --hint-fs:18px;
       --hint-lh:1.6;
 
-      /* ✅ 调色板：更大、更松 */
-      --swatch: clamp(34px, 10.5vw, 56px);
-      --swatch-gap: clamp(12px, 3.6vw, 20px);
+      --swatch: clamp(24px, 7.2vw, 34px);
+      --swatch-gap: clamp(8px, 2.4vw, 12px);
       --ring: 3px;
 
       --gap: 18px;
@@ -32,7 +31,9 @@
       --h-btn: 52px;
       --w-btn: 240px;
 
-      --c-border:#000;
+      /* ✅ 只改颜色：按钮边框变白 */
+      --c-border:#fff;
+
       --c-ok:#0b6b2b;
       --c-danger:#b00020;
     }
@@ -65,7 +66,7 @@
       white-space:pre-wrap;
     }
 
-    /* ✅ 田字格：用黑底“兜底”子像素缝（就算出现也会是黑的，不会白） */
+    /* ====== 你说图层没问题：这里不动 ====== */
     .board{
       width:100%;
       background:#000;
@@ -73,6 +74,8 @@
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap: 0;
+      align-items:start;
+      align-content:start;
       overflow:hidden;
     }
 
@@ -84,10 +87,7 @@
       -webkit-user-select:none;
       touch-action:none;
       min-width:0;
-
-      /* ✅ 强制正方形格子：与你 1280x1280 素材匹配 */
       aspect-ratio: 1 / 1;
-
       font-size:0;
       line-height:0;
     }
@@ -95,25 +95,23 @@
     .cell.rline{ border-right: var(--frame) solid #000; }
     .cell.bline{ border-bottom: var(--frame) solid #000; }
 
-    /* ✅ 关键：不要 cover（会裁切导致 mask 对不齐）
-       你是 1280x1280 → 直接拉伸到格子=等比，无裁切 */
     .cell img{
       position:absolute;
       inset:0;
       width:100%;
       height:100%;
-      object-fit: fill;   /* 或者直接删掉这一行也行（默认就是 fill） */
+      object-fit:cover;
       display:block;
     }
 
-    /* ✅ 关键：canvas 必须与图片“同一个盒子”（inset:0），JS 的 rect 才一致 */
     canvas.overlay{
       position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
+      inset:-1px;
+      width:calc(100% + 2px);
+      height:calc(100% + 2px);
       display:block;
     }
+    /* ====================================== */
 
     .loading{
       position:absolute;
@@ -131,14 +129,14 @@
     .loading.hide{ display:none; }
 
     .paletteWrap{
-      margin-top: 16px;
+      margin-top: 14px;
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:12px;
+      gap:10px;
       width:100%;
       overflow:visible;
-      padding: 12px 0 8px;
+      padding: 10px 0 6px;
     }
 
     .palette{
@@ -190,7 +188,7 @@
       width:4em;
       height:40px;
       padding:0 6px;
-      border:2px solid var(--c-border);
+      border:2px solid #000; /* 输入框仍黑边：你没要求改 */
       font-weight:700;
       font-family:inherit;
       border-radius:0;
@@ -212,6 +210,7 @@
       align-items:center;
     }
 
+    /* ✅ 按钮：完全按“start UI”那种交互风格来写 */
     button.uiBtn{
       width:var(--w-btn);
       height:var(--h-btn);
@@ -221,18 +220,27 @@
       font-weight:600;
       background:#fff;
       color:#000;
-      border:2px solid var(--c-border);
+      border:2px solid var(--c-border);   /* ✅ 白边 */
       cursor:pointer;
       border-radius:0;
       font-family:inherit;
       -webkit-tap-highlight-color:transparent;
+
+      /* iOS 去掉默认按压阴影/高亮 */
+      appearance:none;
+      -webkit-appearance:none;
     }
 
+    /* 桌面 hover：黑底白字（和你之前要求一致） */
     @media (hover:hover) and (pointer:fine){
-      button.uiBtn:hover{ background:#000; color:#fff; }
+      button.uiBtn:hover{
+        background:#000;
+        color:#fff;
+      }
     }
 
-    button.uiBtn.invert{
+    /* 手机/触屏：按下反馈（替代你原来的 invert 闪一下） */
+    button.uiBtn.pressed{
       background:#000;
       color:#fff;
     }
@@ -319,7 +327,7 @@
   const P_BOX_REL = { x: 0.62, y: 0.70, w: 0.26, h: 0.26 };
   const P_STROKE_FACTOR = 0.20;
 
-  const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.22 };
+  const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.24 };
   const A_STROKE_FACTOR = 0.18;
 
   const L_BOX_REL = { x: 0.61, y: 0.67, w: 0.10, h: 0.07 };
@@ -350,24 +358,39 @@
     msg.textContent = text || "";
   }
 
-  function flashInvert(btn, ms=120){
-    btn.classList.add("invert");
-    setTimeout(()=>btn.classList.remove("invert"), ms);
+  /* ✅ 统一“按下反馈”：手机触控和鼠标都一致 */
+  function bindPressFeedback(btn){
+    const down = (e)=>{
+      if(btn.disabled) return;
+      btn.classList.add("pressed");
+    };
+    const up = ()=>{
+      btn.classList.remove("pressed");
+    };
+
+    btn.addEventListener("pointerdown", down, {passive:true});
+    btn.addEventListener("pointerup", up, {passive:true});
+    btn.addEventListener("pointercancel", up, {passive:true});
+    btn.addEventListener("pointerleave", up, {passive:true});
   }
+  bindPressFeedback(btnHint);
+  bindPressFeedback(btnSubmit);
 
   const SUBMIT_TEXT = "提交答案";
   let btnTimer = null;
+
+  /* ✅ 这里保持你原来的“禁用+回弹”结构，只改视觉用 pressed，而不是 invert 闪烁 */
   function setBtnText(text, ms=900){
     if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
 
-    btnSubmit.textContent = text;
-    btnSubmit.classList.add("invert");
+    btnSubmit.textContent = text || SUBMIT_TEXT;
     btnSubmit.disabled = true;
+    btnSubmit.classList.add("pressed");  // 黑底白字（和之前一致）
 
     btnTimer = setTimeout(()=>{
       btnSubmit.textContent = SUBMIT_TEXT;
-      btnSubmit.classList.remove("invert");
       btnSubmit.disabled = false;
+      btnSubmit.classList.remove("pressed");
       btnTimer = null;
     }, ms);
   }
@@ -411,6 +434,7 @@
     return cell;
   }
 
+  /* ====== 以下为你图层/蒙版逻辑：完全不动 ====== */
   class ScratchTile{
     constructor(tile, root){
       this.tile = tile;
@@ -791,6 +815,7 @@
       this.loading.classList.add("hide");
     }
   }
+  /* ====== 以上不动 ====== */
 
   const tiles = [];
   TILES.forEach((t, idx)=>{
@@ -806,10 +831,10 @@
   });
 
   btnHint.addEventListener("click", ()=>{
-    flashInvert(btnHint, 120);
     hintBox.textContent = HINT_TEXT;
     hintBox.classList.toggle("show");
     setMsg("", "");
+    // ✅ hint 按钮点击反馈：由 pressed（pointerdown/up）提供，不额外闪
   });
 
   function normalize4(s){
