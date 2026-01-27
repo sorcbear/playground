@@ -28,6 +28,9 @@
 
   --gap: 18px;
 
+  /* ✅ 两段文字整体对齐方式：center / left */
+  --text-align: center;
+
   /* ✅ 中间说明文字的独立间距控制 */
   --mid-gap-top: 28px;      /* 地图 → 文字 */
   --mid-gap-bottom: 18px;   /* 文字 → 第二张图 */
@@ -53,17 +56,17 @@ body{
   padding:18px 14px 28px;
 }
 
-/* 标题 / 说明文字（全局规范，不乱动） */
+/* 标题 / 说明文字 */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
   margin:0 0 var(--gap);
-  text-align:left;
+  text-align:var(--text-align); /* ✅ 控制文字居中 */
   white-space:pre-wrap;
 }
 
-/* ✅ 只给中间那句话用 */
+/* ✅ 只给中间那句话用：独立调上下间距 */
 .title-mid{
   margin-top:var(--mid-gap-top);
   margin-bottom:var(--mid-gap-bottom);
@@ -80,8 +83,8 @@ body{
 /* 第一张图：地图（无边框） */
 .imgframe{
   width:100%;
-  max-width:560px;   /* 控制在你红框的视觉范围 */
-  margin:0 auto;
+  max-width:560px;   /* 红框视觉范围控制点（可调 520–640） */
+  margin:0 auto;     /* ✅ 居中 */
 }
 .imgframe img{
   display:block;
@@ -94,10 +97,10 @@ body{
   display:block;
   width:100%;
   max-width:800px;
-  margin:0 auto;
+  margin:0 auto;     /* ✅ 居中 */
 }
 
-/* 题目行 */
+/* 题目行：整体居中（文字+输入框） */
 .qline{
   margin:18px 0;
   font-size:var(--fs-hint);
@@ -105,7 +108,10 @@ body{
   font-weight:700;
   display:flex;
   align-items:center;
+  justify-content:center; /* ✅ 居中 */
   gap:10px;
+  flex-wrap:wrap;         /* 小屏避免挤出 */
+  text-align:center;
 }
 .qmark{ color:var(--c-danger); font-weight:800; }
 
@@ -166,6 +172,7 @@ button:disabled{
   margin-top:12px;
   min-height:1.4em;
   font-size:14px;
+  text-align:center; /* ✅ 提示也居中 */
 }
 .msg.ok{
   color:var(--c-ok);
@@ -192,7 +199,7 @@ button:disabled{
   </div>
 
   <!-- 中间说明（可独立调间距） -->
-  <div class="title title-mid">请用弄堂里的环境信息完成以下谜题。</div>
+  <div class="title title-mid">请用弄堂里的环境信息完成以下谜题：</div>
 
   <!-- 第二张图 -->
   <div class="imgbox">
@@ -267,6 +274,7 @@ submitBtn.onclick = ()=>{
     let t = COUNTDOWN_START;
     msg.textContent = `答案正确，即将进入下一题（${t}）`;
     msg.classList.add("ok");
+
     timer = setInterval(()=>{
       t--;
       if (t > 0){
