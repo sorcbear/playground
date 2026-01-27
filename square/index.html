@@ -9,6 +9,7 @@
 
 <style>
 :root{
+  /* ✅ 同源：Rotate / Post Puzzle */
   --maxw: 720px;
 
   --fs-body: 18px;
@@ -21,19 +22,15 @@
   --fw-btn: 600;
   --h-btn: 52px;
 
+  --gap: 18px;
+  --gap-tight: 12px;
+
   --c-text:#111;
   --c-border:#000;
   --c-ok:#0b6b2b;
   --c-danger:#b00020;
 
-  --gap: 18px;
-
-  /* ✅ 两段文字整体对齐方式：center / left */
-  --text-align: center;
-
-  /* ✅ 中间说明文字的独立间距控制 */
-  --mid-gap-top: 28px;      /* 地图 → 文字 */
-  --mid-gap-bottom: 18px;   /* 文字 → 第二张图 */
+  --bg:#fff;
 }
 
 *{ box-sizing:border-box; }
@@ -41,7 +38,7 @@ html,body{ height:100%; }
 
 body{
   margin:0;
-  background:#fff;
+  background:var(--bg);
   color:var(--c-text);
   font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
   font-size:var(--fs-body);
@@ -49,109 +46,84 @@ body{
   -webkit-text-size-adjust:100%;
 }
 
-/* 主容器 */
-.wrap{
+/* ✅ 同源：Rotate / Post Puzzle 容器 */
+.container{
   max-width:var(--maxw);
   margin:0 auto;
   padding:18px 14px 28px;
 }
 
-/* 标题 / 说明文字 */
+/* ✅ 同源标题规范 */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
-  margin:0 0 var(--gap);
-  text-align:var(--text-align); /* ✅ 控制文字居中 */
+  margin:4px 0 var(--gap);
+  text-align:left;
   white-space:pre-wrap;
 }
 
-/* ✅ 只给中间那句话用：独立调上下间距 */
-.title-mid{
-  margin-top:var(--mid-gap-top);
-  margin-bottom:var(--mid-gap-bottom);
-}
-
-/* 图片区域 */
-.imgbox{
-  margin:0;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-/* 第一张图：地图（无边框） */
-.imgframe{
-  width:100%;
-  max-width:560px;   /* 红框视觉范围控制点（可调 520–640） */
-  margin:0 auto;     /* ✅ 居中 */
-}
-.imgframe img{
-  display:block;
-  width:100%;
-  height:auto;
-}
-
-/* 第二张图 */
-.imgbox > img{
-  display:block;
-  width:100%;
-  max-width:800px;
-  margin:0 auto;     /* ✅ 居中 */
-}
-
-/* 题目行：整体居中（文字+输入框） */
-.qline{
-  margin:18px 0;
-  font-size:var(--fs-hint);
-  line-height:var(--lh-hint);
-  font-weight:700;
-  display:flex;
-  align-items:center;
-  justify-content:center; /* ✅ 居中 */
-  gap:10px;
-  flex-wrap:wrap;         /* 小屏避免挤出 */
+/* 图片：同源节奏 */
+.image-box{
+  margin:0 0 var(--gap);
   text-align:center;
 }
-.qmark{ color:var(--c-danger); font-weight:800; }
+.image-box img{
+  max-width:100%;
+  height:auto;
+  display:block;
+  margin:0 auto;
+}
 
-/* 输入框 */
+/* 中间说明文字：只调节上下，不破坏 title 规范 */
+.title.mid{
+  margin-top:var(--gap);
+  margin-bottom:var(--gap);
+}
+
+/* 题目输入行 */
+.answer{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-bottom:calc(var(--gap) * 2);
+}
+
 .ansInput{
   width:4em;
   height:40px;
   padding:0 6px;
   border:2px solid var(--c-border);
-  font-weight:700;
-  font-family:inherit;
   border-radius:0;
   font-size:18px;
   text-align:center;
   outline:none;
   box-shadow:none;
   -webkit-appearance:none;
+  font-weight:700;
+  font-family:inherit;
 }
 
-/* 按钮区 */
+/* 按钮区（同源） */
 .panel{
-  margin-top:18px;
   display:flex;
   gap:12px;
   justify-content:center;
 }
 
-/* 按钮 */
 button{
   width:240px;
   height:var(--h-btn);
   padding:0 18px;
   font-size:var(--fs-btn);
-  font-weight:600;
+  font-weight:var(--fw-btn);
   background:#fff;
   color:#000;
   border:2px solid var(--c-border);
   cursor:pointer;
   border-radius:0;
   -webkit-tap-highlight-color:transparent;
+  font-family:inherit;
 }
 
 @media (hover:hover) and (pointer:fine){
@@ -169,10 +141,10 @@ button:disabled{
 }
 
 .msg{
-  margin-top:12px;
+  margin-top:var(--gap-tight);
   min-height:1.4em;
   font-size:14px;
-  text-align:center; /* ✅ 提示也居中 */
+  line-height:1.6;
 }
 .msg.ok{
   color:var(--c-ok);
@@ -186,29 +158,22 @@ button:disabled{
 </head>
 
 <body>
-<div class="wrap">
+<div class="container">
 
-  <!-- 第一段话 -->
   <div class="title">这是一条不超过200米的弄堂（沿着绿线探索）。</div>
 
-  <!-- 第一张图 -->
-  <div class="imgbox">
-    <div class="imgframe">
-      <img src="map_152.png" alt="map 152">
-    </div>
+  <div class="image-box">
+    <img src="map_152.png" alt="map 152">
   </div>
 
-  <!-- 中间说明（可独立调间距） -->
-  <div class="title title-mid">请用弄堂里的环境信息完成以下谜题。</div>
+  <div class="title mid">请用弄堂里的环境信息完成以下谜题。</div>
 
-  <!-- 第二张图 -->
-  <div class="imgbox">
+  <div class="image-box">
     <img src="puzzle.jpg" alt="square puzzle">
   </div>
 
-  <!-- 以下保持不变 -->
-  <div class="qline">
-    <span><span class="qmark">? </span>对应的是什么数字：</span>
+  <div class="answer">
+    <span><strong>? 对应的是什么数字：</strong></span>
     <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
   </div>
 
@@ -234,12 +199,6 @@ const msg = document.getElementById("msg");
 
 let locked=false;
 let timer=null;
-let btnTimer=null;
-
-function flashInvert(btn, ms=120){
-  btn.classList.add("invert");
-  setTimeout(()=>btn.classList.remove("invert"), ms);
-}
 
 function setLocked(v){
   locked=v;
@@ -248,46 +207,33 @@ function setLocked(v){
   input.disabled=v;
 }
 
-function setBtnText(text, ms=900){
-  if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
-  submitBtn.textContent = text;
-  submitBtn.classList.add("invert");
-  submitBtn.disabled = true;
-  btnTimer = setTimeout(()=>{
-    submitBtn.textContent = "提交答案";
-    submitBtn.classList.remove("invert");
-    submitBtn.disabled = false;
-    btnTimer = null;
-  }, ms);
-}
-
-hintBtn.onclick = ()=>{
-  if (locked) return;
-  flashInvert(hintBtn, 120);
-  setTimeout(()=>location.href = HINT_URL, 120);
+hintBtn.onclick=()=>{
+  if(locked) return;
+  location.href=HINT_URL;
 };
 
-submitBtn.onclick = ()=>{
-  if (locked) return;
-  if (input.value.trim() === CORRECT){
+submitBtn.onclick=()=>{
+  if(locked) return;
+
+  if(input.value.trim()===CORRECT){
     setLocked(true);
-    let t = COUNTDOWN_START;
-    msg.textContent = `答案正确，即将进入下一题（${t}）`;
+    let t=COUNTDOWN_START;
+    msg.textContent=`答案正确，即将进入下一题（${t}）`;
     msg.classList.add("ok");
 
-    timer = setInterval(()=>{
+    timer=setInterval(()=>{
       t--;
-      if (t > 0){
-        msg.textContent = `答案正确，即将进入下一题（${t}）`;
+      if(t>0){
+        msg.textContent=`答案正确，即将进入下一题（${t}）`;
       }else{
         clearInterval(timer);
-        location.href = NEXT_URL;
+        location.href=NEXT_URL;
       }
     },1000);
   }else{
     msg.textContent="";
-    msg.classList.remove("ok");
-    setBtnText("错了，再试一次", 900);
+    submitBtn.classList.add("invert");
+    setTimeout(()=>submitBtn.classList.remove("invert"),900);
   }
 };
 </script>
