@@ -31,7 +31,7 @@
       --h-btn: 52px;
       --w-btn: 240px;
 
-      /* ✅ 只改颜色：按钮边框白色 */
+      /* 按钮边框：你当前是白色，就保持 */
       --c-border:#fff;
 
       --c-ok:#0b6b2b;
@@ -66,7 +66,6 @@
       white-space:pre-wrap;
     }
 
-    /* ✅ 田字格：无 gap，只有黑色边框（你说图层已解决，这部分不动） */
     .board{
       width:100%;
       background:#000;
@@ -88,7 +87,6 @@
       touch-action:none;
       min-width:0;
       aspect-ratio: 1 / 1;
-
       font-size:0;
       line-height:0;
     }
@@ -161,7 +159,8 @@
       outline:none;
       -webkit-tap-highlight-color:transparent;
     }
-    .swatch.selected{ box-shadow: 0 0 0 var(--ring) #000; }
+    /* ✅ 调色盘选中：白色边框 */
+    .swatch.selected{ box-shadow: 0 0 0 var(--ring) #fff; }
 
     .answerBlock{
       margin-top: 18px;
@@ -188,7 +187,10 @@
       width:4em;
       height:40px;
       padding:0 6px;
-      border:2px solid var(--c-border); /* 这里保持跟按钮一致：白边 */
+
+      /* ✅ 输入框边框：必须纯黑 */
+      border:2px solid #000;
+
       font-weight:700;
       font-family:inherit;
       border-radius:0;
@@ -210,7 +212,6 @@
       align-items:center;
     }
 
-    /* ✅ 按钮：完全按你给的 Post Puzzle 交互写法 */
     button.uiBtn{
       width:var(--w-btn);
       height:var(--h-btn);
@@ -220,7 +221,7 @@
       font-weight:600;
       background:#fff;
       color:#000;
-      border:2px solid var(--c-border); /* ✅ 白边框 */
+      border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
       -webkit-tap-highlight-color:transparent;
@@ -295,11 +296,8 @@
 
 <script>
 (() => {
-  /* ==========================
-     ✅ 按钮逻辑同源：Post Puzzle
-     ========================== */
-  const HINT_URL = "https://sorcbear.github.io/playground/post/hint"; // ← 按需改成你的提示页
-  const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";      // ← 按需改成你的下一页
+  const HINT_URL = "https://sorcbear.github.io/playground/post/hint";
+  const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";
   const COUNTDOWN_START = 3;
 
   const PALETTE_COLORS = [
@@ -428,7 +426,6 @@
     return cell;
   }
 
-  /* ===== 图层/蒙版/涂抹逻辑：保持不动 ===== */
   class ScratchTile{
     constructor(tile, root){
       this.tile = tile;
@@ -871,7 +868,6 @@
     }
   };
 
-  /* 你原来 hintBox 的逻辑不需要了，但保留 DOM 不影响 */
   hintBox.textContent = HINT_TEXT;
 })();
 </script>
