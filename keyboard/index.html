@@ -89,15 +89,15 @@ body{
 .topbar{
   display:flex;
   gap:10px;
-  align-items:center;
+  align-items:stretch;        /* ✅ 关键：左右两列同高 */
   justify-content:space-between;
   margin:0 0 var(--gap-tight);
 }
 .btnsTop{
   display:flex;
   gap:10px;
-  flex:0 0 auto;
-  align-items:center;
+  align-items:center;         /* 按钮在自身高度内垂直居中 */
+  height:100%;                /* ✅ 撑满 topbar 的高度 */
 }
 
 /* 同源按钮：直角 */
