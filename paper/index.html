@@ -59,20 +59,20 @@
       font-weight:700;
       margin:4px 0 var(--gap);
       text-align:left;
-      white-space:pre-wrap;
+      white-space:pre-wrap; /* 保持同源 */
     }
 
-    /* ✅ 更紧：标题下方间距（用于“标题→图片/输入框”） */
+    /* ✅ 更紧：标题→下一块（图片/输入框） */
     .title.tightGap{
       margin-bottom: var(--gap-tight); /* 12px */
     }
 
-    /* ✅ 更更紧：用于“底部说明→输入框” */
+    /* ✅ 更更紧：底部说明→输入框 */
     .title.tighterGap{
-      margin-bottom: 6px; /* 比 gap-tight 更紧，但不破坏整体体系 */
+      margin-bottom: 6px;
     }
 
-    /* 图片区：保持你原逻辑，只同源节奏 */
+    /* 图片区 */
     .image-box{
       margin:0 0 var(--gap);
       text-align:center;
@@ -93,7 +93,6 @@
       gap:8px;
       align-items:center;
       flex-wrap:nowrap;
-      /* ✅ 关键：不要用 2*gap，改为同源 tight */
       margin-bottom: var(--gap);
     }
 
@@ -156,12 +155,9 @@
 <body>
   <div class="container">
 
-    <!-- ✅ 顶部说明：改成 tight，和 Post UI 统一 -->
-    <div class="title tightGap">
-拿出道具中的【红色铁丝】和【方形图纸】，有数字的为前面（对应下图中的蓝色），没有数字的为背面（对应下图中的红色），按照下图指引，制作装置。
-    </div>
+    <!-- ✅ 关键：文字不要另起一行/不要缩进空格，否则 pre-wrap 会渲染“空行” -->
+    <div class="title tightGap">拿出道具中的【红色铁丝】和【方形图纸】，有数字的为前面（对应下图中的蓝色），没有数字的为背面（对应下图中的红色），按照下图指引，制作装置。</div>
 
-    <!-- 图片 -->
     <div class="image-box">
       <img src="./p0.png" alt="p0" />
     </div>
@@ -174,10 +170,8 @@
       <img src="./p2.png" alt="p2" />
     </div>
 
-    <!-- ✅ 底部说明：再收紧（6px） -->
-    <div class="title tighterGap">
-请输入“已完成的装置”上可见的所有数字的总和：
-    </div>
+    <!-- ✅ 同样：不要前置换行/缩进 -->
+    <div class="title tighterGap">请输入“已完成的装置”上可见的所有数字的总和：</div>
 
     <div class="answer">
       <input class="ansInput" inputmode="numeric" autocomplete="off" />
