@@ -89,7 +89,7 @@ body{
 .topbar{
   display:flex;
   gap:10px;
-  align-items:stretch;              /* ✅ 关键：两侧元素同高，便于上下沿对齐 */
+  align-items:stretch;
   justify-content:space-between;
   margin:0 0 var(--gap-tight);
 }
@@ -97,7 +97,7 @@ body{
   display:flex;
   gap:10px;
   flex:0 0 auto;
-  align-items:stretch;              /* ✅ 关键：让两个按钮同高=topbar高度 */
+  align-items:stretch;
 }
 
 /* 同源按钮：直角 */
@@ -125,7 +125,7 @@ button:disabled{ opacity:.45; cursor:default; }
 /* 顶部两个按钮：按内容自适应 + ✅ 高度跟随状态两行高度（上下沿对齐） */
 .btnSmall{
   width:auto;
-  height:100%;                      /* ✅ 关键：高度=topbar高度=两行状态高度 */
+  height:100%;
   padding:0 14px;
   font-size:16px;
   white-space:nowrap;
@@ -219,6 +219,9 @@ button:disabled{ opacity:.45; cursor:default; }
   const GLOBAL_NUDGE = 0;
   const NEXT_URL = "https://sorcbear.github.io/playground/end/";
   const BOUNDARY_SCALE = 0.9920;
+
+  /* ✅ 新增：成功后倒计时逻辑（同 symbol） */
+  const COUNTDOWN_START = 3;
 
   const KEYS = [
     {c:"green",n:"so",m:55},
@@ -491,6 +494,17 @@ button:disabled{ opacity:.45; cursor:default; }
 
   let step=0, lastTime=null;
 
+  /* ✅ 新增：成功后锁定与倒计时 */
+  let locked=false;
+  let timer=null;
+
+  function setLocked(v){
+    locked=v;
+    audioBtn.disabled = v || audioBtn.disabled;  // 成功后强制禁用（已启用时本来就禁用）
+    resetBtn.disabled = v;
+    debugBtn.disabled = v;
+  }
+
   function setStatus(text, cls){
     statusEl.textContent = text;
     statusEl.classList.remove("statusFail","statusOk");
@@ -498,19 +512,48 @@ button:disabled{ opacity:.45; cursor:default; }
   }
 
   function reset(msg="未开始"){
+    if(timer){ clearInterval(timer); timer=null; }
+    locked=false;
+    setLocked(false);
+
     step=0; lastTime=null;
     setStatus(msg, "");
   }
+
   function fail(msg){
+    if(locked) return;
     setStatus("失败：" + msg + "（已重置）", "statusFail");
     step=0; lastTime=null;
   }
   function timeoutReset(){
+    if(locked) return;
     setStatus("失败：超时（已重置）", "statusFail");
     step=0; lastTime=null;
   }
 
+  function startSuccessCountdown(){
+    if(timer){ clearInterval(timer); timer=null; }
+    setLocked(true);
+    locked=true;
+
+    let t = COUNTDOWN_START;
+    setStatus(`答案正确，即将进入下一题（${t}）`, "statusOk");
+
+    timer = setInterval(()=>{
+      t--;
+      if(t>0){
+        setStatus(`答案正确，即将进入下一题（${t}）`, "statusOk");
+      }else{
+        clearInterval(timer);
+        timer=null;
+        location.href = NEXT_URL;
+      }
+    }, 1000);
+  }
+
   function pressLocal(localIdx){
+    if(locked) return;
+
     const globalIdx = FIX_OFFSET + localIdx;
     if(globalIdx < 0 || globalIdx >= 16) return;
 
@@ -542,8 +585,9 @@ button:disabled{ opacity:.45; cursor:default; }
 
     step++;
     if(step === target.length){
-      setStatus("success", "statusOk");
-      setTimeout(() => { location.href = NEXT_URL; }, 800);
+      /* ✅ 改这里：不再显示 success + setTimeout(800) 跳转
+         ✅ 改成同 symbol：锁定 + 倒计时跳转 */
+      startSuccessCountdown();
     } else {
       setStatus(`进度 ${step}/${target.length}`, "statusOk");
     }
@@ -551,6 +595,8 @@ button:disabled{ opacity:.45; cursor:default; }
 
   let lastDownAt = 0;
   function handlePointerDown(ev){
+    if(locked) return;
+
     const t = performance.now();
     if(t - lastDownAt < 50) return;
     lastDownAt = t;
@@ -572,6 +618,7 @@ button:disabled{ opacity:.45; cursor:default; }
 
   /* ✅ 声音按钮：完全不闪 */
   audioBtn.addEventListener("click", async ()=>{
+    if(locked) return;
     try{
       await enableAudio();
       audioBtn.textContent="声音已启用";
@@ -584,11 +631,13 @@ button:disabled{ opacity:.45; cursor:default; }
 
   /* ✅ 重置按钮：保留闪 */
   resetBtn.addEventListener("click", ()=>{
+    if(locked) return;
     flashInvert(resetBtn,120);
     reset("已重置");
   });
 
   debugBtn.addEventListener("click", ()=>{
+    if(locked) return;
     flashInvert(debugBtn,120);
     const on = document.body.classList.toggle("debug");
     debugBtn.textContent = on ? "Debug On" : "Debug";
