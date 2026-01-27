@@ -22,7 +22,7 @@
       --swatch-gap: clamp(8px, 2.4vw, 12px);
 
       /* ✅ 选中白圈厚度：想更细就改 2px */
-      --ring: 3px;
+      --ring: 4px;
 
       --gap: 18px;
       --frame: 4px;
@@ -37,6 +37,7 @@
 
       /* ✅ 调色盘选中反馈：白色 */
       --c-swatch-ring:#fff;
+      --ring: 4px;
 
       --c-ok:#0b6b2b;
       --c-danger:#b00020;
@@ -153,21 +154,19 @@
       max-width: min(100%, calc(4 * var(--swatch) + 3 * var(--swatch-gap)));
     }
 
-    .swatch{
+     .swatch{
       width:var(--swatch);
       height:var(--swatch);
+      padding: 4px;                 /* 👈 控制“往里缩多少” */
       border-radius:999px;
-      background:var(--c);
+      background: var(--c);
+      background-clip: padding-box; /* 👈 关键 */
       border:none;
-      padding:0;
-      cursor:pointer;
-      outline:none;
-      -webkit-tap-highlight-color:transparent;
     }
 
     /* ✅ 关键改动：白色圈“画在圆内部” */
     .swatch.selected{
-      box-shadow: inset 0 0 0 var(--ring) var(--c-swatch-ring);
+    box-shadow: inset 0 0 0 var(--ring) #fff;
     }
 
     .answerBlock{
