@@ -4,7 +4,7 @@
   const TILE_COUNT = ROWS * COLS;
 
   // ✅ 你想“通关后去哪里”，只改这一行
-  const NEXT_URL = "../circle/";
+  const NEXT_URL = "../tp/";
   const COUNTDOWN_SECONDS = 3;
 
   const STORY_KEY = "chapter.rotate.find_your_origin.v1";
