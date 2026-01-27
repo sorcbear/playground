@@ -23,7 +23,6 @@
       --ring: 3px;
 
       --gap: 18px;
-
       --frame: 4px;
 
       --fs-btn: 18px;
@@ -31,8 +30,11 @@
       --h-btn: 52px;
       --w-btn: 240px;
 
-      /* 按钮边框：你当前是白色，就保持 */
-      --c-border:#fff;
+      /* ✅ 关键：按钮/输入框统一黑边框 */
+      --c-border:#000;
+
+      /* ✅ 关键：调色盘选中反馈要白色边框 */
+      --c-swatch-ring:#fff;
 
       --c-ok:#0b6b2b;
       --c-danger:#b00020;
@@ -66,6 +68,7 @@
       white-space:pre-wrap;
     }
 
+    /* ✅ 田字格：无 gap，只有黑色边框 */
     .board{
       width:100%;
       background:#000;
@@ -87,6 +90,7 @@
       touch-action:none;
       min-width:0;
       aspect-ratio: 1 / 1;
+
       font-size:0;
       line-height:0;
     }
@@ -159,8 +163,8 @@
       outline:none;
       -webkit-tap-highlight-color:transparent;
     }
-    /* ✅ 调色盘选中：白色边框 */
-    .swatch.selected{ box-shadow: 0 0 0 var(--ring) #fff; }
+    /* ✅ 选中反馈：白色外圈 */
+    .swatch.selected{ box-shadow: 0 0 0 var(--ring) var(--c-swatch-ring); }
 
     .answerBlock{
       margin-top: 18px;
@@ -183,14 +187,12 @@
       margin:0;
     }
 
+    /* ✅ 输入框：纯黑边框 */
     .ansInput{
       width:4em;
       height:40px;
       padding:0 6px;
-
-      /* ✅ 输入框边框：必须纯黑 */
-      border:2px solid #000;
-
+      border:2px solid var(--c-border);
       font-weight:700;
       font-family:inherit;
       border-radius:0;
@@ -212,6 +214,7 @@
       align-items:center;
     }
 
+    /* ✅ 按钮：纯黑边框（保持你 Post Puzzle 交互） */
     button.uiBtn{
       width:var(--w-btn);
       height:var(--h-btn);
@@ -296,8 +299,11 @@
 
 <script>
 (() => {
-  const HINT_URL = "https://sorcbear.github.io/playground/post/hint";
-  const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";
+  /* ==========================
+     ✅ 按钮逻辑同源：Post Puzzle
+     ========================== */
+  const HINT_URL = "https://sorcbear.github.io/playground/post/hint"; // ← 按需改成你的提示页
+  const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";      // ← 按需改成你的下一页
   const COUNTDOWN_START = 3;
 
   const PALETTE_COLORS = [
@@ -311,11 +317,23 @@
     "#9B857A"
   ];
 
+  /* ✅ 只改这里：字母映射，不改四图相对位置
+     位置仍是：
+     (1,1) skull / (1,2) violin
+     (2,1) avec  / (2,2) lion
+  */
   const TILES = [
-    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"P" }, correctColor:"#2A5A5E" },
-    { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"A" }, correctColor:"#C62622" },
-    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"U" }, correctColor:"#9B857A" },
-    { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" },
+    // 1号图：骷髅头 -> P
+    { key:"t3", bg:"bw.jpg",     mask:"skull_bw.png",    reveal:{ type:"P" }, correctColor:"#9B857A" }, // (1,1)
+
+    // 2号图：violin -> A
+    { key:"t1", bg:"violin.jpg", mask:"violin_mask.png", reveal:{ type:"A" }, correctColor:"#2A5A5E" }, // (1,2)
+
+    // 3号图：avec -> U
+    { key:"t2", bg:"avec.jpg",   mask:"avec_mask.png",   reveal:{ type:"U" }, correctColor:"#C62622" }, // (2,1)
+
+    // 4号图：lion -> L
+    { key:"t4", bg:"lion.jpg",   mask:"lion_mask.png",   reveal:{ type:"L" }, correctColor:"#E2C164" }, // (2,2)
   ];
 
   const U_BOX_REL = { x: 0.20, y: 0.08, w: 0.20, h: 0.30 };
@@ -426,6 +444,7 @@
     return cell;
   }
 
+  /* ===== 图层/蒙版/涂抹逻辑：保持不动 ===== */
   class ScratchTile{
     constructor(tile, root){
       this.tile = tile;
