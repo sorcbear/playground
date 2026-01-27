@@ -49,7 +49,7 @@ body{
   padding:18px 14px 28px;
 }
 
-/* 标题：保持你原有规范 */
+/* 标题 / 说明文字（统一规范） */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
@@ -67,10 +67,10 @@ body{
   gap:8px;
 }
 
-/* ✅ 第一张图：扩大到接近红框范围 */
+/* 第一张图：地图（较大显示 + 黑框） */
 .imgframe{
   width:100%;
-  max-width:560px;   /* ← 核心控制点（可调 520–640） */
+  max-width:560px;   /* 控制在你红框的视觉范围 */
   margin:0 auto;
   border:3px solid #000;
 }
@@ -172,15 +172,25 @@ button:disabled{
 <body>
 <div class="wrap">
 
-  <div class="title">这是一条不超过200米的弄堂（沿着绿色线路探索），请用弄堂里的环境信息完成以下谜题。</div>
+  <!-- 第一段话 -->
+  <div class="title">这是一条不超过200米的弄堂（沿着绿线探索）。</div>
 
+  <!-- 第一张图 -->
   <div class="imgbox">
     <div class="imgframe">
       <img src="map_152.png" alt="map 152">
     </div>
+  </div>
+
+  <!-- 第二段话（插在两张图之间） -->
+  <div class="title">请用弄堂里的环境信息完成以下谜题。</div>
+
+  <!-- 第二张图 -->
+  <div class="imgbox">
     <img src="puzzle.jpg" alt="square puzzle">
   </div>
 
+  <!-- 以下保持不变 -->
   <div class="qline">
     <span><span class="qmark">? </span>对应的是什么数字：</span>
     <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
