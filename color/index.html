@@ -101,21 +101,26 @@
     .cell.rline{ border-right: var(--frame) solid #000; }
     .cell.bline{ border-bottom: var(--frame) solid #000; }
 
-    .cell img{
+/* 防止子像素/资源边缘露白 */
+    .cell{
+      background:#000;
+      font-size:0;
+      line-height:0;
+    }
+
+/* ✅ 底图 + 蒙版：统一外扩 2px（稳定值） */
+    .cell img,
+    canvas.overlay{
       position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      object-fit:cover;
+      inset:-2px;
+      width:calc(100% + 4px);
+      height:calc(100% + 4px);
       display:block;
     }
 
-    canvas.overlay{
-      position:absolute;
-      inset:-1px;
-      width:calc(100% + 2px);
-      height:calc(100% + 2px);
-      display:block;
+/* 底图仍然 cover */
+    .cell img{
+      object-fit:cover;
     }
 
     .loading{
