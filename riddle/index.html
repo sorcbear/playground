@@ -335,6 +335,8 @@
       if (isCorrect()){
         setLocked(true);
 
+        localStorage.setItem("pg_unlock_paper_v1", "1");
+
         let t = COUNTDOWN_START;
         msg.textContent = `答案正确，即将进入下一题（${t}）`;
         msg.classList.add("ok");
