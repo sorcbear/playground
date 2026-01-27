@@ -155,31 +155,32 @@
       max-width: min(100%, calc(4 * var(--swatch) + 3 * var(--swatch-gap)));
     }
 
-     .swatch{
-    width:var(--swatch);
-    height:var(--swatch);
-    border-radius:999px;
-    background: var(--c);
-    border:none;
-    padding:0;
-    cursor:pointer;
-    outline:none;
-    -webkit-tap-highlight-color:transparent;
+
+
+    .swatch{
+      width:var(--swatch);
+      height:var(--swatch);
+      border-radius:999px;
+      background: var(--c);
+      border:none;
+      padding:0;
+      cursor:pointer;
+      outline:none;
+      -webkit-tap-highlight-color:transparent;
     }
 
-
-/* ✅ 选中：外原色 + 白环 + 内原色（同心、不会偏） */
+/* ✅ 选中：外原色 + 白环 + 内原色（同心） */
     .swatch.selected{
-    background:
-    radial-gradient(circle at center,
-/* 内圈原色 */
-    var(--c) 0 calc(50% - var(--ring-inset) - var(--ring-w)),
-/* 白色圆环 */
-    var(--c-swatch-ring) calc(50% - var(--ring-inset) - var(--ring-w))
-    calc(50% - var(--ring-inset)),
-/* 外圈原色 */
-    var(--c) calc(50% - var(--ring-inset)) 100%
-    );
+      background:
+        radial-gradient(circle at center,
+      /* 内圈原色 */
+          var(--c) 0 calc(50% - var(--ring-inset) - var(--ring-w)),
+      /* 白色圆环 */
+          var(--c-swatch-ring) calc(50% - var(--ring-inset) - var(--ring-w))
+                              calc(50% - var(--ring-inset)),
+      /* 外圈原色 */
+          var(--c) calc(50% - var(--ring-inset)) 100%
+        );
     }
 
     .answerBlock{
