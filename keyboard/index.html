@@ -3,46 +3,164 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<meta name="format-detection" content="telephone=no,address=no,email=no">
 <title>Piano Puzzle</title>
 
 <style>
-html,body{
-  margin:0;background:#fff;color:#111;
-  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
-  user-select:none;-webkit-tap-highlight-color:transparent;
-}
-.wrap{max-width:1100px;margin:0 auto;padding:6px 8px;box-sizing:border-box;}
-.topbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 4px;}
-.status{font-size:14px;min-height:18px;line-height:18px;flex:1 1 240px;margin:0;}
-.btns{display:flex;gap:8px;flex:0 0 auto;}
-button{border:none;border-radius:10px;background:#111;color:#fff;padding:8px 10px;font-size:14px;cursor:pointer;}
-button:active{transform:translateY(1px)}
-.ok{background:#12b76a;color:#052;font-weight:700}
+:root{
+  /* ✅ 同源：Rotate */
+  --maxw: 720px;
 
-/* 顶部新增一句话：普通文字 */
-.intro{
+  --fs-body: 18px;
+  --lh-body: 1.6;
+
+  --fs-hint: 18px;
+  --lh-hint: 1.6;
+
+  --fs-btn: 18px;
+  --fw-btn: 600;
+  --h-btn: 52px;
+
+  --gap: 18px;
+  --gap-tight: 12px;
+
+  --c-text:#111;
+  --c-border:#000;
+  --c-ok:#0b6b2b;
+  --c-danger:#b00020;
+
+  --bg:#fff;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--c-text);
+  font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+  -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+
+.wrap{
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:18px 14px 28px;
+}
+
+/* ✅ 标题 UI（同源 Rotate titleLine） */
+.title{
+  font-size:var(--fs-hint);
+  line-height:var(--lh-hint);
+  font-weight:700;
+  margin:4px 0 var(--gap);
+  text-align:left;
+  white-space:pre-wrap;
+}
+
+/* ✅ 状态也用标题 UI */
+.statusTitle{
+  font-size:var(--fs-hint);
+  line-height:var(--lh-hint);
+  font-weight:700;
+  margin:0;
+  white-space:pre-wrap;
+}
+
+/* 失败状态：红色加粗（仍是标题 UI） */
+.statusFail{
+  color:var(--c-danger);
+  font-weight:800;
+}
+
+/* 进度/成功/启用声音：绿色（同源 ok 绿） */
+.statusOk{
+  color:var(--c-ok);
+  font-weight:800;
+}
+
+/* ✅ 下面一行说明：略小 + 加粗 */
+.subnote{
   font-size:14px;
-  line-height:1.45;
-  margin:2px 0 6px;
+  line-height:1.5;
+  font-weight:700;
+  margin:0 0 var(--gap);
+  white-space:pre-wrap;
 }
 
-/* 提示字小一点 */
-.hint{font-size:12px;line-height:1.35;margin:0 0 6px;}
-.small{font-size:11px;opacity:.75;margin-top:2px;line-height:1.25;}
+/* 顶部栏：左状态 + 右按钮 */
+.topbar{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  margin:0 0 var(--gap-tight);
+}
+.btnsTop{
+  display:flex;
+  gap:12px;
+  flex:0 0 auto;
+  align-items:center;
+}
 
-/* ✅ 用稳定比例，避免不同设备地址栏/布局导致的高度漂移
-   你的 keyboard.png 若不是 1024x461，请改这个比例（宽/高）
-*/
+/* ✅ 同源按钮：直角 */
+button{
+  width:240px;
+  height:var(--h-btn);
+  padding:0 18px;
+  box-sizing:border-box;
+  font-size:var(--fs-btn);
+  font-weight:var(--fw-btn);
+  background:#fff;
+  color:#000;
+  border:2px solid var(--c-border);
+  cursor:pointer;
+  border-radius:0;                 /* ✅ 直角 */
+  -webkit-tap-highlight-color:transparent;
+  font-family:inherit;
+  transition:none;
+}
+@media (hover:hover) and (pointer:fine){
+  button:hover{ background:#000; color:#fff; }
+}
+button.invert{ background:#000; color:#fff; }
+button:disabled{ opacity:.45; cursor:default; }
+
+/* 顶部两个按钮更紧凑 */
+.btnSmall{
+  width:auto;
+  min-width: 140px;
+  height:44px;
+  padding:0 14px;
+  font-size:16px;
+}
+
+/* 启动声音按钮保持绿色底（你说颜色不变） */
+.okBtn{
+  background:#12b76a;
+  color:#052;
+  border:2px solid #12b76a;
+  font-weight:800;
+}
+@media (hover:hover) and (pointer:fine){
+  .okBtn:hover{ background:#0ea765; color:#052; }
+}
+
+/* 键盘区域：保持你现在的稳定定位策略 */
 .kbd{
   position:relative;
   width:100%;
   overflow:hidden;
   background:#fff;
   touch-action:none;
-  margin:0;
-  aspect-ratio: 1024 / 461;
+  margin:0 0 var(--gap-tight);
+  aspect-ratio: 1024 / 461; /* 会在 img load 后自动覆盖为真实比例 */
 }
-
 .kbd-inner{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;}
 #kbdImg{
   width:100%;
@@ -58,10 +176,19 @@ button:active{transform:translateY(1px)}
 .segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,160,90,.70);background:rgba(0,160,90,.06);display:none;}
 .debug .segbox{display:block;}
 
-@media (orientation: landscape){
-  .wrap{padding:4px 8px;}
-  .hint{margin-bottom:4px;}
-  button{padding:7px 10px;}
+/* Debug 按钮移到琴键下面：单独一行，居中 */
+.debugRow{
+  display:flex;
+  justify-content:center;
+  margin-top: var(--gap-tight);
+}
+.debugRow button{
+  width:240px;
+}
+
+@media (max-width:520px){
+  /* 手机上顶部按钮不要过宽 */
+  .btnSmall{ min-width: 120px; }
 }
 </style>
 </head>
@@ -69,21 +196,19 @@ button:active{transform:translateY(1px)}
 <body>
 <div class="wrap">
 
-  <div class="intro">请按照正确的曲谱顺序（4.1,10.5,10.9,15.2）演奏乐曲。</div>
+  <!-- ✅ 这句话：标题 UI 规范 -->
+  <div class="title">请按照正确的曲谱顺序（4.1,10.5,10.9,15.2）演奏乐曲，相邻两次点击间隔需≤ 5 秒（超时算作失败将重置）。</div>
 
   <div class="topbar">
-    <div class="status" id="status">未开始</div>
-    <div class="btns">
-      <button id="audioBtn" class="ok">启用声音</button>
-      <button id="resetBtn">Reset</button>
-      <button id="debugBtn">Debug</button>
+    <div class="statusTitle" id="status">未开始</div>
+    <div class="btnsTop">
+      <button id="audioBtn" class="btnSmall okBtn">启动声音</button>
+      <button id="resetBtn" class="btnSmall">重置</button>
     </div>
   </div>
 
-  <div class="hint">
-    建议横屏操作；相邻两次点击间隔 ≤ 5 秒（超时重置）。
-    <div class="small">iPhone：需先点击“启用声音”。</div>
-  </div>
+  <!-- ✅ 下面文字改成你要的；略小 + 加粗 -->
+  <div class="subnote">弹奏前需先点击“启动声音”，可横屏操作。</div>
 
   <div class="kbd" id="kbd">
     <div class="kbd-inner">
@@ -91,6 +216,12 @@ button:active{transform:translateY(1px)}
     </div>
     <div class="overlay" id="overlay"></div>
   </div>
+
+  <!-- ✅ Debug 移到底下（暂时保留） -->
+  <div class="debugRow">
+    <button id="debugBtn">Debug</button>
+  </div>
+
 </div>
 
 <script>
@@ -223,7 +354,6 @@ button:active{transform:translateY(1px)}
       out[i] = center + (out[i]-center) * scale;
     }
 
-    // 严格递增（极小 epsilon 修正，不做 Math.round）
     out[0]=0; out[out.length-1]=iw;
     const eps = 1e-6;
     for(let i=1;i<out.length;i++){
@@ -331,7 +461,6 @@ button:active{transform:translateY(1px)}
 
     let refined = chosen.map(p => snapToDarkRunCenter(p.x));
 
-    // 线性拟合，提升稳定性
     let sumk=0, sumx=0, sumkk=0, sumkx=0;
     for(let i=0;i<need;i++){
       const k=i+1;
@@ -389,7 +518,6 @@ button:active{transform:translateY(1px)}
     layoutOverlay();
   }
 
-  // ✅ overlay 用“imgRect 相对 kbdRect”的真实偏移（保证绿线与点击同一坐标系）
   function layoutOverlay(){
     if(!boundaries || segBoxes.length!==FIX_N) return;
 
@@ -397,8 +525,8 @@ button:active{transform:translateY(1px)}
     const ir  = img.getBoundingClientRect();
     const iw  = img.naturalWidth || 1024;
 
-    const offsetX = ir.left - kbr.left; // img 在 kbd 内的真实左偏移
-    const w = ir.width;                 // img 在屏幕上的真实宽度
+    const offsetX = ir.left - kbr.left;
+    const w = ir.width;
 
     for(let i=0;i<FIX_N;i++){
       const x0 = offsetX + (boundaries[i]   / iw) * w;
@@ -408,7 +536,7 @@ button:active{transform:translateY(1px)}
     }
   }
 
-  // ✅ 点击定位：不设死区，不“中间优先”，边缘/黑线也会判定到某个键（硬切分）
+  // ✅ 点击定位：边缘也判定（硬切分），且与绿线同一坐标系（img rect）
   function pointToLocalIndex(clientX, clientY){
     const ir = img.getBoundingClientRect();
     if(clientX<ir.left || clientX>ir.right || clientY<ir.top || clientY>ir.bottom) return null;
@@ -434,18 +562,25 @@ button:active{transform:translateY(1px)}
 
   let step=0, lastTime=null;
 
+  function setStatus(text, cls){
+    statusEl.textContent = text;
+    statusEl.classList.remove("statusFail","statusOk");
+    if(cls) statusEl.classList.add(cls);
+  }
+
   function reset(msg="未开始"){
     step=0; lastTime=null;
-    statusEl.textContent=msg;
-    statusEl.style.color="#111";
+    setStatus(msg, "");
   }
+
   function fail(msg){
     reset("失败：" + msg + "（已重置）");
-    statusEl.style.color="#b42318";
+    statusEl.classList.add("statusFail");
   }
+
   function timeoutReset(){
-    reset("已超时，请重新完整弹奏。");
-    statusEl.style.color="#b42318";
+    reset("失败：超时（已重置）");
+    statusEl.classList.add("statusFail");
   }
 
   function pressLocal(localIdx){
@@ -474,22 +609,18 @@ button:active{transform:translateY(1px)}
     }
 
     if(globalIdx !== needIdx){
-      fail("音符错误，请再弹一次。");
+      // ✅ 你指定的句子：标题 UI + 红色加粗
+      fail("音符错误，请再弹一次");
       return;
     }
 
     step++;
     if(step === target.length){
-      statusEl.textContent="success";
-      statusEl.style.color="#067647";
-
-      setTimeout(() => {
-        location.href = NEXT_URL;
-      }, 800);
-
+      setStatus("success", "statusOk");
+      setTimeout(() => { location.href = NEXT_URL; }, 800);
     } else {
-      statusEl.textContent=`进度 ${step}/${target.length}`;
-      statusEl.style.color="#111";
+      // ✅ 进度：标题 UI + 绿色（同“声音已启用”）
+      setStatus(`进度 ${step}/${target.length}`, "statusOk");
     }
   }
 
@@ -506,40 +637,46 @@ button:active{transform:translateY(1px)}
   }
   kbd.addEventListener("pointerdown", handlePointerDown, {passive:false});
 
-  function relayoutAll(){
-    layoutOverlay();
-  }
+  function relayoutAll(){ layoutOverlay(); }
   window.addEventListener("resize", relayoutAll);
+
+  function flashInvert(btn, ms=120){
+    btn.classList.add("invert");
+    setTimeout(()=>btn.classList.remove("invert"), ms);
+  }
 
   audioBtn.addEventListener("click", async ()=>{
     try{
+      flashInvert(audioBtn,120);
       await enableAudio();
       audioBtn.textContent="声音已启用";
       audioBtn.disabled=true;
-      statusEl.textContent="声音已启用，开始弹奏";
-      statusEl.style.color="#067647";
+      // ✅ 用标题 UI，绿色
+      setStatus("声音已启用，开始弹奏", "statusOk");
     }catch(e){
-      statusEl.textContent="启用声音失败（请再点一次）";
-      statusEl.style.color="#b42318";
+      setStatus("失败：启用声音失败（请再点一次）", "statusFail");
     }
   });
 
-  resetBtn.addEventListener("click", ()=>reset("已重置"));
+  resetBtn.addEventListener("click", ()=>{
+    flashInvert(resetBtn,120);
+    reset("已重置");
+  });
 
   debugBtn.addEventListener("click", ()=>{
+    flashInvert(debugBtn,120);
     const on = document.body.classList.toggle("debug");
     debugBtn.textContent = on ? "Debug On" : "Debug";
     if(on){
-      statusEl.textContent =
-        `Debug: ${boundarySource || "?"}, scale=${BOUNDARY_SCALE}, dpr=${window.devicePixelRatio || 1}`;
-      statusEl.style.color="#111";
+      setStatus(`Debug: ${boundarySource || "?"}, scale=${BOUNDARY_SCALE}, dpr=${window.devicePixelRatio || 1}`, "");
       layoutOverlay();
+    }else{
+      reset("未开始");
     }
   });
 
   img.addEventListener("load", ()=>{
-    // ✅ 可选：自动从图片真实比例更新 aspect-ratio（防止你换图忘了改 CSS）
-    // 这行会覆盖 CSS 的 aspect-ratio，让不同设备更一致
+    // ✅ 自动从图片真实比例更新 aspect-ratio（防止换图忘记改）
     const iw = img.naturalWidth || 1024;
     const ih = img.naturalHeight || 461;
     kbd.style.aspectRatio = `${iw} / ${ih}`;
