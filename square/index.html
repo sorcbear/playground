@@ -30,6 +30,11 @@
   --c-ok:#0b6b2b;
   --c-danger:#b00020;
 
+  /* 图1 → 中间文字 的距离 */
+  --mid-gap-top: 48px; /* ← 想更远就调大，比如 48px */
+/* 中间文字 → 图2 的距离 */
+  --mid-gap-bottom: 18px;
+
   --bg:#fff;
 
   /* ✅ 第一张图（地图）单独控制：50% = 现在的一半（手机/PC 都有效） */
@@ -70,8 +75,8 @@ body{
 
 /* 中间说明文字：只调节上下，不破坏 title 规范 */
 .title.mid{
-  margin-top:var(--gap);
-  margin-bottom:var(--gap);
+  margin-top: var(--mid-gap-top);
+  margin-bottom: var(--mid-gap-bottom);
 }
 
 /* 图片：同源节奏 */
