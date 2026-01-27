@@ -1,3 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no">
+  <title>4 Scratch Boards</title>
+
+  <style>
+    :root{
+      --maxw: 980px;
+      --bg:#fff;
+      --text:#111;
+
+      --fs-body: 18px;
+      --lh-body: 1.6;
+
+      --hint-fs:18px;
+      --hint-lh:1.6;
+
+      --swatch: clamp(24px, 7.2vw, 34px);
+      --swatch-gap: clamp(8px, 2.4vw, 12px);
+
+      /* ✅ 选中白圈厚度：想更细就改 2px */
+      --ring: 4px;
+      --ring-inset: 4px;
+
+      --gap: 18px;
+      --frame: 4px;
+
+      --fs-btn: 18px;
+      --fw-btn: 600;
+      --h-btn: 52px;
+      --w-btn: 240px;
+
+      /* ✅ 按钮/输入框统一黑边框 */
+      --c-border:#000;
+
+      /* ✅ 调色盘选中反馈：白色 */
+      --c-swatch-ring:#fff;
+
+      --c-ok:#0b6b2b;
+      --c-danger:#b00020;
+
+      /* 标题与四宫格之间的间距（只调这里） */
+      --space-title-board: 24px;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+      -webkit-text-size-adjust:100%;
+    }
+
+    .wrap{
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:18px 14px 28px;
+    }
+
+    .title{
+      margin:4px 0 var(--space-title-board);
       font-size:var(--hint-fs);
       line-height:var(--hint-lh);
       font-weight:700;
@@ -647,7 +716,7 @@
       for(let i=0;i<data.length;i+=4){
         const r=data[i], g=data[i+1], b=data[i+2];
         const lum=(r+g+b)/3;
-        data[i+3] = (lum >= WHITE_TH) ? 255 : 0;
+        data[i+3] = (lum >= 200) ? 255 : 0;
       }
 
       this.whiteMaskCtx.putImageData(imgData, 0, 0);
