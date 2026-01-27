@@ -23,6 +23,7 @@
 
       /* ✅ 选中白圈厚度：想更细就改 2px */
       --ring: 4px;
+      --ring-inset: 6px
 
       --gap: 18px;
       --frame: 4px;
@@ -154,19 +155,31 @@
       max-width: min(100%, calc(4 * var(--swatch) + 3 * var(--swatch-gap)));
     }
 
-     .swatch{
-      width:var(--swatch);
-      height:var(--swatch);
-      padding: 4px;                 /* 👈 控制“往里缩多少” */
-      border-radius:999px;
-      background: var(--c);
-      background-clip: padding-box; /* 👈 关键 */
-      border:none;
+    .swatch{
+    width:var(--swatch);
+    height:var(--swatch);
+    border-radius:999px;
+    background:var(--c);
+    border:none;
+    padding:0;
+    cursor:pointer;
+    outline:none;
+    -webkit-tap-highlight-color:transparent;
+
+
+    position:relative; /* ✅ 给 ::after 定位 */
+    overflow:hidden; /* ✅ 保证白圈不会跑到外面 */
     }
 
-    /* ✅ 关键改动：白色圈“画在圆内部” */
-    .swatch.selected{
-    box-shadow: inset 0 0 0 var(--ring) #fff;
+
+/* ✅ 选中：用伪元素画“内嵌白圈”（像你图2那样） */
+    .swatch.selected::after{
+    content:"";
+    position:absolute;
+    inset: var(--ring-inset); /* ✅ 内缩距离 */
+    border: var(--ring) solid var(--c-swatch-ring); /* ✅ 白圈厚度 */
+    border-radius:999px;
+    pointer-events:none;
     }
 
     .answerBlock{
