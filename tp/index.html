@@ -10,7 +10,7 @@
       --fs-body: 18px;
 
       --btn-h: 56px;
-      --btn-w: 140px;   /* ✅ 文字按钮更宽一点更稳 */
+      --btn-w: 140px;
       --bg:#fff;
       --c-border:#000;
 
@@ -19,13 +19,13 @@
 
       --line-w: 8px;
 
-      --cap-sz: 34px;   /* 顶部方块大小 */
+      --cap-sz: 34px;
 
-      /* ✅ 与最新 Save 一致：间距变量（桌面/默认） */
-      --gap-cap-btn: 24px;   /* cap 到第一个按钮 */
-      --gap-btn: 20px;       /* 按钮之间 */
-      --pad-top: 14px;       /* map 内部顶部留白 */
-      --pad-bottom: 14px;    /* map 内部底部留白 */
+      /* 与最新 Save 一致 */
+      --gap-cap-btn: 24px;
+      --gap-btn: 20px;
+      --pad-top: 14px;
+      --pad-bottom: 14px;
     }
 
     *{ box-sizing:border-box; }
@@ -44,7 +44,7 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      justify-content:center;          /* ✅ 页面整体居中（与参考代码一致） */
+      justify-content:center;
       padding:16px 16px 32px;
     }
 
@@ -76,7 +76,7 @@
       transform:translate(-50%,-50%);
     }
 
-    /* 顶部黑方块（非按钮） */
+    /* 顶部黑方块 */
     .cap{
       width: var(--cap-sz);
       height: var(--cap-sz);
@@ -86,7 +86,7 @@
     }
     .cap svg{ width:100%; height:100%; display:block; }
 
-    /* ✅ 文字按钮（无图标） */
+    /* 通用按钮 */
     .btn{
       width:var(--btn-w);
       height:var(--btn-h);
@@ -116,7 +116,16 @@
     }
     .btn:hover{ background:#000; color:#fff; }
 
-    /* ✅ iPhone/窄屏：与最新 Save 一致（更高、间距更大、线更长） */
+    /* ✅ 起点按钮：浅灰背景 */
+    .btn-start{
+      background:#f2f2f2;
+    }
+    .btn-start:hover{
+      background:#000;
+      color:#fff;
+    }
+
+    /* iPhone / 窄屏 */
     @media (max-width: 520px){
       :root{
         --gap-cap-btn: 34px;
@@ -139,7 +148,6 @@
     <div class="notice"></div>
 
     <div class="map" id="map">
-      <!-- 统一 0~100 坐标系 -->
       <svg class="wires" id="wires"
            viewBox="0 0 100 100"
            preserveAspectRatio="none"
@@ -148,11 +156,8 @@
   </div>
 
   <script>
-    // ===== 假存档：固定显示 2 个按钮，但布局/顶部距离完全对齐“最新 Save”算法 =====
-
     const X = 50.0;
 
-    // 只显示两个按钮：起点、天平路（链接与你原来一致）
     const VIS = [
       { text:"起点",   url:"https://sorcbear.github.io/playground/rotate" },
       { text:"天平路", url:"https://sorcbear.github.io/playground/circle" }
@@ -161,6 +166,12 @@
     function makeBtn(n){
       const btn = document.createElement("button");
       btn.className = "btn";
+
+      // ✅ 仅“起点”按钮使用浅灰背景
+      if(n.text === "起点"){
+        btn.classList.add("btn-start");
+      }
+
       btn.type = "button";
       btn.textContent = n.text;
       btn.onclick = () => location.href = n.url;
@@ -182,7 +193,6 @@
       return Number.isFinite(n) ? n : fallback;
     }
 
-    // ✅ 与“最新 Save”一致：根据 map 实际高度动态排布（只影响显示）
     function computeLayout(mapH, visLen){
       const cap = cssNum("--cap-sz", 34);
       const btnH = cssNum("--btn-h", 56);
@@ -202,7 +212,6 @@
       gapBtn *= scale;
 
       const capY = topPad + cap / 2;
-
       let y = capY + cap / 2 + gapCapBtn + btnH / 2;
 
       const ys = [];
@@ -242,7 +251,6 @@
       const mapH = map.getBoundingClientRect().height || 1;
       const layout = computeLayout(mapH, Math.max(1, VIS.length));
 
-      // 1) cap（顶部黑方块）
       const capNode = document.createElement("div");
       capNode.className = "node";
       capNode.style.left = X + "%";
@@ -250,18 +258,15 @@
       capNode.appendChild(makeCap());
       map.appendChild(capNode);
 
-      // 2) buttons（2 个）
       for (let i = 0; i < VIS.length; i++){
-        const n = VIS[i];
         const wrap = document.createElement("div");
         wrap.className = "node";
         wrap.style.left = X + "%";
         wrap.style.top  = layout.yPctList[i] + "%";
-        wrap.appendChild(makeBtn(n));
+        wrap.appendChild(makeBtn(VIS[i]));
         map.appendChild(wrap);
       }
 
-      // 3) wires：cap -> 起点 -> 天平路
       addLine(X, layout.capYPct, X, layout.yPctList[0]);
       for (let i = 1; i < VIS.length; i++){
         addLine(X, layout.yPctList[i-1], X, layout.yPctList[i]);
@@ -270,7 +275,6 @@
 
     render();
 
-    // ✅ 与最新 Save 一致：尺寸变化时重排更稳
     let raf = 0;
     function scheduleRender(){
       cancelAnimationFrame(raf);
