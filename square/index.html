@@ -9,7 +9,6 @@
 
 <style>
 :root{
-  /* ✅ Rotate 同款 */
   --maxw: 720px;
 
   --fs-body: 18px;
@@ -27,7 +26,6 @@
   --c-ok:#0b6b2b;
   --c-danger:#b00020;
 
-  /* ✅ Rotate 同款间距基准 */
   --gap: 18px;
 }
 
@@ -51,12 +49,12 @@ body{
   padding:18px 14px 28px;
 }
 
-/* 标题 */
+/* ✅ 标题：恢复你原本的间距规范 */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
-  margin:4px 0 var(--gap);
+  margin:0 0 var(--gap);   /* ✅ 只留底部间距 */
   text-align:left;
   white-space:pre-wrap;
 }
@@ -69,12 +67,11 @@ body{
   gap:8px;
 }
 
-/* ✅ 第一张图：缩小 + 黑框 + 限制显示范围 */
+/* 第一张图：缩小 + 黑框 */
 .imgframe{
   width:33.333%;
   margin:0 auto;
   border:3px solid #000;
-  box-sizing:border-box;
 }
 .imgframe img{
   display:block;
@@ -117,7 +114,6 @@ body{
   box-shadow:none;
   -webkit-appearance:none;
 }
-.ansInput:focus{ outline:none; box-shadow:none; }
 
 /* 按钮区 */
 .panel{
@@ -166,7 +162,6 @@ button:disabled{
   font-weight:700;
 }
 
-/* 移动端按钮宽度 */
 @media (max-width:520px){
   button{ width:46vw; }
   .imgframe{ width:48%; }
@@ -177,15 +172,13 @@ button:disabled{
 <body>
 <div class="wrap">
 
-  <div class="title">
-康平路152弄是一条不超过200米的弄堂（沿着绿色线路探索），请用弄堂里的环境信息完成以下谜题。
-  </div>
+  <!-- ✅ 关键：文本不换行、不留空白 -->
+  <div class="title">这是一条不超过200米的弄堂（沿着绿色线路探索），请用弄堂里的环境信息完成以下谜题。</div>
 
   <div class="imgbox">
     <div class="imgframe">
       <img src="map_152.png" alt="map 152">
     </div>
-
     <img src="puzzle.jpg" alt="square puzzle">
   </div>
 
@@ -235,7 +228,6 @@ function setBtnText(text, ms=900){
   submitBtn.textContent = text;
   submitBtn.classList.add("invert");
   submitBtn.disabled = true;
-
   btnTimer = setTimeout(()=>{
     submitBtn.textContent = "提交答案";
     submitBtn.classList.remove("invert");
@@ -257,7 +249,6 @@ submitBtn.onclick = ()=>{
     let t = COUNTDOWN_START;
     msg.textContent = `答案正确，即将进入下一题（${t}）`;
     msg.classList.add("ok");
-
     timer = setInterval(()=>{
       t--;
       if (t > 0){
