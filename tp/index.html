@@ -116,13 +116,19 @@
     }
     .btn:hover{ background:#000; color:#fff; }
 
-    /* ✅ 起点按钮：浅灰背景 */
+    /* ✅ 起点按钮：灰色背景 */
     .btn-start{
       background:#cccccc;
     }
-    .btn-start:hover{
-      background:#000;
-      color:#fff;
+
+    /* ✅ 起点按钮：不可点击（只保留样子） */
+    .btn-start.is-disabled{
+      cursor: default;
+      pointer-events: none;   /* ✅ 关键：完全禁用点击/触摸 */
+    }
+    .btn-start.is-disabled:hover{
+      background:#cccccc;     /* ✅ hover 不变黑 */
+      color:#000;
     }
 
     /* iPhone / 窄屏 */
@@ -166,14 +172,17 @@
     function makeBtn(n){
       const btn = document.createElement("button");
       btn.className = "btn";
-
-      // ✅ 仅“起点”按钮使用浅灰背景
-      if(n.text === "起点"){
-        btn.classList.add("btn-start");
-      }
-
       btn.type = "button";
       btn.textContent = n.text;
+
+      // ✅ “起点”：灰色 + 不可点击（只保留样子）
+      if(n.text === "起点"){
+        btn.classList.add("btn-start","is-disabled");
+        // 不绑定 onclick
+        return btn;
+      }
+
+      // ✅ 其他按钮照常可点击
       btn.onclick = () => location.href = n.url;
       return btn;
     }
