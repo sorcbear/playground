@@ -38,25 +38,20 @@ body{
   margin:0;
   background:#fff;
   color:var(--c-text);
-
-  /* ✅ Rotate 同款字体栈 */
   font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-
   font-size:var(--fs-body);
   line-height:var(--lh-body);
-
-  /* ✅ Rotate 同款 */
   -webkit-text-size-adjust:100%;
 }
 
-/* ✅ Rotate 同款 wrap */
+/* 主容器 */
 .wrap{
   max-width:var(--maxw);
   margin:0 auto;
   padding:18px 14px 28px;
 }
 
-/* ✅ Rotate 同款 titleLine 排版 */
+/* 标题 */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
@@ -66,14 +61,29 @@ body{
   white-space:pre-wrap;
 }
 
-/* 图片（两张图竖排，间距尽量小，宽度一致） */
+/* 图片区域 */
 .imgbox{
   margin:0;
   display:flex;
   flex-direction:column;
-  gap:8px; /* ✅ 两张图间距：想更小改成 4px/2px */
+  gap:8px;
 }
-.imgbox img{
+
+/* ✅ 第一张图：缩小 + 黑框 + 限制显示范围 */
+.imgframe{
+  width:33.333%;
+  margin:0 auto;
+  border:3px solid #000;
+  box-sizing:border-box;
+}
+.imgframe img{
+  display:block;
+  width:100%;
+  height:auto;
+}
+
+/* 第二张图保持原样 */
+.imgbox > img{
   display:block;
   width:100%;
   max-width:800px;
@@ -115,15 +125,13 @@ body{
   display:flex;
   gap:12px;
   justify-content:center;
-  flex-wrap:nowrap;
 }
 
-/* 默认按钮 */
+/* 按钮 */
 button{
   width:240px;
   height:var(--h-btn);
   padding:0 18px;
-  box-sizing:border-box;
   font-size:var(--fs-btn);
   font-weight:600;
   background:#fff;
@@ -134,12 +142,10 @@ button{
   -webkit-tap-highlight-color:transparent;
 }
 
-/* PC hover */
 @media (hover:hover) and (pointer:fine){
   button:hover{ background:#000; color:#fff; }
 }
 
-/* JS 控制的点击反馈 */
 button.invert{
   background:#000;
   color:#fff;
@@ -160,9 +166,10 @@ button:disabled{
   font-weight:700;
 }
 
-/* ✅ 这里保留你原来的移动端按钮宽度策略，不影响标题对齐 */
+/* 移动端按钮宽度 */
 @media (max-width:520px){
   button{ width:46vw; }
+  .imgframe{ width:48%; }
 }
 </style>
 </head>
@@ -170,11 +177,15 @@ button:disabled{
 <body>
 <div class="wrap">
 
-  <!-- ✅ 关键：不要在文本前加换行/空格 -->
-  <div class="title">这是一条不超过200米的弄堂（沿着绿色线路探索），请用弄堂里的环境信息完成以下谜题。</div>
+  <div class="title">
+康平路152弄是一条不超过200米的弄堂（沿着绿色线路探索），请用弄堂里的环境信息完成以下谜题。
+  </div>
 
   <div class="imgbox">
-    <img src="map_152.png" alt="map 152">
+    <div class="imgframe">
+      <img src="map_152.png" alt="map 152">
+    </div>
+
     <img src="puzzle.jpg" alt="square puzzle">
   </div>
 
@@ -207,7 +218,6 @@ let locked=false;
 let timer=null;
 let btnTimer=null;
 
-/* 公共：短暂黑底白字反馈 */
 function flashInvert(btn, ms=120){
   btn.classList.add("invert");
   setTimeout(()=>btn.classList.remove("invert"), ms);
@@ -220,10 +230,8 @@ function setLocked(v){
   input.disabled=v;
 }
 
-/* 错误提示用 */
 function setBtnText(text, ms=900){
   if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
-
   submitBtn.textContent = text;
   submitBtn.classList.add("invert");
   submitBtn.disabled = true;
@@ -236,7 +244,6 @@ function setBtnText(text, ms=900){
   }, ms);
 }
 
-/* 获得提示：先反馈，再跳转 */
 hintBtn.onclick = ()=>{
   if (locked) return;
   flashInvert(hintBtn, 120);
@@ -245,7 +252,6 @@ hintBtn.onclick = ()=>{
 
 submitBtn.onclick = ()=>{
   if (locked) return;
-
   if (input.value.trim() === CORRECT){
     setLocked(true);
     let t = COUNTDOWN_START;
