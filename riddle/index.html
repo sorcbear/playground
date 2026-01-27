@@ -33,7 +33,17 @@
       --bg:#fff;
     }
 
-    *{ box-sizing:border-box; }
+    /* =========================
+       ✅ 全局清零：禁止任何缩进
+       ========================= */
+    *{
+      box-sizing:border-box;
+      margin-left:0;
+      margin-right:0;
+      padding-left:0;
+      padding-right:0;
+    }
+
     html,body{ height:100%; }
 
     body{
@@ -49,28 +59,37 @@
     .wrap{
       max-width:var(--maxw);
       margin:0 auto;
-      padding:18px 14px 28px;
+      padding:18px 14px 28px; /* 这是整体页面留白，不是文字缩进 */
     }
 
+    /* 标题 */
     .titleLine{
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
       font-weight:700;
-      margin:4px 0 var(--gap);
+      margin-top:0;
+      margin-bottom:var(--gap);
       text-align:left;
       white-space:pre-wrap;
     }
 
-    .quotes{ margin-top:1em; }
+    /* 对话区：不允许任何段落感 */
+    .quotes{
+      margin:0;
+      padding:0;
+    }
     .quote{
       margin:0;
+      padding:0;
       font-style:italic;
       font-weight:400;
       color:#000;
       white-space:pre-wrap;
     }
 
-    .formBlock{ margin-top:var(--gap); }
+    .formBlock{
+      margin-top:var(--gap);
+    }
 
     .row{
       display:flex;
@@ -78,12 +97,6 @@
       gap:10px;
       flex-wrap:wrap;
       margin-top:var(--gap-tight);
-    }
-
-    .label{
-      font-size:var(--fs-hint);
-      line-height:var(--lh-hint);
-      font-weight:700;
     }
 
     .ansInput{
@@ -99,16 +112,12 @@
       font-weight:700;
       font-family:inherit;
       text-align:center;
-
       box-shadow:none;
       -webkit-appearance:none;
       appearance:none;
-      -webkit-tap-highlight-color:transparent;
       caret-color:#000;
     }
-    .ansInput:focus{ outline:none; box-shadow:none; }
 
-    /* ✅ placeholder 样式（新增） */
     .ansInput::placeholder{
       color:#888;
       font-weight:700;
@@ -151,7 +160,6 @@
       border:2px solid var(--c-border);
       cursor:pointer;
       border-radius:0;
-      -webkit-tap-highlight-color:transparent;
       font-family:inherit;
       user-select:none;
       transition:none;
@@ -192,19 +200,19 @@
   <div class="wrap">
 
     <div class="titleLine">
-      四君子正是四位建筑师，他们正在衡山宾馆大堂争论谁的作品最能代表上海的气质。
+四君子正是四位建筑师，他们正在衡山宾馆大堂争论谁的作品最能代表上海的气质。
     </div>
 
     <div class="quotes">
-      <div class="quote">A ： “我为那个‘上海滩名号最响的人’画了一座宫殿。虽然他从来没有住进来过。”</div>
-      <div class="quote">B ： “我用家乡的一个大区毕卡第（Picardie）为我的作品命名。”</div>
-      <div class="quote">C： “我堆砌了一座坚固的堡垒。它曾经拥有一个来自纽约的名字。”</div>
-      <div class="quote">D： “我不想争第一，我只是为了让我的父亲有个家。”</div>
+      <div class="quote">A：“我为那个‘上海滩名号最响的人’画了一座宫殿。虽然他从来没有住进来过。”</div>
+      <div class="quote">B：“我用家乡的一个大区毕卡第（Picardie）为我的作品命名。”</div>
+      <div class="quote">C：“我堆砌了一座坚固的堡垒。它曾经拥有一个来自纽约的名字。”</div>
+      <div class="quote">D：“我不想争第一，我只是为了让我的父亲有个家。”</div>
     </div>
 
     <div class="formBlock">
       <div class="titleLine" style="margin-bottom:0;">
-        上述4位建筑师在对话中提及的建筑分别是哪4个？（大堂墙面似乎有些线索，答案都为4个字）
+上述4位建筑师在对话中提及的建筑分别是哪4个？（大堂墙面似乎有些线索，答案都为4个字）
       </div>
 
       <div class="row">
@@ -227,7 +235,7 @@
 
     <div class="formBlock">
       <div class="titleLine" style="margin-bottom:0;">
-        上述建筑中，哪个与其他3个处于不同年代？
+上述建筑中，哪个与其他3个处于不同年代？
       </div>
       <div class="row">
         <input id="ansOdd" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
@@ -242,7 +250,6 @@
     <div class="msg" id="msg"></div>
   </div>
 
-  <!-- JS 原封不动 -->
   <script>
     const HINT_URL = "https://sorcbear.github.io/playground/riddle/hint";
     const NEXT_URL = "https://sorcbear.github.io/playground/painting/";
@@ -268,14 +275,8 @@
 
     let locked = false;
     let timer = null;
-    let btnTimer = null;
 
     function clean(v){ return (v || "").replace(/\s/g,""); }
-
-    function flashInvert(btn, ms=120){
-      btn.classList.add("invert");
-      setTimeout(()=>btn.classList.remove("invert"), ms);
-    }
 
     function setLocked(v){
       locked = v;
@@ -288,58 +289,45 @@
       ansOdd.disabled = v;
     }
 
-    function setBtnText(text, ms=900){
-      if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
-      submitBtn.textContent = text;
-      submitBtn.classList.add("invert");
-      submitBtn.disabled = true;
-      btnTimer = setTimeout(()=>{
-        submitBtn.textContent = "提交答案";
-        submitBtn.classList.remove("invert");
-        submitBtn.disabled = false;
-        btnTimer = null;
-      }, ms);
-    }
-
-    hintBtn.onclick = ()=>{
-      if (locked) return;
-      flashInvert(hintBtn,120);
-      setTimeout(()=>location.href = HINT_URL,120);
-    };
-
     function isCorrect(){
       const a = clean(ansA.value);
       const b = clean(ansB.value);
       const c = clean(ansC.value);
       const d = clean(ansD.value);
       const o = clean(ansOdd.value);
-      const bOk = (b === "衡山宾馆" || b === "衡山酒店");
-      return a === CORRECT.A && bOk && c === CORRECT.C && d === CORRECT.D && o === CORRECT.ODD;
+      return a==="东湖宾馆" &&
+             (b==="衡山宾馆"||b==="衡山酒店") &&
+             c==="上海大厦" &&
+             d==="瑞金宾馆" &&
+             o==="瑞金宾馆";
     }
 
     submitBtn.onclick = ()=>{
       if (locked) return;
       if (isCorrect()){
         setLocked(true);
-        localStorage.setItem("pg_unlock_paper_v1", "1");
-        let t = COUNTDOWN_START;
-        msg.textContent = `答案正确，即将进入下一题（${t}）`;
+        localStorage.setItem("pg_unlock_paper_v1","1");
+        let t=COUNTDOWN_START;
+        msg.textContent=`答案正确，即将进入下一题（${t}）`;
         msg.classList.add("ok");
-        timer = setInterval(()=>{
+        timer=setInterval(()=>{
           t--;
-          if (t>0){
-            msg.textContent = `答案正确，即将进入下一题（${t}）`;
+          if(t>0){
+            msg.textContent=`答案正确，即将进入下一题（${t}）`;
           }else{
             clearInterval(timer);
-            location.href = NEXT_URL;
+            location.href=NEXT_URL;
           }
         },1000);
       }else{
-        msg.textContent = "";
+        msg.textContent="";
         msg.classList.remove("ok");
-        setBtnText("错了，再试一次", 900);
+        submitBtn.textContent="错了，再试一次";
+        setTimeout(()=>submitBtn.textContent="提交答案",900);
       }
     };
+
+    hintBtn.onclick=()=>location.href=HINT_URL;
   </script>
 </body>
 </html>
