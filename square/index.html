@@ -49,12 +49,12 @@ body{
   padding:18px 14px 28px;
 }
 
-/* ✅ 标题：恢复你原本的间距规范 */
+/* 标题：保持你原有规范 */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
-  margin:0 0 var(--gap);   /* ✅ 只留底部间距 */
+  margin:0 0 var(--gap);
   text-align:left;
   white-space:pre-wrap;
 }
@@ -67,9 +67,10 @@ body{
   gap:8px;
 }
 
-/* 第一张图：缩小 + 黑框 */
+/* ✅ 第一张图：扩大到接近红框范围 */
 .imgframe{
-  width:33.333%;
+  width:100%;
+  max-width:560px;   /* ← 核心控制点（可调 520–640） */
   margin:0 auto;
   border:3px solid #000;
 }
@@ -164,7 +165,6 @@ button:disabled{
 
 @media (max-width:520px){
   button{ width:46vw; }
-  .imgframe{ width:48%; }
 }
 </style>
 </head>
@@ -172,7 +172,6 @@ button:disabled{
 <body>
 <div class="wrap">
 
-  <!-- ✅ 关键：文本不换行、不留空白 -->
   <div class="title">这是一条不超过200米的弄堂（沿着绿色线路探索），请用弄堂里的环境信息完成以下谜题。</div>
 
   <div class="imgbox">
