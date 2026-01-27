@@ -78,8 +78,17 @@ body{
   white-space:pre-wrap;
 }
 
-/* 图片 */
-img{
+/* ✅ 插入图片：行内图标（大小/间距跟文字自然一致） */
+.inlineIcon{
+  height:1em;
+  width:auto;
+  display:inline-block;
+  vertical-align:-0.12em;
+  margin:0 .18em;
+}
+
+/* 图片（仅主图） */
+.puzzleImg{
   width:100%;
   display:block;
   margin:0;
@@ -197,10 +206,10 @@ button:disabled{
 <body>
 <div class="wrap">
 
-  <!-- ✅ 保持一行，避免缩进空白 -->
-  <div class="title">原来是那一天，记得参加完签售会后，我去了衡山公园约会，那里有一个名人雕塑，或许有下一个谜题的线索。</div>
+  <!-- ✅ 只改第一段话：插入行内图片 -->
+  <div class="title">找到衡山公园里 "<img class="inlineIcon" src="icon.png" alt="marker">" 指向的地点，寻找线索。</div>
 
-  <img src="puzzle.png" alt="puzzle">
+  <img class="puzzleImg" src="puzzle.png" alt="puzzle">
 
   <div class="code">
     <div class="title" style="margin:0 0 var(--gap-tight);">请在彩色方框内输入暗号：</div>
