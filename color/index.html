@@ -31,7 +31,7 @@
       --h-btn: 52px;
       --w-btn: 240px;
 
-      /* ✅ 只改颜色：按钮边框变白 */
+      /* ✅ 只改颜色：按钮边框白色 */
       --c-border:#fff;
 
       --c-ok:#0b6b2b;
@@ -66,7 +66,7 @@
       white-space:pre-wrap;
     }
 
-    /* ====== 你说图层没问题：这里不动 ====== */
+    /* ✅ 田字格：无 gap，只有黑色边框（你说图层已解决，这部分不动） */
     .board{
       width:100%;
       background:#000;
@@ -88,6 +88,7 @@
       touch-action:none;
       min-width:0;
       aspect-ratio: 1 / 1;
+
       font-size:0;
       line-height:0;
     }
@@ -111,7 +112,6 @@
       height:calc(100% + 2px);
       display:block;
     }
-    /* ====================================== */
 
     .loading{
       position:absolute;
@@ -188,7 +188,7 @@
       width:4em;
       height:40px;
       padding:0 6px;
-      border:2px solid #000; /* 输入框仍黑边：你没要求改 */
+      border:2px solid var(--c-border); /* 这里保持跟按钮一致：白边 */
       font-weight:700;
       font-family:inherit;
       border-radius:0;
@@ -210,7 +210,7 @@
       align-items:center;
     }
 
-    /* ✅ 按钮：完全按“start UI”那种交互风格来写 */
+    /* ✅ 按钮：完全按你给的 Post Puzzle 交互写法 */
     button.uiBtn{
       width:var(--w-btn);
       height:var(--h-btn);
@@ -220,27 +220,19 @@
       font-weight:600;
       background:#fff;
       color:#000;
-      border:2px solid var(--c-border);   /* ✅ 白边 */
+      border:2px solid var(--c-border); /* ✅ 白边框 */
       cursor:pointer;
       border-radius:0;
-      font-family:inherit;
       -webkit-tap-highlight-color:transparent;
-
-      /* iOS 去掉默认按压阴影/高亮 */
-      appearance:none;
-      -webkit-appearance:none;
+      font-family:inherit;
+      transition:none;
     }
 
-    /* 桌面 hover：黑底白字（和你之前要求一致） */
     @media (hover:hover) and (pointer:fine){
-      button.uiBtn:hover{
-        background:#000;
-        color:#fff;
-      }
+      button.uiBtn:hover{ background:#000; color:#fff; }
     }
 
-    /* 手机/触屏：按下反馈（替代你原来的 invert 闪一下） */
-    button.uiBtn.pressed{
+    button.uiBtn.invert{
       background:#000;
       color:#fff;
     }
@@ -254,9 +246,9 @@
       min-height: 1.4em;
       font-size:14px;
       margin-top: 0;
+      line-height:1.6;
     }
     .msg.ok{ color: var(--c-ok); font-weight:700; }
-    .msg.bad{ color: var(--c-danger); font-weight:700; }
 
     .hintBox{
       display:none;
@@ -303,6 +295,13 @@
 
 <script>
 (() => {
+  /* ==========================
+     ✅ 按钮逻辑同源：Post Puzzle
+     ========================== */
+  const HINT_URL = "https://sorcbear.github.io/playground/post/hint"; // ← 按需改成你的提示页
+  const NEXT_URL = "https://sorcbear.github.io/playground/ppl/";      // ← 按需改成你的下一页
+  const COUNTDOWN_START = 3;
+
   const PALETTE_COLORS = [
     "#2A5A5E",
     "#C62622",
@@ -327,7 +326,7 @@
   const P_BOX_REL = { x: 0.62, y: 0.70, w: 0.26, h: 0.26 };
   const P_STROKE_FACTOR = 0.20;
 
-  const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.24 };
+  const A_BOX_REL = { x: 0.70, y: 0.32, w: 0.24, h: 0.22 };
   const A_STROKE_FACTOR = 0.18;
 
   const L_BOX_REL = { x: 0.61, y: 0.67, w: 0.10, h: 0.07 };
@@ -353,44 +352,39 @@
   const hintBox = document.getElementById("hintBox");
   const msg = document.getElementById("msg");
 
+  let locked = false;
+  let timer = null;
+  let btnTimer = null;
+
   function setMsg(text, cls){
     msg.className = "msg" + (cls ? (" " + cls) : "");
     msg.textContent = text || "";
   }
 
-  /* ✅ 统一“按下反馈”：手机触控和鼠标都一致 */
-  function bindPressFeedback(btn){
-    const down = (e)=>{
-      if(btn.disabled) return;
-      btn.classList.add("pressed");
-    };
-    const up = ()=>{
-      btn.classList.remove("pressed");
-    };
-
-    btn.addEventListener("pointerdown", down, {passive:true});
-    btn.addEventListener("pointerup", up, {passive:true});
-    btn.addEventListener("pointercancel", up, {passive:true});
-    btn.addEventListener("pointerleave", up, {passive:true});
+  function flashInvert(btn, ms=120){
+    btn.classList.add("invert");
+    setTimeout(()=>btn.classList.remove("invert"), ms);
   }
-  bindPressFeedback(btnHint);
-  bindPressFeedback(btnSubmit);
+
+  function setLocked(v){
+    locked = v;
+    btnSubmit.disabled = v;
+    btnHint.disabled = v;
+    ans.disabled = v;
+  }
 
   const SUBMIT_TEXT = "提交答案";
-  let btnTimer = null;
-
-  /* ✅ 这里保持你原来的“禁用+回弹”结构，只改视觉用 pressed，而不是 invert 闪烁 */
   function setBtnText(text, ms=900){
     if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
 
-    btnSubmit.textContent = text || SUBMIT_TEXT;
+    btnSubmit.textContent = text;
+    btnSubmit.classList.add("invert");
     btnSubmit.disabled = true;
-    btnSubmit.classList.add("pressed");  // 黑底白字（和之前一致）
 
     btnTimer = setTimeout(()=>{
       btnSubmit.textContent = SUBMIT_TEXT;
+      btnSubmit.classList.remove("invert");
       btnSubmit.disabled = false;
-      btnSubmit.classList.remove("pressed");
       btnTimer = null;
     }, ms);
   }
@@ -434,7 +428,7 @@
     return cell;
   }
 
-  /* ====== 以下为你图层/蒙版逻辑：完全不动 ====== */
+  /* ===== 图层/蒙版/涂抹逻辑：保持不动 ===== */
   class ScratchTile{
     constructor(tile, root){
       this.tile = tile;
@@ -815,7 +809,6 @@
       this.loading.classList.add("hide");
     }
   }
-  /* ====== 以上不动 ====== */
 
   const tiles = [];
   TILES.forEach((t, idx)=>{
@@ -830,12 +823,11 @@
     });
   });
 
-  btnHint.addEventListener("click", ()=>{
-    hintBox.textContent = HINT_TEXT;
-    hintBox.classList.toggle("show");
-    setMsg("", "");
-    // ✅ hint 按钮点击反馈：由 pressed（pointerdown/up）提供，不额外闪
-  });
+  btnHint.onclick = ()=>{
+    if(locked) return;
+    flashInvert(btnHint, 120);
+    setTimeout(()=>location.href = HINT_URL, 120);
+  };
 
   function normalize4(s){
     return (s || "")
@@ -850,23 +842,37 @@
     ans.value = ans.value.replace(/[^a-zA-Z]/g, "").slice(0,4);
   });
 
-  btnSubmit.addEventListener("click", ()=>{
+  function isCorrect(){
     const v = normalize4(ans.value);
+    return v.length === 4 && v === ANSWER;
+  }
 
-    if(v.length !== 4){
-      setMsg("", "");
-      setBtnText("请输入 4 个字母", 900);
-      return;
-    }
+  btnSubmit.onclick = ()=>{
+    if(locked) return;
 
-    if(v === ANSWER){
-      setMsg("正确。", "ok");
-      setBtnText("正确。", 900);
+    if(isCorrect()){
+      setLocked(true);
+
+      let t = COUNTDOWN_START;
+      setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
+
+      timer = setInterval(()=>{
+        t--;
+        if(t > 0){
+          setMsg(`答案正确，即将进入下一题（${t}）`, "ok");
+        }else{
+          clearInterval(timer);
+          location.href = NEXT_URL;
+        }
+      }, 1000);
     }else{
       setMsg("", "");
-      setBtnText("不正确，再试一次", 900);
+      setBtnText("错了，再试一次", 900);
     }
-  });
+  };
+
+  /* 你原来 hintBox 的逻辑不需要了，但保留 DOM 不影响 */
+  hintBox.textContent = HINT_TEXT;
 })();
 </script>
 </body>
