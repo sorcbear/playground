@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reset Progress</title>
+
+  <style>
+    body{
+      margin:0;
+      min-height:100svh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      background:#fff;
+      color:#111;
+    }
+    button{
+      width:240px;
+      height:56px;
+      font-size:18px;
+      font-weight:600;
+      border:2px solid #000;
+      background:#fff;
+      cursor:pointer;
+    }
+    button:hover{
+      background:#000;
+      color:#fff;
+    }
+  </style>
+</head>
+
+<body>
+  <button id="resetBtn">清空解谜存档</button>
+
+  <script>
+    document.getElementById("resetBtn").onclick = () => {
+      if (!confirm("确定要清空所有解谜进度吗？")) return;
+
+      [
+        "pg_unlock_circle_v1",
+        "pg_unlock_square_v1",
+        "pg_unlock_ppl_v1"
+      ].forEach(k=>{
+        localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
+      });
+
+      alert("存档已清空");
+      location.href = "https://sorcbear.github.io/playground/save";
+    };
+  </script>
+</body>
+</html>
