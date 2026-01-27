@@ -1,160 +1,174 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="format-detection" content="telephone=no,address=no,email=no">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no">
 
-<title>Square Puzzle</title>
+  <title>Square Puzzle</title>
 
-<style>
-:root{
-  /* ✅ 同源：Rotate / Post Puzzle */
-  --maxw: 720px;
+  <style>
+    :root{
+      /* ✅ 同源：Rotate / Post Puzzle */
+      --maxw: 720px;
 
-  --fs-body: 18px;
-  --lh-body: 1.6;
+      --fs-body: 18px;
+      --lh-body: 1.6;
 
-  --fs-hint: 18px;
-  --lh-hint: 1.6;
+      --fs-hint: 18px;
+      --lh-hint: 1.6;
 
-  --fs-btn: 18px;
-  --fw-btn: 600;
-  --h-btn: 52px;
+      --fs-btn: 18px;
+      --fw-btn: 600;
+      --h-btn: 52px;
 
-  --gap: 18px;
-  --gap-tight: 12px;
+      --gap: 18px;
+      --gap-tight: 12px;
 
-  --c-text:#111;
-  --c-border:#000;
-  --c-ok:#0b6b2b;
-  --c-danger:#b00020;
+      --c-text:#111;
+      --c-border:#000;
+      --c-ok:#0b6b2b;
+      --c-danger:#b00020;
 
-  --bg:#fff;
-}
+      --bg:#fff;
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
+      /* ✅ 第一张图（地图）专用控制 */
+      --map-scale: 0.5;   /* ← 改这里即可：0.5 = 现在的一半 */
+    }
 
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--c-text);
-  font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-  font-size:var(--fs-body);
-  line-height:var(--lh-body);
-  -webkit-text-size-adjust:100%;
-}
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
 
-/* ✅ 同源：Rotate / Post Puzzle 容器 */
-.container{
-  max-width:var(--maxw);
-  margin:0 auto;
-  padding:18px 14px 28px;
-}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--c-text);
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size:var(--fs-body);
+      line-height:var(--lh-body);
+      -webkit-text-size-adjust:100%;
+    }
 
-/* ✅ 同源标题规范 */
-.title{
-  font-size:var(--fs-hint);
-  line-height:var(--lh-hint);
-  font-weight:700;
-  margin:4px 0 var(--gap);
-  text-align:left;
-  white-space:pre-wrap;
-}
+    /* ✅ 同源容器（关键：页面真正居中） */
+    .container{
+      max-width:var(--maxw);
+      margin:0 auto;
+      padding:18px 14px 28px;
+    }
 
-/* 图片：同源节奏 */
-.image-box{
-  margin:0 0 var(--gap);
-  text-align:center;
-}
-.image-box img{
-  max-width:100%;
-  height:auto;
-  display:block;
-  margin:0 auto;
-}
+    /* ✅ 标题规范（完全同源） */
+    .title{
+      font-size:var(--fs-hint);
+      line-height:var(--lh-hint);
+      font-weight:700;
+      margin:4px 0 var(--gap);
+      text-align:left;
+      white-space:pre-wrap;
+    }
 
-/* 中间说明文字：只调节上下，不破坏 title 规范 */
-.title.mid{
-  margin-top:var(--gap);
-  margin-bottom:var(--gap);
-}
+    /* 中间那句话，只调上下间距 */
+    .title.mid{
+      margin-top:var(--gap);
+      margin-bottom:var(--gap);
+    }
 
-/* 题目输入行 */
-.answer{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  margin-bottom:calc(var(--gap) * 2);
-}
+    /* 图片区域（同源节奏） */
+    .image-box{
+      margin:0 0 var(--gap);
+      text-align:center;
+    }
 
-.ansInput{
-  width:4em;
-  height:40px;
-  padding:0 6px;
-  border:2px solid var(--c-border);
-  border-radius:0;
-  font-size:18px;
-  text-align:center;
-  outline:none;
-  box-shadow:none;
-  -webkit-appearance:none;
-  font-weight:700;
-  font-family:inherit;
-}
+    .image-box img{
+      display:block;
+      height:auto;
+      margin:0 auto;
+    }
 
-/* 按钮区（同源） */
-.panel{
-  display:flex;
-  gap:12px;
-  justify-content:center;
-}
+    /* ✅ 第一张图：缩放控制（不影响第二张图） */
+    .image-box.map img{
+      max-width: calc(var(--maxw) * var(--map-scale));
+    }
 
-button{
-  width:240px;
-  height:var(--h-btn);
-  padding:0 18px;
-  font-size:var(--fs-btn);
-  font-weight:var(--fw-btn);
-  background:#fff;
-  color:#000;
-  border:2px solid var(--c-border);
-  cursor:pointer;
-  border-radius:0;
-  -webkit-tap-highlight-color:transparent;
-  font-family:inherit;
-}
+    /* 第二张图保持正常宽度 */
+    .image-box.puzzle img{
+      max-width:100%;
+    }
 
-@media (hover:hover) and (pointer:fine){
-  button:hover{ background:#000; color:#fff; }
-}
+    /* 题目输入行 */
+    .answer{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-bottom:calc(var(--gap) * 2);
+    }
 
-button.invert{
-  background:#000;
-  color:#fff;
-}
+    .ansInput{
+      width:4em;
+      height:40px;
+      padding:0 6px;
+      border:2px solid var(--c-border);
+      border-radius:0;
+      font-size:18px;
+      text-align:center;
+      outline:none;
+      box-shadow:none;
+      -webkit-appearance:none;
+      font-weight:700;
+      font-family:inherit;
+    }
 
-button:disabled{
-  opacity:.45;
-  cursor:default;
-}
+    /* 按钮区（同源） */
+    .panel{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+    }
 
-.msg{
-  margin-top:var(--gap-tight);
-  min-height:1.4em;
-  font-size:14px;
-  line-height:1.6;
-}
-.msg.ok{
-  color:var(--c-ok);
-  font-weight:700;
-}
+    button{
+      width:240px;
+      height:var(--h-btn);
+      padding:0 18px;
+      font-size:var(--fs-btn);
+      font-weight:var(--fw-btn);
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+      -webkit-tap-highlight-color:transparent;
+      font-family:inherit;
+    }
 
-@media (max-width:520px){
-  button{ width:46vw; }
-}
-</style>
+    @media (hover:hover) and (pointer:fine){
+      button:hover{ background:#000; color:#fff; }
+    }
+
+    button.invert{
+      background:#000;
+      color:#fff;
+    }
+
+    button:disabled{
+      opacity:.45;
+      cursor:default;
+    }
+
+    .msg{
+      margin-top:var(--gap-tight);
+      min-height:1.4em;
+      font-size:14px;
+      line-height:1.6;
+    }
+
+    .msg.ok{
+      color:var(--c-ok);
+      font-weight:700;
+    }
+
+    @media (max-width:520px){
+      button{ width:46vw; }
+    }
+  </style>
 </head>
 
 <body>
@@ -162,13 +176,15 @@ button:disabled{
 
   <div class="title">这是一条不超过200米的弄堂（沿着绿线探索）。</div>
 
-  <div class="image-box">
+  <!-- 第一张图（地图，已缩小） -->
+  <div class="image-box map">
     <img src="map_152.png" alt="map 152">
   </div>
 
   <div class="title mid">请用弄堂里的环境信息完成以下谜题。</div>
 
-  <div class="image-box">
+  <!-- 第二张图（谜题图，原尺寸逻辑） -->
+  <div class="image-box puzzle">
     <img src="puzzle.jpg" alt="square puzzle">
   </div>
 
