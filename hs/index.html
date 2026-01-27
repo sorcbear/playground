@@ -114,6 +114,17 @@
     }
     .btn:hover{ background:#000; color:#fff; }
 
+    /* ✅ 灰色 + 不可点击（用于 起点/天平路/康平路） */
+    .btn-disabled{
+      background:#cccccc;
+      cursor: default;
+      pointer-events:none;     /* ✅ 关键：完全禁用点击/触摸 */
+    }
+    .btn-disabled:hover{
+      background:#cccccc;      /* ✅ hover 不变黑 */
+      color:#000;
+    }
+
     /* ✅ iPhone/窄屏：与最新 Save 一致（更高、间距更大、线更长） */
     @media (max-width: 520px){
       :root{
@@ -161,6 +172,15 @@
       btn.className = "btn";
       btn.type = "button";
       btn.textContent = n.text;
+
+      // ✅ 起点 / 天平路 / 康平路：变灰且不可点击
+      if(n.text === "起点" || n.text === "天平路" || n.text === "康平路"){
+        btn.classList.add("btn-disabled");
+        // 不绑定 onclick
+        return btn;
+      }
+
+      // ✅ 衡山路：保持可点击
       btn.onclick = () => location.href = n.url;
       return btn;
     }
