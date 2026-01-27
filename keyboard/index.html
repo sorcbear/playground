@@ -8,7 +8,6 @@
 
 <style>
 :root{
-  /* ✅ 同源：Rotate */
   --maxw: 720px;
 
   --fs-body: 18px;
@@ -28,7 +27,7 @@
   --c-border:#000;
   --c-danger:#b00020;
 
-  /* ✅ 你原本的“声音启用”绿（保持原色，不做朦胧） */
+  /* ✅ 统一绿色：按钮/进度/成功/启用声音 全部同一个变量 */
   --c-green:#12b76a;
 
   --bg:#fff;
@@ -55,17 +54,16 @@ body{
   padding:18px 14px 28px;
 }
 
-/* ✅ 标题 UI（同源 Rotate titleLine） */
+/* 标题 UI */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
-  margin:4px 0 var(--gap-tight); /* ✅ 更近一点（你要“进度那行更贴近上面”） */
+  margin:4px 0 var(--gap-tight);
   text-align:left;
   white-space:pre-wrap;
 }
 
-/* ✅ 状态也用标题 UI */
 .statusTitle{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
@@ -74,19 +72,16 @@ body{
   white-space:pre-wrap;
 }
 
-/* 失败状态：红色加粗 */
 .statusFail{
   color:var(--c-danger);
   font-weight:800;
 }
-
-/* 进度/成功/启用声音：用“启用声音”同款绿色 */
 .statusOk{
   color:var(--c-green);
   font-weight:800;
 }
 
-/* ✅ 下面一行说明：略小 + 加粗 */
+/* 说明行：略小 + 加粗 */
 .subnote{
   font-size:14px;
   line-height:1.5;
@@ -99,24 +94,23 @@ body{
   font-weight:800;
 }
 
-/* 顶部栏：左状态 + 右按钮 */
+/* 顶部栏 */
 .topbar{
   display:flex;
-  gap:12px;
+  gap:10px;
   align-items:center;
   justify-content:space-between;
   margin:0 0 var(--gap-tight);
 }
 .btnsTop{
   display:flex;
-  gap:12px;
+  gap:10px;
   flex:0 0 auto;
   align-items:center;
 }
 
-/* ✅ 同源按钮：直角 */
+/* 同源按钮：直角 */
 button{
-  width:240px;
   height:var(--h-btn);
   padding:0 18px;
   box-sizing:border-box;
@@ -126,7 +120,7 @@ button{
   color:#000;
   border:2px solid var(--c-border);
   cursor:pointer;
-  border-radius:0;                 /* ✅ 直角 */
+  border-radius:0;
   -webkit-tap-highlight-color:transparent;
   font-family:inherit;
   transition:none;
@@ -137,36 +131,35 @@ button{
 button.invert{ background:#000; color:#fff; }
 button:disabled{ opacity:.45; cursor:default; }
 
-/* 顶部两个按钮更紧凑 */
+/* ✅ 顶部两个按钮：用“按内容自适应”，并给不同按钮不同最小宽度 */
 .btnSmall{
   width:auto;
-  min-width: 140px;
   height:44px;
   padding:0 14px;
   font-size:16px;
+  white-space:nowrap;
 }
 
-/* ✅ 启动声音：保持原本绿底，不加“朦胧层”，字纯黑 */
+/* 启动声音稍宽、重置更窄 */
+.btnAudio{ min-width: 132px; }  /* “启动声音/声音已启用” 都不挤 */
+.btnReset{ min-width: 72px;  }  /* “重置” 只有2字就窄 */
+
+/* ✅ 启动声音：保持原色绿底，字纯黑；禁用也不变淡 */
 .okBtn{
   background:var(--c-green);
   border:2px solid var(--c-green);
-  color:#000;              /* ✅ 纯黑 */
+  color:#000;
   font-weight:800;
 }
-/* ✅ 关键：启用后按钮会 disabled，默认 opacity=.45 会变“朦胧”——这里强制不降透明度 */
 .okBtn:disabled{
   opacity:1;
   cursor:default;
 }
-/* hover 时也不改变颜色（保持“原本色的绿色”） */
 @media (hover:hover) and (pointer:fine){
-  .okBtn:hover{
-    background:var(--c-green);
-    color:#000;
-  }
+  .okBtn:hover{ background:var(--c-green); color:#000; }
 }
 
-/* 键盘区域：保持你现在的稳定定位策略 */
+/* 键盘区域 */
 .kbd{
   position:relative;
   width:100%;
@@ -174,7 +167,7 @@ button:disabled{ opacity:.45; cursor:default; }
   background:#fff;
   touch-action:none;
   margin:0 0 var(--gap-tight);
-  aspect-ratio: 1024 / 461; /* 会在 img load 后自动覆盖为真实比例 */
+  aspect-ratio: 1024 / 461;
 }
 .kbd-inner{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;}
 #kbdImg{
@@ -191,18 +184,16 @@ button:disabled{ opacity:.45; cursor:default; }
 .segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,160,90,.70);background:rgba(0,160,90,.06);display:none;}
 .debug .segbox{display:block;}
 
-/* Debug 按钮在琴键下面：单独一行，居中（暂时保留） */
 .debugRow{
   display:flex;
   justify-content:center;
   margin-top: var(--gap-tight);
 }
-.debugRow button{
-  width:240px;
-}
+.debugRow button{ width:240px; }
 
 @media (max-width:520px){
-  .btnSmall{ min-width: 120px; }
+  .btnAudio{ min-width: 124px; }
+  .btnReset{ min-width: 68px; }
 }
 </style>
 </head>
@@ -215,8 +206,8 @@ button:disabled{ opacity:.45; cursor:default; }
   <div class="topbar">
     <div class="statusTitle" id="status">未开始</div>
     <div class="btnsTop">
-      <button id="audioBtn" class="btnSmall okBtn">启动声音</button>
-      <button id="resetBtn" class="btnSmall">重置</button>
+      <button id="audioBtn" class="btnSmall btnAudio okBtn">启动声音</button>
+      <button id="resetBtn" class="btnSmall btnReset">重置</button>
     </div>
   </div>
 
@@ -242,7 +233,6 @@ button:disabled{ opacity:.45; cursor:default; }
   const MAX_GAP = 5.0;
 
   const GLOBAL_NUDGE = 0;
-
   const NEXT_URL = "https://sorcbear.github.io/playground/end/";
   const BOUNDARY_SCALE = 0.9920;
 
