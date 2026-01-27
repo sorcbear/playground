@@ -30,7 +30,9 @@ button:active{transform:translateY(1px)}
 .hint{font-size:12px;line-height:1.35;margin:0 0 6px;}
 .small{font-size:11px;opacity:.75;margin-top:2px;line-height:1.25;}
 
-/* ✅ 改：kbd 直接固定图片比例（跨设备更稳），不再用 ::before padding-top 估算 */
+/* ✅ 用稳定比例，避免不同设备地址栏/布局导致的高度漂移
+   你的 keyboard.png 若不是 1024x461，请改这个比例（宽/高）
+*/
 .kbd{
   position:relative;
   width:100%;
@@ -38,10 +40,9 @@ button:active{transform:translateY(1px)}
   background:#fff;
   touch-action:none;
   margin:0;
-  aspect-ratio: 1024 / 461; /* keyboard.png 的宽高比（如你换图可改） */
+  aspect-ratio: 1024 / 461;
 }
 
-/* 图片铺满 kbd（contain） */
 .kbd-inner{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;}
 #kbdImg{
   width:100%;
@@ -105,10 +106,6 @@ button:active{transform:translateY(1px)}
 
   // 边界整体压缩（校准用）
   const BOUNDARY_SCALE = 0.9920;
-
-  // ✅ 边界“死区”：避免点在分隔线附近因不同设备取整抖动而误判
-  // 0.04~0.10 都可；越大越不容易误判，但越容易“点了没反应”
-  const DEADZONE_RATIO = 0.06;
 
   const KEYS = [
     {c:"green",n:"so",m:55},
@@ -196,10 +193,16 @@ button:active{transform:translateY(1px)}
 
   // ✅ 用图片真实渲染矩形做坐标系（跨设备最稳）
   function getImageDrawRect(){
-    const ir = img.getBoundingClientRect();
+    const ir = img.getBoundingClientRect();   // ✅ 图片实际渲染框
     const iw = img.naturalWidth || 1024;
     const ih = img.naturalHeight || 461;
-    return { dx: ir.left, dy: ir.top, dw: ir.width, dh: ir.height, iw, ih };
+    return {
+      dx: ir.left,
+      dy: ir.top,
+      dw: ir.width,
+      dh: ir.height,
+      iw, ih
+    };
   }
 
   function fallbackEqualBoundaries(n){
@@ -220,7 +223,7 @@ button:active{transform:translateY(1px)}
       out[i] = center + (out[i]-center) * scale;
     }
 
-    // 保证严格递增（用极小 epsilon）
+    // 严格递增（极小 epsilon 修正，不做 Math.round）
     out[0]=0; out[out.length-1]=iw;
     const eps = 1e-6;
     for(let i=1;i<out.length;i++){
@@ -328,6 +331,7 @@ button:active{transform:translateY(1px)}
 
     let refined = chosen.map(p => snapToDarkRunCenter(p.x));
 
+    // 线性拟合，提升稳定性
     let sumk=0, sumx=0, sumkk=0, sumkx=0;
     for(let i=0;i<need;i++){
       const k=i+1;
@@ -362,10 +366,11 @@ button:active{transform:translateY(1px)}
     }
 
     refined = fitted.map(x => snapSmall(x) + GLOBAL_NUDGE);
-    const bds=[0, ...refined, iw];
 
+    const bds=[0, ...refined, iw];
+    const eps=1e-6;
     for(let i=1;i<bds.length;i++){
-      if(bds[i]<=bds[i-1]) bds[i]=bds[i-1]+1e-6;
+      if(bds[i]<=bds[i-1]) bds[i]=bds[i-1]+eps;
     }
     return bds;
   }
@@ -384,7 +389,7 @@ button:active{transform:translateY(1px)}
     layoutOverlay();
   }
 
-  // ✅ overlay 用“imgRect 相对 kbdRect”的真实偏移
+  // ✅ overlay 用“imgRect 相对 kbdRect”的真实偏移（保证绿线与点击同一坐标系）
   function layoutOverlay(){
     if(!boundaries || segBoxes.length!==FIX_N) return;
 
@@ -392,8 +397,8 @@ button:active{transform:translateY(1px)}
     const ir  = img.getBoundingClientRect();
     const iw  = img.naturalWidth || 1024;
 
-    const offsetX = ir.left - kbr.left;
-    const w = ir.width;
+    const offsetX = ir.left - kbr.left; // img 在 kbd 内的真实左偏移
+    const w = ir.width;                 // img 在屏幕上的真实宽度
 
     for(let i=0;i<FIX_N;i++){
       const x0 = offsetX + (boundaries[i]   / iw) * w;
@@ -403,7 +408,7 @@ button:active{transform:translateY(1px)}
     }
   }
 
-  // ✅ 点击定位：完全基于 img 的真实渲染框 + 自然像素边界
+  // ✅ 点击定位：不设死区，不“中间优先”，边缘/黑线也会判定到某个键（硬切分）
   function pointToLocalIndex(clientX, clientY){
     const ir = img.getBoundingClientRect();
     if(clientX<ir.left || clientX>ir.right || clientY<ir.top || clientY>ir.bottom) return null;
@@ -422,17 +427,7 @@ button:active{transform:translateY(1px)}
       const mid=(lo+hi)>>1;
       if(xNat < bds[mid]) hi=mid-1;
       else if(xNat >= bds[mid+1]) lo=mid+1;
-      else {
-        // ✅ 边界死区：减少跨设备误判（尤其是点分隔线）
-        const x0=bds[mid], x1=bds[mid+1];
-        const w = x1-x0;
-        const dead = w * DEADZONE_RATIO;
-
-        if((xNat - x0) < dead) return null;
-        if((x1 - xNat) < dead) return null;
-
-        return mid;
-      }
+      else return mid;
     }
     return null;
   }
@@ -506,7 +501,7 @@ button:active{transform:translateY(1px)}
 
     ev.preventDefault();
     const localIdx = pointToLocalIndex(ev.clientX, ev.clientY);
-    if(localIdx === null) return; // ✅ 死区/无效区域不响应
+    if(localIdx === null) return;
     pressLocal(localIdx);
   }
   kbd.addEventListener("pointerdown", handlePointerDown, {passive:false});
@@ -536,13 +531,19 @@ button:active{transform:translateY(1px)}
     debugBtn.textContent = on ? "Debug On" : "Debug";
     if(on){
       statusEl.textContent =
-        `Debug: ${boundarySource || "?"}, scale=${BOUNDARY_SCALE}, dpr=${window.devicePixelRatio || 1}, dead=${DEADZONE_RATIO}`;
+        `Debug: ${boundarySource || "?"}, scale=${BOUNDARY_SCALE}, dpr=${window.devicePixelRatio || 1}`;
       statusEl.style.color="#111";
       layoutOverlay();
     }
   });
 
   img.addEventListener("load", ()=>{
+    // ✅ 可选：自动从图片真实比例更新 aspect-ratio（防止你换图忘了改 CSS）
+    // 这行会覆盖 CSS 的 aspect-ratio，让不同设备更一致
+    const iw = img.naturalWidth || 1024;
+    const ih = img.naturalHeight || 461;
+    kbd.style.aspectRatio = `${iw} / ${ih}`;
+
     let bds = detectBoundaries12BySeparators();
     if(!bds || bds.length !== FIX_N+1){
       boundarySource = "fallback";
