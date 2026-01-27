@@ -201,7 +201,7 @@ button:disabled{ opacity:.45; cursor:default; }
 <body>
 <div class="wrap">
 
-  <div class="title">请按照正确的曲谱顺序（4.1,10.5,10.9,15.2）演奏乐曲，相邻两次点击间隔需≤ 5 秒（超时算作失败将重置）。</div>
+  <div class="title">拿出道具包里的五线谱，按照正确的曲谱顺序（8,4,6）演奏乐曲。相邻两次点击间隔需≤ 5 秒（超时算作失败将重置）。</div>
 
   <div class="topbar">
     <div class="statusTitle" id="status">未开始</div>
@@ -552,7 +552,7 @@ button:disabled{ opacity:.45; cursor:default; }
     }
 
     if(globalIdx !== needIdx){
-      fail("音符错误，请再弹一次");
+      fail("音符错误");
       return;
     }
 
