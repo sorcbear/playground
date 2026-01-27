@@ -66,8 +66,13 @@ body{
   white-space:pre-wrap;
 }
 
-/* 图片 */
-.imgbox{ margin:0; }
+/* 图片（两张图竖排，间距尽量小，宽度一致） */
+.imgbox{
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  gap:8px; /* ✅ 两张图间距：想更小改成 4px/2px */
+}
 .imgbox img{
   display:block;
   width:100%;
@@ -166,9 +171,10 @@ button:disabled{
 <div class="wrap">
 
   <!-- ✅ 关键：不要在文本前加换行/空格 -->
-  <div class="title">康平路152弄是一条不超过200米的弄堂，请用弄堂里的环境信息完成以下谜题。</div>
+  <div class="title">这是一条不超过200米的弄堂（沿着绿色线路探索），请用弄堂里的环境信息完成以下谜题。</div>
 
   <div class="imgbox">
+    <img src="map_152.png" alt="map 152">
     <img src="puzzle.jpg" alt="square puzzle">
   </div>
 
