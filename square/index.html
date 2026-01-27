@@ -27,6 +27,10 @@
   --c-danger:#b00020;
 
   --gap: 18px;
+
+  /* ✅ 中间说明文字的独立间距控制 */
+  --mid-gap-top: 28px;      /* 地图 → 文字 */
+  --mid-gap-bottom: 18px;   /* 文字 → 第二张图 */
 }
 
 *{ box-sizing:border-box; }
@@ -49,7 +53,7 @@ body{
   padding:18px 14px 28px;
 }
 
-/* 标题 / 说明文字（统一规范） */
+/* 标题 / 说明文字（全局规范，不乱动） */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
@@ -57,6 +61,12 @@ body{
   margin:0 0 var(--gap);
   text-align:left;
   white-space:pre-wrap;
+}
+
+/* ✅ 只给中间那句话用 */
+.title-mid{
+  margin-top:var(--mid-gap-top);
+  margin-bottom:var(--mid-gap-bottom);
 }
 
 /* 图片区域 */
@@ -67,12 +77,11 @@ body{
   gap:8px;
 }
 
-/* 第一张图：地图（较大显示 + 黑框） */
+/* 第一张图：地图（无边框） */
 .imgframe{
   width:100%;
   max-width:560px;   /* 控制在你红框的视觉范围 */
   margin:0 auto;
-  border:3px solid #000;
 }
 .imgframe img{
   display:block;
@@ -80,7 +89,7 @@ body{
   height:auto;
 }
 
-/* 第二张图保持原样 */
+/* 第二张图 */
 .imgbox > img{
   display:block;
   width:100%;
@@ -182,8 +191,8 @@ button:disabled{
     </div>
   </div>
 
-  <!-- 第二段话（插在两张图之间） -->
-  <div class="title">请用弄堂里的环境信息完成以下谜题。</div>
+  <!-- 中间说明（可独立调间距） -->
+  <div class="title title-mid">请用弄堂里的环境信息完成以下谜题。</div>
 
   <!-- 第二张图 -->
   <div class="imgbox">
