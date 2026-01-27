@@ -61,6 +61,9 @@
       text-align:left;
       white-space:pre-wrap;
     }
+    .title.tightGap{
+      margin-bottom: var(--gap-tight); /* 12px */
+    }
 
     /* 图片区：保持你原逻辑，只同源节奏 */
     .image-box{
@@ -164,12 +167,12 @@
     </div>
 
     <!-- ✅ 底部说明 -->
-    <div class="title">
+    <div class="title tightGap">
 请输入“已完成的装置”上可见的所有数字的总和：
     </div>
 
     <div class="answer">
-      <input class="ansInput" placeholder="数字总和" inputmode="numeric" autocomplete="off" />
+      <input class="ansInput" inputmode="numeric" autocomplete="off" />
     </div>
 
     <div class="panel">
