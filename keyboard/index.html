@@ -30,10 +30,28 @@ button:active{transform:translateY(1px)}
 .hint{font-size:12px;line-height:1.35;margin:0 0 6px;}
 .small{font-size:11px;opacity:.75;margin-top:2px;line-height:1.25;}
 
-.kbd{position:relative;width:100%;overflow:hidden;background:#fff;touch-action:none;margin:0;}
-.kbd::before{content:"";display:block;padding-top:34%;}
+/* ✅ 改：kbd 直接固定图片比例（跨设备更稳），不再用 ::before padding-top 估算 */
+.kbd{
+  position:relative;
+  width:100%;
+  overflow:hidden;
+  background:#fff;
+  touch-action:none;
+  margin:0;
+  aspect-ratio: 1024 / 461; /* keyboard.png 的宽高比（如你换图可改） */
+}
+
+/* 图片铺满 kbd（contain） */
 .kbd-inner{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;}
-#kbdImg{width:100%;height:100%;object-fit:contain;object-position:center top;display:block;pointer-events:none;background:#fff;}
+#kbdImg{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center top;
+  display:block;
+  pointer-events:none;
+  background:#fff;
+}
 
 .overlay{position:absolute;inset:0;pointer-events:none;}
 .segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,160,90,.70);background:rgba(0,160,90,.06);display:none;}
@@ -43,7 +61,6 @@ button:active{transform:translateY(1px)}
   .wrap{padding:4px 8px;}
   .hint{margin-bottom:4px;}
   button{padding:7px 10px;}
-  .kbd::before{padding-top:26%;}
 }
 </style>
 </head>
@@ -51,7 +68,6 @@ button:active{transform:translateY(1px)}
 <body>
 <div class="wrap">
 
-  <!-- 新增：页面最上面一句话 -->
   <div class="intro">请按照正确的曲谱顺序（4.1,10.5,10.9,15.2）演奏乐曲。</div>
 
   <div class="topbar">
@@ -87,8 +103,12 @@ button:active{transform:translateY(1px)}
   // success 后跳转目标
   const NEXT_URL = "https://sorcbear.github.io/playground/end/";
 
-  // 这里你改 0.8 应该会“明显压缩”，如果你看不到变化，一定是旧文件/缓存 或 fallback 未应用
+  // 边界整体压缩（校准用）
   const BOUNDARY_SCALE = 0.9920;
+
+  // ✅ 边界“死区”：避免点在分隔线附近因不同设备取整抖动而误判
+  // 0.04~0.10 都可；越大越不容易误判，但越容易“点了没反应”
+  const DEADZONE_RATIO = 0.06;
 
   const KEYS = [
     {c:"green",n:"so",m:55},
@@ -174,44 +194,41 @@ button:active{transform:translateY(1px)}
   let segBoxes=[];
   let boundarySource=""; // "detected" | "fallback"
 
+  // ✅ 用图片真实渲染矩形做坐标系（跨设备最稳）
   function getImageDrawRect(){
-    const cr = kbd.getBoundingClientRect();
-    const cw=cr.width, ch=cr.height;
-    const iw=img.naturalWidth||1024, ih=img.naturalHeight||461;
-    const scale=Math.min(cw/iw, ch/ih);
-    const dw=iw*scale, dh=ih*scale;
-    const dx=cr.left+(cw-dw)/2;
-    const dy=cr.top +(ch-dh)/2;
-    return {dx,dy,dw,dh,iw,ih,cw,ch};
+    const ir = img.getBoundingClientRect();
+    const iw = img.naturalWidth || 1024;
+    const ih = img.naturalHeight || 461;
+    return { dx: ir.left, dy: ir.top, dw: ir.width, dh: ir.height, iw, ih };
   }
 
   function fallbackEqualBoundaries(n){
     const iw = img.naturalWidth || 1024;
     const bds=[0];
-    for(let i=1;i<n;i++) bds.push(Math.round(iw*i/n));
+    for(let i=1;i<n;i++) bds.push(iw*i/n);
     bds.push(iw);
     return bds;
   }
 
-  // 关键：无论 detected / fallback，都统一在这里做缩放
+  // ✅ 浮点边界（避免 round 在不同 DPR 上放大误差）
   function applyScaleToBoundaries(bds, scale){
     const iw = img.naturalWidth || 1024;
     const center = iw * 0.5;
     const out = bds.slice();
 
     for(let i=1;i<out.length-1;i++){
-      out[i] = Math.round(center + (out[i]-center) * scale);
+      out[i] = center + (out[i]-center) * scale;
     }
 
-    // 保证严格递增
+    // 保证严格递增（用极小 epsilon）
     out[0]=0; out[out.length-1]=iw;
+    const eps = 1e-6;
     for(let i=1;i<out.length;i++){
-      if(out[i] <= out[i-1]) out[i] = out[i-1] + 1;
+      if(out[i] <= out[i-1]) out[i] = out[i-1] + eps;
       if(out[i] > iw) out[i] = iw;
     }
-    // 再从右往左修正，避免尾部挤爆
     for(let i=out.length-2;i>=0;i--){
-      if(out[i] >= out[i+1]) out[i] = out[i+1] - 1;
+      if(out[i] >= out[i+1]) out[i] = out[i+1] - eps;
       if(out[i] < 0) out[i] = 0;
     }
     out[0]=0; out[out.length-1]=iw;
@@ -306,7 +323,7 @@ button:active{transform:translateY(1px)}
       let a=bestX, b=bestX;
       while(a>L  && raw[a-1] >= th) a--;
       while(b<Rr && raw[b+1] >= th) b++;
-      return Math.round((a+b)/2);
+      return (a+b)/2;
     }
 
     let refined = chosen.map(p => snapToDarkRunCenter(p.x));
@@ -323,7 +340,7 @@ button:active{transform:translateY(1px)}
     const a0 = (sumx - d*sumk) / n;
 
     const fitted=[];
-    for(let k=1;k<=need;k++) fitted.push(Math.round(a0 + d*k));
+    for(let k=1;k<=need;k++) fitted.push(a0 + d*k);
 
     function snapSmall(x0){
       const R = 4;
@@ -341,14 +358,14 @@ button:active{transform:translateY(1px)}
       let a=bestX, b=bestX;
       while(a>L  && raw[a-1] >= th) a--;
       while(b<Rr && raw[b+1] >= th) b++;
-      return Math.round((a+b)/2);
+      return (a+b)/2;
     }
 
     refined = fitted.map(x => snapSmall(x) + GLOBAL_NUDGE);
     const bds=[0, ...refined, iw];
 
     for(let i=1;i<bds.length;i++){
-      if(bds[i]<=bds[i-1]) bds[i]=bds[i-1]+1;
+      if(bds[i]<=bds[i-1]) bds[i]=bds[i-1]+1e-6;
     }
     return bds;
   }
@@ -367,27 +384,37 @@ button:active{transform:translateY(1px)}
     layoutOverlay();
   }
 
+  // ✅ overlay 用“imgRect 相对 kbdRect”的真实偏移
   function layoutOverlay(){
     if(!boundaries || segBoxes.length!==FIX_N) return;
-    const r = getImageDrawRect();
-    const leftPad = (r.cw - r.dw)/2;
+
+    const kbr = kbd.getBoundingClientRect();
+    const ir  = img.getBoundingClientRect();
+    const iw  = img.naturalWidth || 1024;
+
+    const offsetX = ir.left - kbr.left;
+    const w = ir.width;
 
     for(let i=0;i<FIX_N;i++){
-      const x0 = boundaries[i]   / r.iw * r.dw + leftPad;
-      const x1 = boundaries[i+1] / r.iw * r.dw + leftPad;
-      segBoxes[i].style.left = x0 + "px";
+      const x0 = offsetX + (boundaries[i]   / iw) * w;
+      const x1 = offsetX + (boundaries[i+1] / iw) * w;
+      segBoxes[i].style.left  = x0 + "px";
       segBoxes[i].style.width = Math.max(0, x1-x0) + "px";
     }
   }
 
+  // ✅ 点击定位：完全基于 img 的真实渲染框 + 自然像素边界
   function pointToLocalIndex(clientX, clientY){
-    const r = getImageDrawRect();
-    if(clientX<r.dx || clientX>r.dx+r.dw || clientY<r.dy || clientY>r.dy+r.dh) return null;
+    const ir = img.getBoundingClientRect();
+    if(clientX<ir.left || clientX>ir.right || clientY<ir.top || clientY>ir.bottom) return null;
 
-    const yNat = (clientY-r.dy)/r.dh*r.ih;
-    if(yNat < r.ih*0.52) return null;
+    const iw = img.naturalWidth || 1024;
+    const ih = img.naturalHeight || 461;
 
-    const xNat = (clientX-r.dx)/r.dw*r.iw;
+    const yNat = (clientY - ir.top) / ir.height * ih;
+    if(yNat < ih*0.52) return null;
+
+    const xNat = (clientX - ir.left) / ir.width * iw;
     const bds = boundaries || fallbackEqualBoundaries(FIX_N);
 
     let lo=0, hi=FIX_N-1;
@@ -395,7 +422,17 @@ button:active{transform:translateY(1px)}
       const mid=(lo+hi)>>1;
       if(xNat < bds[mid]) hi=mid-1;
       else if(xNat >= bds[mid+1]) lo=mid+1;
-      else return mid;
+      else {
+        // ✅ 边界死区：减少跨设备误判（尤其是点分隔线）
+        const x0=bds[mid], x1=bds[mid+1];
+        const w = x1-x0;
+        const dead = w * DEADZONE_RATIO;
+
+        if((xNat - x0) < dead) return null;
+        if((x1 - xNat) < dead) return null;
+
+        return mid;
+      }
     }
     return null;
   }
@@ -451,7 +488,6 @@ button:active{transform:translateY(1px)}
       statusEl.textContent="success";
       statusEl.style.color="#067647";
 
-      /* 新增：success 后自动跳转 */
       setTimeout(() => {
         location.href = NEXT_URL;
       }, 800);
@@ -470,11 +506,15 @@ button:active{transform:translateY(1px)}
 
     ev.preventDefault();
     const localIdx = pointToLocalIndex(ev.clientX, ev.clientY);
-    if(localIdx === null) return;
+    if(localIdx === null) return; // ✅ 死区/无效区域不响应
     pressLocal(localIdx);
   }
   kbd.addEventListener("pointerdown", handlePointerDown, {passive:false});
-  window.addEventListener("resize", ()=>layoutOverlay());
+
+  function relayoutAll(){
+    layoutOverlay();
+  }
+  window.addEventListener("resize", relayoutAll);
 
   audioBtn.addEventListener("click", async ()=>{
     try{
@@ -495,8 +535,10 @@ button:active{transform:translateY(1px)}
     const on = document.body.classList.toggle("debug");
     debugBtn.textContent = on ? "Debug On" : "Debug";
     if(on){
-      statusEl.textContent = `Debug: ${boundarySource || "?"}, scale=${BOUNDARY_SCALE}`;
+      statusEl.textContent =
+        `Debug: ${boundarySource || "?"}, scale=${BOUNDARY_SCALE}, dpr=${window.devicePixelRatio || 1}, dead=${DEADZONE_RATIO}`;
       statusEl.style.color="#111";
+      layoutOverlay();
     }
   });
 
