@@ -26,8 +26,10 @@
 
   --c-text:#111;
   --c-border:#000;
-  --c-ok:#0b6b2b;
   --c-danger:#b00020;
+
+  /* ✅ 你原本的“声音启用”绿（保持原色，不做朦胧） */
+  --c-green:#12b76a;
 
   --bg:#fff;
 }
@@ -58,7 +60,7 @@ body{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
-  margin:4px 0 var(--gap);
+  margin:4px 0 var(--gap-tight); /* ✅ 更近一点（你要“进度那行更贴近上面”） */
   text-align:left;
   white-space:pre-wrap;
 }
@@ -72,15 +74,15 @@ body{
   white-space:pre-wrap;
 }
 
-/* 失败状态：红色加粗（仍是标题 UI） */
+/* 失败状态：红色加粗 */
 .statusFail{
   color:var(--c-danger);
   font-weight:800;
 }
 
-/* 进度/成功/启用声音：绿色（同源 ok 绿） */
+/* 进度/成功/启用声音：用“启用声音”同款绿色 */
 .statusOk{
-  color:var(--c-ok);
+  color:var(--c-green);
   font-weight:800;
 }
 
@@ -91,6 +93,10 @@ body{
   font-weight:700;
   margin:0 0 var(--gap);
   white-space:pre-wrap;
+}
+.subnote .greenWord{
+  color:var(--c-green);
+  font-weight:800;
 }
 
 /* 顶部栏：左状态 + 右按钮 */
@@ -140,15 +146,24 @@ button:disabled{ opacity:.45; cursor:default; }
   font-size:16px;
 }
 
-/* 启动声音按钮保持绿色底（你说颜色不变） */
+/* ✅ 启动声音：保持原本绿底，不加“朦胧层”，字纯黑 */
 .okBtn{
-  background:#12b76a;
-  color:#052;
-  border:2px solid #12b76a;
+  background:var(--c-green);
+  border:2px solid var(--c-green);
+  color:#000;              /* ✅ 纯黑 */
   font-weight:800;
 }
+/* ✅ 关键：启用后按钮会 disabled，默认 opacity=.45 会变“朦胧”——这里强制不降透明度 */
+.okBtn:disabled{
+  opacity:1;
+  cursor:default;
+}
+/* hover 时也不改变颜色（保持“原本色的绿色”） */
 @media (hover:hover) and (pointer:fine){
-  .okBtn:hover{ background:#0ea765; color:#052; }
+  .okBtn:hover{
+    background:var(--c-green);
+    color:#000;
+  }
 }
 
 /* 键盘区域：保持你现在的稳定定位策略 */
@@ -176,7 +191,7 @@ button:disabled{ opacity:.45; cursor:default; }
 .segbox{position:absolute;top:0;bottom:0;outline:1px solid rgba(0,160,90,.70);background:rgba(0,160,90,.06);display:none;}
 .debug .segbox{display:block;}
 
-/* Debug 按钮移到琴键下面：单独一行，居中 */
+/* Debug 按钮在琴键下面：单独一行，居中（暂时保留） */
 .debugRow{
   display:flex;
   justify-content:center;
@@ -187,7 +202,6 @@ button:disabled{ opacity:.45; cursor:default; }
 }
 
 @media (max-width:520px){
-  /* 手机上顶部按钮不要过宽 */
   .btnSmall{ min-width: 120px; }
 }
 </style>
@@ -196,7 +210,6 @@ button:disabled{ opacity:.45; cursor:default; }
 <body>
 <div class="wrap">
 
-  <!-- ✅ 这句话：标题 UI 规范 -->
   <div class="title">请按照正确的曲谱顺序（4.1,10.5,10.9,15.2）演奏乐曲，相邻两次点击间隔需≤ 5 秒（超时算作失败将重置）。</div>
 
   <div class="topbar">
@@ -207,8 +220,7 @@ button:disabled{ opacity:.45; cursor:default; }
     </div>
   </div>
 
-  <!-- ✅ 下面文字改成你要的；略小 + 加粗 -->
-  <div class="subnote">弹奏前需先点击“启动声音”，可横屏操作。</div>
+  <div class="subnote">弹奏前需点击“<span class="greenWord">启动声音</span>”，手机可横屏操作。</div>
 
   <div class="kbd" id="kbd">
     <div class="kbd-inner">
@@ -217,7 +229,6 @@ button:disabled{ opacity:.45; cursor:default; }
     <div class="overlay" id="overlay"></div>
   </div>
 
-  <!-- ✅ Debug 移到底下（暂时保留） -->
   <div class="debugRow">
     <button id="debugBtn">Debug</button>
   </div>
@@ -232,10 +243,7 @@ button:disabled{ opacity:.45; cursor:default; }
 
   const GLOBAL_NUDGE = 0;
 
-  // success 后跳转目标
   const NEXT_URL = "https://sorcbear.github.io/playground/end/";
-
-  // 边界整体压缩（校准用）
   const BOUNDARY_SCALE = 0.9920;
 
   const KEYS = [
@@ -318,23 +326,9 @@ button:disabled{ opacity:.45; cursor:default; }
   const resetBtn=document.getElementById("resetBtn");
   const debugBtn=document.getElementById("debugBtn");
 
-  let boundaries=null; // length FIX_N+1
+  let boundaries=null;
   let segBoxes=[];
-  let boundarySource=""; // "detected" | "fallback"
-
-  // ✅ 用图片真实渲染矩形做坐标系（跨设备最稳）
-  function getImageDrawRect(){
-    const ir = img.getBoundingClientRect();   // ✅ 图片实际渲染框
-    const iw = img.naturalWidth || 1024;
-    const ih = img.naturalHeight || 461;
-    return {
-      dx: ir.left,
-      dy: ir.top,
-      dw: ir.width,
-      dh: ir.height,
-      iw, ih
-    };
-  }
+  let boundarySource="";
 
   function fallbackEqualBoundaries(n){
     const iw = img.naturalWidth || 1024;
@@ -344,7 +338,6 @@ button:disabled{ opacity:.45; cursor:default; }
     return bds;
   }
 
-  // ✅ 浮点边界（避免 round 在不同 DPR 上放大误差）
   function applyScaleToBoundaries(bds, scale){
     const iw = img.naturalWidth || 1024;
     const center = iw * 0.5;
@@ -424,7 +417,7 @@ button:disabled{ opacity:.45; cursor:default; }
     if(peaks.length < 11) return null;
 
     peaks.sort((a,b)=>b.v-a.v);
-    const need = FIX_N - 1; // 11
+    const need = FIX_N - 1;
     const minDist = Math.floor(iw/(FIX_N*1.20));
     const chosen=[];
     for(const p of peaks){
@@ -439,41 +432,6 @@ button:disabled{ opacity:.45; cursor:default; }
     }
     if(chosen.length!==need) return null;
     chosen.sort((a,b)=>a.x-b.x);
-
-    function snapToDarkRunCenter(x0){
-      const R = 10;
-      const L = Math.max(2, x0 - R);
-      const Rr = Math.min(iw - 3, x0 + R);
-
-      let bestX=x0, bestV=-1;
-      for(let x=L;x<=Rr;x++){
-        const v=raw[x];
-        if(v>bestV){ bestV=v; bestX=x; }
-      }
-      if(bestV<=0) return bestX;
-
-      const th = bestV * 0.90;
-      let a=bestX, b=bestX;
-      while(a>L  && raw[a-1] >= th) a--;
-      while(b<Rr && raw[b+1] >= th) b++;
-      return (a+b)/2;
-    }
-
-    let refined = chosen.map(p => snapToDarkRunCenter(p.x));
-
-    let sumk=0, sumx=0, sumkk=0, sumkx=0;
-    for(let i=0;i<need;i++){
-      const k=i+1;
-      const x=refined[i];
-      sumk += k; sumx += x; sumkk += k*k; sumkx += k*x;
-    }
-    const n=need;
-    const denom = (n*sumkk - sumk*sumk) || 1;
-    const d = (n*sumkx - sumk*sumx) / denom;
-    const a0 = (sumx - d*sumk) / n;
-
-    const fitted=[];
-    for(let k=1;k<=need;k++) fitted.push(a0 + d*k);
 
     function snapSmall(x0){
       const R = 4;
@@ -494,8 +452,7 @@ button:disabled{ opacity:.45; cursor:default; }
       return (a+b)/2;
     }
 
-    refined = fitted.map(x => snapSmall(x) + GLOBAL_NUDGE);
-
+    const refined = chosen.map(p => snapSmall(p.x) + GLOBAL_NUDGE);
     const bds=[0, ...refined, iw];
     const eps=1e-6;
     for(let i=1;i<bds.length;i++){
@@ -508,7 +465,6 @@ button:disabled{ opacity:.45; cursor:default; }
     overlay.innerHTML="";
     segBoxes=[];
     if(!boundaries) return;
-
     for(let i=0;i<FIX_N;i++){
       const box=document.createElement("div");
       box.className="segbox";
@@ -536,7 +492,6 @@ button:disabled{ opacity:.45; cursor:default; }
     }
   }
 
-  // ✅ 点击定位：边缘也判定（硬切分），且与绿线同一坐标系（img rect）
   function pointToLocalIndex(clientX, clientY){
     const ir = img.getBoundingClientRect();
     if(clientX<ir.left || clientX>ir.right || clientY<ir.top || clientY>ir.bottom) return null;
@@ -572,15 +527,13 @@ button:disabled{ opacity:.45; cursor:default; }
     step=0; lastTime=null;
     setStatus(msg, "");
   }
-
   function fail(msg){
-    reset("失败：" + msg + "（已重置）");
-    statusEl.classList.add("statusFail");
+    setStatus("失败：" + msg + "（已重置）", "statusFail");
+    step=0; lastTime=null;
   }
-
   function timeoutReset(){
-    reset("失败：超时（已重置）");
-    statusEl.classList.add("statusFail");
+    setStatus("失败：超时（已重置）", "statusFail");
+    step=0; lastTime=null;
   }
 
   function pressLocal(localIdx){
@@ -609,7 +562,6 @@ button:disabled{ opacity:.45; cursor:default; }
     }
 
     if(globalIdx !== needIdx){
-      // ✅ 你指定的句子：标题 UI + 红色加粗
       fail("音符错误，请再弹一次");
       return;
     }
@@ -619,7 +571,6 @@ button:disabled{ opacity:.45; cursor:default; }
       setStatus("success", "statusOk");
       setTimeout(() => { location.href = NEXT_URL; }, 800);
     } else {
-      // ✅ 进度：标题 UI + 绿色（同“声音已启用”）
       setStatus(`进度 ${step}/${target.length}`, "statusOk");
     }
   }
@@ -651,7 +602,6 @@ button:disabled{ opacity:.45; cursor:default; }
       await enableAudio();
       audioBtn.textContent="声音已启用";
       audioBtn.disabled=true;
-      // ✅ 用标题 UI，绿色
       setStatus("声音已启用，开始弹奏", "statusOk");
     }catch(e){
       setStatus("失败：启用声音失败（请再点一次）", "statusFail");
@@ -676,7 +626,6 @@ button:disabled{ opacity:.45; cursor:default; }
   });
 
   img.addEventListener("load", ()=>{
-    // ✅ 自动从图片真实比例更新 aspect-ratio（防止换图忘记改）
     const iw = img.naturalWidth || 1024;
     const ih = img.naturalHeight || 461;
     kbd.style.aspectRatio = `${iw} / ${ih}`;
@@ -690,7 +639,6 @@ button:disabled{ opacity:.45; cursor:default; }
     }
 
     boundaries = applyScaleToBoundaries(bds, BOUNDARY_SCALE);
-
     buildOverlay();
     reset("未开始");
   });
