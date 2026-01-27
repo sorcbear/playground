@@ -827,14 +827,13 @@ button:disabled{ opacity:.45; cursor:default; }
 
     timer = setInterval(()=>{
       t--;
-      if(t>0){
+
+      if(t >= 0){
         setStatus(`答案正确，即将进入下一题（${t}）`, "statusOk");
       }else{
         clearInterval(timer);
         timer=null;
-
-        // ✅ 关键改动：倒计时结束 → 触发同款爆炸 → 跳转
-        latchThenExplodeAndGo();
+        latchThenExplodeAndGo(); // ✅ 0 显示完 1 秒后才爆炸
       }
     }, 1000);
   }
