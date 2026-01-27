@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Save</title>
+
+  <style>
+    :root{
+      --fs-body: 18px;
+
+      --btn-h: 56px;
+      --btn-w: 140px;
+      --bg:#fff;
+      --c-border:#000;
+
+      --map-w: 780;
+      --map-h: 520;
+
+      --line-w: 8px;
+
+      --cap-sz: 34px;
+
+      /* 与最新 Save 一致 */
+      --gap-cap-btn: 24px;
+      --gap-btn: 20px;
+      --pad-top: 14px;
+      --pad-bottom: 14px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      padding:0;
+      background:#fff;
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size:var(--fs-body);
+      color:#111;
+    }
+
+    .wrap{
+      min-height:100svh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:16px 16px 32px;
+    }
+
+    .notice{
+      width:100%;
+      text-align:center;
+      font-size:13px;
+      font-weight:700;
+      color:#000;
+      margin:4px 0 14px;
+    }
+
+    .map{
+      position:relative;
+      width:min(780px, 100%);
+      aspect-ratio: calc(var(--map-w) / var(--map-h));
+    }
+
+    .wires{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      pointer-events:none;
+    }
+
+    .node{
+      position:absolute;
+      transform:translate(-50%,-50%);
+    }
+
+    .cap{
+      width:var(--cap-sz);
+      height:var(--cap-sz);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .cap svg{ width:100%; height:100%; display:block; }
+
+    .btn{
+      width:var(--btn-w);
+      height:var(--btn-h);
+      padding:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:var(--fs-body);
+      font-weight:600;
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      cursor:pointer;
+      border-radius:0;
+      appearance:none;
+      -webkit-appearance:none;
+      background-image:none;
+      box-shadow:none;
+      white-space:nowrap;
+      -webkit-tap-highlight-color:transparent;
+      user-select:none;
+    }
+    .btn:hover{ background:#000; color:#fff; }
+
+    /* 灰色 + 不可点击 */
+    .btn-disabled{
+      background:#cccccc;
+      cursor:default;
+      pointer-events:none;
+    }
+    .btn-disabled:hover{
+      background:#cccccc;
+      color:#000;
+    }
+
+    @media (max-width:520px){
+      :root{
+        --gap-cap-btn:34px;
+        --gap-btn:30px;
+        --pad-top:18px;
+        --pad-bottom:18px;
+      }
+      .map{
+        width:100%;
+        max-width:420px;
+        height:min(68svh,560px);
+        aspect-ratio:auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="notice"></div>
+
+    <div class="map" id="map">
+      <svg class="wires" id="wires"
+           viewBox="0 0 100 100"
+           preserveAspectRatio="none"
+           aria-hidden="true"></svg>
+    </div>
+  </div>
+
+  <script>
+    const X = 50.0;
+
+    // 起点 / 天平路 / 康平路 / 衡山路（灰不可点） + 终点（可点）
+    const VIS = [
+      { text:"起点",   url:"https://sorcbear.github.io/playground/rotate",  disabled:true },
+      { text:"天平路", url:"https://sorcbear.github.io/playground/circle",  disabled:true },
+      { text:"康平路", url:"https://sorcbear.github.io/playground/square",  disabled:true },
+      { text:"衡山路", url:"https://sorcbear.github.io/playground/ppl",     disabled:true },
+      { text:"终点",   url:"https://sorcbear.github.io/playground/painting/", disabled:false }
+    ];
+
+    function makeBtn(n){
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.type = "button";
+      btn.textContent = n.text;
+
+      if(n.disabled){
+        btn.classList.add("btn-disabled");
+        return btn;
+      }
+
+      btn.onclick = () => location.href = n.url;
+      return btn;
+    }
+
+    function makeCap(){
+      const d = document.createElement("div");
+      d.className = "cap";
+      d.innerHTML = `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <rect x="8" y="8" width="48" height="48" fill="#000"/>
+        </svg>`;
+      return d;
+    }
+
+    function cssNum(varName, fallback){
+      const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function computeLayout(mapH, visLen){
+      const cap = cssNum("--cap-sz",34);
+      const btnH = cssNum("--btn-h",56);
+      const topPad = cssNum("--pad-top",14);
+      const bottomPad = cssNum("--pad-bottom",14);
+
+      let gapCapBtn = cssNum("--gap-cap-btn",24);
+      let gapBtn = cssNum("--gap-btn",20);
+
+      const fixed = topPad + cap + (visLen * btnH) + bottomPad;
+      const needGaps = gapCapBtn + Math.max(0,visLen-1)*gapBtn;
+      const availGaps = Math.max(0,mapH-fixed);
+      const scale = needGaps>0 ? Math.max(0.55,Math.min(1,availGaps/needGaps)) : 1;
+
+      gapCapBtn*=scale;
+      gapBtn*=scale;
+
+      const capY = topPad + cap/2;
+      let y = capY + cap/2 + gapCapBtn + btnH/2;
+
+      const ys=[];
+      for(let i=0;i<visLen;i++){
+        ys.push(y);
+        y+=btnH+gapBtn;
+      }
+
+      return {
+        capYPct:(capY/mapH)*100,
+        yPctList:ys.map(v=>(v/mapH)*100)
+      };
+    }
+
+    function render(){
+      const map=document.getElementById("map");
+      const wires=document.getElementById("wires");
+      map.querySelectorAll(".node").forEach(el=>el.remove());
+      wires.innerHTML="";
+
+      const lw=cssNum("--line-w",8);
+
+      function addLine(x1,y1,x2,y2){
+        const ln=document.createElementNS("http://www.w3.org/2000/svg","line");
+        ln.setAttribute("x1",x1);
+        ln.setAttribute("y1",y1);
+        ln.setAttribute("x2",x2);
+        ln.setAttribute("y2",y2);
+        ln.setAttribute("stroke","#000");
+        ln.setAttribute("stroke-width",lw);
+        ln.setAttribute("vector-effect","non-scaling-stroke");
+        ln.setAttribute("stroke-linecap","square");
+        wires.appendChild(ln);
+      }
+
+      const mapH=map.getBoundingClientRect().height||1;
+      const layout=computeLayout(mapH,VIS.length);
+
+      const capNode=document.createElement("div");
+      capNode.className="node";
+      capNode.style.left=X+"%";
+      capNode.style.top=layout.capYPct+"%";
+      capNode.appendChild(makeCap());
+      map.appendChild(capNode);
+
+      for(let i=0;i<VIS.length;i++){
+        const wrap=document.createElement("div");
+        wrap.className="node";
+        wrap.style.left=X+"%";
+        wrap.style.top=layout.yPctList[i]+"%";
+        wrap.appendChild(makeBtn(VIS[i]));
+        map.appendChild(wrap);
+      }
+
+      addLine(X,layout.capYPct,X,layout.yPctList[0]);
+      for(let i=1;i<VIS.length;i++){
+        addLine(X,layout.yPctList[i-1],X,layout.yPctList[i]);
+      }
+    }
+
+    render();
+
+    let raf=0;
+    function scheduleRender(){
+      cancelAnimationFrame(raf);
+      raf=requestAnimationFrame(render);
+    }
+    window.addEventListener("resize",scheduleRender,{passive:true});
+    window.addEventListener("orientationchange",scheduleRender,{passive:true});
+  </script>
+</body>
+</html>
