@@ -77,8 +77,6 @@ body{
   font-weight:700;
   margin:0;
   white-space:pre-wrap;
-
-  /* ✅ 一开始就占两行高度 */
   min-height: var(--status-2line-h);
 }
 
@@ -181,6 +179,31 @@ button:disabled{ opacity:.45; cursor:default; }
   .btnAudio{ min-width: 124px; }
   .btnReset{ min-width: 68px; }
 }
+
+/* =========================
+   ✅ Start Game 同款爆炸层（完全一样）
+   ========================= */
+#fx{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  pointer-events:none;
+  z-index:9999;
+  opacity:0;
+}
+
+@keyframes shake {
+  0%{ transform:translate(0,0); }
+  15%{ transform:translate(-9px,7px); }
+  30%{ transform:translate(8px,-7px); }
+  45%{ transform:translate(-7px,-9px); }
+  60%{ transform:translate(7px,9px); }
+  75%{ transform:translate(-5px,7px); }
+  90%{ transform:translate(5px,-7px); }
+  100%{ transform:translate(0,0); }
+}
+.shake{ animation:shake 0.55s ease-in-out; }
 </style>
 </head>
 
@@ -210,6 +233,9 @@ button:disabled{ opacity:.45; cursor:default; }
 
 </div>
 
+<!-- ✅ Start Game 同款爆炸 canvas -->
+<canvas id="fx"></canvas>
+
 <script>
 (() => {
   const FIX_N = 12;
@@ -220,8 +246,12 @@ button:disabled{ opacity:.45; cursor:default; }
   const NEXT_URL = "https://sorcbear.github.io/playground/end/";
   const BOUNDARY_SCALE = 0.9920;
 
-  /* ✅ 新增：成功后倒计时逻辑（同 symbol） */
+  /* ✅ 成功后倒计时（同你之前要求） */
   const COUNTDOWN_START = 3;
+
+  /* ✅ Start Game 同款爆炸时序（完全一样） */
+  const PAUSE_BEFORE_LATCH_MS = 1000;
+  const LATCH_TO_BOOM_MS = 500;
 
   const KEYS = [
     {c:"green",n:"so",m:55},
@@ -250,6 +280,7 @@ button:disabled{ opacity:.45; cursor:default; }
   ];
 
   let audioCtx=null, audioEnabled=false;
+
   function ensureAudioCtx(){
     const AC = window.AudioContext || window.webkitAudioContext;
     if(!audioCtx) audioCtx = new AC();
@@ -260,6 +291,7 @@ button:disabled{ opacity:.45; cursor:default; }
     if(ctx.state==="suspended") await ctx.resume();
     audioEnabled = true;
   }
+
   function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
   function playTone(freq, duration=1.25){
     if(!audioEnabled || !audioCtx) return;
@@ -302,6 +334,10 @@ button:disabled{ opacity:.45; cursor:default; }
   const audioBtn=document.getElementById("audioBtn");
   const resetBtn=document.getElementById("resetBtn");
   const debugBtn=document.getElementById("debugBtn");
+
+  /* ✅ Start Game 同款爆炸 canvas/context */
+  const fx = document.getElementById("fx");
+  const fxCtx = fx.getContext("2d", { alpha:true });
 
   let boundaries=null;
   let segBoxes=[];
@@ -494,13 +530,13 @@ button:disabled{ opacity:.45; cursor:default; }
 
   let step=0, lastTime=null;
 
-  /* ✅ 新增：成功后锁定与倒计时 */
+  /* ✅ 成功后锁定与倒计时 */
   let locked=false;
   let timer=null;
 
   function setLocked(v){
     locked=v;
-    audioBtn.disabled = v || audioBtn.disabled;  // 成功后强制禁用（已启用时本来就禁用）
+    audioBtn.disabled = v || audioBtn.disabled;
     resetBtn.disabled = v;
     debugBtn.disabled = v;
   }
@@ -516,6 +552,9 @@ button:disabled{ opacity:.45; cursor:default; }
     locked=false;
     setLocked(false);
 
+    // ✅ 若爆炸层还在，复位为透明（不影响其它逻辑）
+    fx.style.opacity = "0";
+
     step=0; lastTime=null;
     setStatus(msg, "");
   }
@@ -529,6 +568,253 @@ button:disabled{ opacity:.45; cursor:default; }
     if(locked) return;
     setStatus("失败：超时（已重置）", "statusFail");
     step=0; lastTime=null;
+  }
+
+  /* =========================================================
+     ✅ Start Game 同款爆炸：视觉 + shake + latch/boom 音效
+     （只在成功倒计时结束触发，不改其它路径）
+     ========================================================= */
+
+  function resizeFx(){
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    fx.width = Math.floor(innerWidth * dpr);
+    fx.height = Math.floor(innerHeight * dpr);
+    fx.style.width = innerWidth + "px";
+    fx.style.height = innerHeight + "px";
+    fxCtx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener("resize", resizeFx);
+  resizeFx();
+
+  function doShakeOnce(){
+    document.documentElement.classList.add("shake");
+    document.body.classList.add("shake");
+    setTimeout(() => {
+      document.documentElement.classList.remove("shake");
+      document.body.classList.remove("shake");
+    }, 560);
+  }
+
+  const RINGS = ["#ff6a00","#c84500","#b00000","#000000"];
+
+  function squareDistNorm(x, y, cx, cy, maxD){
+    const dx = Math.abs(x - cx);
+    const dy = Math.abs(y - cy);
+    return Math.min(1, Math.max(dx, dy) / maxD);
+  }
+
+  function drawSquareExpand(progress){
+    const w = innerWidth, h = innerHeight;
+    const cx = w/2, cy = h/2;
+    const maxD = Math.max(cx, w - cx, cy, h - cy);
+
+    const hc = navigator.hardwareConcurrency || 8;
+    const cell = (hc <= 4) ? 28 : 22;
+
+    fxCtx.fillStyle = "#000";
+    fxCtx.fillRect(0,0,w,h);
+
+    const front = Math.min(1, progress);
+    const step = 0.085;
+
+    for(let y=0; y<h; y+=cell){
+      for(let x=0; x<w; x+=cell){
+        const gx = x + cell/2;
+        const gy = y + cell/2;
+
+        const dn = squareDistNorm(gx, gy, cx, cy, maxD);
+        if(dn > front) continue;
+
+        const ratio = dn / Math.max(0.0001, front);
+        const band = Math.min(1, Math.floor(ratio / step) * step);
+
+        const idx = Math.min(RINGS.length - 1, Math.floor(band * (RINGS.length)));
+        fxCtx.fillStyle = RINGS[idx];
+        fxCtx.fillRect(x, y, cell, cell);
+      }
+    }
+  }
+
+  function runSquareExplosionFx(onDone){
+    fx.style.opacity = "1";
+
+    const t0 = performance.now();
+    const phaseExpand = 920;
+    const phaseHoldBlack = 220;
+    const TOTAL_MS = phaseExpand + phaseHoldBlack;
+
+    let shook = false;
+    let doneCalled = false;
+
+    const hardTimeout = setTimeout(() => {
+      if(doneCalled) return;
+      doneCalled = true;
+      try { onDone && onDone(); } catch(e) {}
+    }, TOTAL_MS + 600);
+
+    function finish(){
+      if(doneCalled) return;
+      doneCalled = true;
+      clearTimeout(hardTimeout);
+      if(typeof onDone === "function") onDone();
+    }
+
+    function tick(now){
+      const dt = now - t0;
+
+      if(dt <= phaseExpand){
+        const p = dt / phaseExpand;
+        drawSquareExpand(p);
+
+        if(!shook && p > 0.42){
+          shook = true;
+          doShakeOnce();
+        }
+
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      fxCtx.fillStyle = "#000";
+      fxCtx.fillRect(0,0,innerWidth,innerHeight);
+
+      if(dt <= TOTAL_MS){
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      finish();
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  function playLatch(){
+    if(!audioEnabled || !audioCtx) return;
+    const ctx = audioCtx;
+    const t0 = ctx.currentTime;
+
+    const outGain = ctx.createGain();
+    outGain.gain.setValueAtTime(1.0, t0);
+    outGain.connect(ctx.destination);
+
+    const o1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    o1.type = "square";
+    o1.frequency.setValueAtTime(260, t0);
+    o1.frequency.exponentialRampToValueAtTime(150, t0 + 0.12);
+    g1.gain.setValueAtTime(0.0001, t0);
+    g1.gain.linearRampToValueAtTime(0.95, t0 + 0.008);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+    o1.connect(g1);
+    g1.connect(outGain);
+    o1.start(t0);
+    o1.stop(t0 + 0.20);
+
+    const t1 = t0 + 0.18;
+    const o2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    o2.type = "square";
+    o2.frequency.setValueAtTime(210, t1);
+    o2.frequency.exponentialRampToValueAtTime(120, t1 + 0.10);
+    g2.gain.setValueAtTime(0.0001, t1);
+    g2.gain.linearRampToValueAtTime(0.88, t1 + 0.008);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.16);
+    o2.connect(g2);
+    g2.connect(outGain);
+    o2.start(t1);
+    o2.stop(t1 + 0.18);
+
+    const dur = 0.42;
+    const bufferSize = Math.floor(ctx.sampleRate * dur);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++){
+      const x = i / bufferSize;
+      const raw = (Math.random()*2-1);
+      data[i] = raw * (0.55*(1-x));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(900, t0);
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(1900, t0);
+    bp.Q.setValueAtTime(6, t0);
+
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t0);
+    ng.gain.linearRampToValueAtTime(0.72, t0 + 0.02);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+    src.connect(hp);
+    hp.connect(bp);
+    bp.connect(ng);
+    ng.connect(outGain);
+
+    src.start(t0);
+    src.stop(t0 + dur);
+  }
+
+  function playExplosion(){
+    if(!audioEnabled || !audioCtx) return;
+    const ctx = audioCtx;
+
+    const duration = 0.90;
+    const bufferSize = Math.floor(ctx.sampleRate * duration);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for(let i=0;i<bufferSize;i++){
+      const x = i / bufferSize;
+      const noise = (Math.random()*2-1);
+      const thump = Math.sin(2*Math.PI*50*x) * (1-x);
+      const punch = (x < 0.16) ? 1.55 : 1.0;
+      data[i] = (noise*1.05 + thump*0.60) * (1 - x) * punch;
+    }
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1600, ctx.currentTime);
+    lp.frequency.exponentialRampToValueAtTime(420, ctx.currentTime + duration);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(1.0, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+    const outGain = ctx.createGain();
+    outGain.gain.setValueAtTime(1.0, ctx.currentTime);
+    outGain.connect(ctx.destination);
+
+    src.connect(lp);
+    lp.connect(gain);
+    gain.connect(outGain);
+
+    src.start();
+  }
+
+  function latchThenExplodeAndGo(){
+    // 复用 Start Game 的时序：先等 1s，再 latch；再等 0.5s boom + fx；fx done 后跳转
+    setTimeout(() => {
+      playLatch();
+
+      setTimeout(() => {
+        playExplosion();
+
+        runSquareExplosionFx(() => {
+          setTimeout(() => { location.href = NEXT_URL; }, 80);
+        });
+
+      }, LATCH_TO_BOOM_MS);
+
+    }, PAUSE_BEFORE_LATCH_MS);
   }
 
   function startSuccessCountdown(){
@@ -546,7 +832,9 @@ button:disabled{ opacity:.45; cursor:default; }
       }else{
         clearInterval(timer);
         timer=null;
-        location.href = NEXT_URL;
+
+        // ✅ 关键改动：倒计时结束 → 触发同款爆炸 → 跳转
+        latchThenExplodeAndGo();
       }
     }, 1000);
   }
@@ -585,8 +873,7 @@ button:disabled{ opacity:.45; cursor:default; }
 
     step++;
     if(step === target.length){
-      /* ✅ 改这里：不再显示 success + setTimeout(800) 跳转
-         ✅ 改成同 symbol：锁定 + 倒计时跳转 */
+      // ✅ 成功后：3秒倒计时（你原要求）→ 倒计时结束触发爆炸
       startSuccessCountdown();
     } else {
       setStatus(`进度 ${step}/${target.length}`, "statusOk");
