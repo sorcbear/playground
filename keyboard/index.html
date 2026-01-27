@@ -21,14 +21,17 @@
   --h-btn: 52px;
 
   --gap: 18px;
-  --gap-tight: 24px;
+  --gap-tight: 12px;
 
   --c-text:#111;
   --c-border:#000;
   --c-danger:#b00020;
 
-  /* ✅ 稍微更深一点的绿 */
-  --c-green:#0ea965;
+  /* ✅ 统一绿色：按钮/进度/成功/启用声音 全部同一个变量 */
+  --c-green:#12b76a;
+
+  /* ✅ 状态区域固定两行高度 + 按钮对齐用 */
+  --status-2line-h: calc(var(--fs-hint) * var(--lh-hint) * 2);
 
   --bg:#fff;
 }
@@ -54,7 +57,7 @@ body{
   padding:18px 14px 28px;
 }
 
-/* 顶部说明（合并后的整段） */
+/* 标题 UI */
 .title{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
@@ -63,41 +66,53 @@ body{
   text-align:left;
   white-space:pre-wrap;
 }
-.title .greenWord{
-  color:var(--c-green);
-  font-weight:800;
-}
 
 .statusTitle{
   font-size:var(--fs-hint);
   line-height:var(--lh-hint);
   font-weight:700;
   margin:0;
+  white-space:pre-wrap;
 
-  /* ✅ 固定占 2 行高度，避免键盘上下跳 */
-  min-height: calc(var(--fs-hint) * var(--lh-hint) * 2);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;   /* ✅ 最多显示两行 */
-  overflow: hidden;
+  /* ✅ 固定两行高度：避免不同提示语把键盘顶来顶去 */
+  min-height: var(--status-2line-h);
 }
 
-.statusFail{ color:var(--c-danger); font-weight:800; }
-.statusOk{ color:var(--c-green); font-weight:800; }
+.statusFail{
+  color:var(--c-danger);
+  font-weight:800;
+}
+.statusOk{
+  color:var(--c-green);
+  font-weight:800;
+}
+
+/* 说明行：略小 + 加粗 */
+.subnote{
+  font-size:14px;
+  line-height:1.5;
+  font-weight:700;
+  margin:0 0 var(--gap);
+  white-space:pre-wrap;
+}
+.subnote .greenWord{
+  color:var(--c-green);
+  font-weight:800;
+}
 
 /* 顶部栏 */
 .topbar{
   display:flex;
   gap:10px;
-  align-items:stretch;        /* ✅ 关键：左右两列同高 */
+  align-items:flex-start;          /* ✅ 让顶部对齐更稳定 */
   justify-content:space-between;
   margin:0 0 var(--gap-tight);
 }
 .btnsTop{
   display:flex;
   gap:10px;
-  align-items:center;         /* 按钮在自身高度内垂直居中 */
-  height:100%;                /* ✅ 撑满 topbar 的高度 */
+  flex:0 0 auto;
+  align-items:stretch;             /* ✅ 按钮高度吃满自身 height */
 }
 
 /* 同源按钮：直角 */
@@ -122,25 +137,30 @@ button{
 button.invert{ background:#000; color:#fff; }
 button:disabled{ opacity:.45; cursor:default; }
 
-/* 顶部两个按钮：按内容自适应 */
+/* ✅ 顶部两个按钮：高度=状态两行高度，保证上下沿对齐 */
 .btnSmall{
   width:auto;
-  height:44px;
+  height: var(--status-2line-h);   /* ✅ 关键：按钮上下沿=两行状态上下沿 */
   padding:0 14px;
   font-size:16px;
   white-space:nowrap;
 }
-.btnAudio{ min-width: 132px; }
-.btnReset{ min-width: 72px; }
 
-/* 启动声音：深绿底，字黑；禁用不变淡 */
+/* 启动声音稍宽、重置更窄 */
+.btnAudio{ min-width: 132px; }  /* “启动声音/声音已启用” 都不挤 */
+.btnReset{ min-width: 72px;  }  /* “重置” 只有2字就窄 */
+
+/* ✅ 启动声音：绿底黑字；禁用也不变淡 */
 .okBtn{
   background:var(--c-green);
   border:2px solid var(--c-green);
   color:#000;
   font-weight:800;
 }
-.okBtn:disabled{ opacity:1; cursor:default; }
+.okBtn:disabled{
+  opacity:1;
+  cursor:default;
+}
 @media (hover:hover) and (pointer:fine){
   .okBtn:hover{ background:var(--c-green); color:#000; }
 }
@@ -187,7 +207,7 @@ button:disabled{ opacity:.45; cursor:default; }
 <body>
 <div class="wrap">
 
-  <div class="title">拿出道具包里的五线谱，按照正确的曲谱顺序（8,4,6）演奏乐曲。相邻两次点击间隔需≤ 5 秒（超时算作失败将重置）。弹奏前需点击“<span class="greenWord">启动声音</span>”，手机建议横屏操作。</div>
+  <div class="title">请按照正确的曲谱顺序（4.1,10.5,10.9,15.2）演奏乐曲，相邻两次点击间隔需≤ 5 秒（超时算作失败将重置）。</div>
 
   <div class="topbar">
     <div class="statusTitle" id="status">未开始</div>
@@ -196,6 +216,8 @@ button:disabled{ opacity:.45; cursor:default; }
       <button id="resetBtn" class="btnSmall btnReset">重置</button>
     </div>
   </div>
+
+  <div class="subnote">弹奏前需点击“<span class="greenWord">启动声音</span>”，手机可横屏操作。</div>
 
   <div class="kbd" id="kbd">
     <div class="kbd-inner">
@@ -536,7 +558,7 @@ button:disabled{ opacity:.45; cursor:default; }
     }
 
     if(globalIdx !== needIdx){
-      fail("音符错误");
+      fail("音符错误，请再弹一次");
       return;
     }
 
@@ -570,9 +592,9 @@ button:disabled{ opacity:.45; cursor:default; }
     setTimeout(()=>btn.classList.remove("invert"), ms);
   }
 
+  /* ✅ 声音按钮：完全不闪（不调用 flashInvert） */
   audioBtn.addEventListener("click", async ()=>{
     try{
-      flashInvert(audioBtn,120);
       await enableAudio();
       audioBtn.textContent="声音已启用";
       audioBtn.disabled=true;
@@ -582,11 +604,13 @@ button:disabled{ opacity:.45; cursor:default; }
     }
   });
 
+  /* ✅ 重置按钮：保留闪一下 */
   resetBtn.addEventListener("click", ()=>{
     flashInvert(resetBtn,120);
     reset("已重置");
   });
 
+  /* Debug：保持原逻辑（也会闪） */
   debugBtn.addEventListener("click", ()=>{
     flashInvert(debugBtn,120);
     const on = document.body.classList.toggle("debug");
