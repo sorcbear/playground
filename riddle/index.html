@@ -8,7 +8,6 @@
 
   <style>
     :root{
-      /* ===== 同源（Rotate）基础 ===== */
       --maxw: 720px;
 
       --fs-body: 18px;
@@ -53,7 +52,6 @@
       padding:18px 14px 28px;
     }
 
-    /* ===== 标题同源（titleLine） ===== */
     .titleLine{
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
@@ -63,10 +61,7 @@
       white-space:pre-wrap;
     }
 
-    /* 斜体对白：与 address 页一致（不加粗、斜体、紧贴） */
-    .quotes{
-      margin-top:1em;
-    }
+    .quotes{ margin-top:1em; }
     .quote{
       margin:0;
       font-style:italic;
@@ -75,10 +70,7 @@
       white-space:pre-wrap;
     }
 
-    /* ===== 表单区 ===== */
-    .formBlock{
-      margin-top:var(--gap);
-    }
+    .formBlock{ margin-top:var(--gap); }
 
     .row{
       display:flex;
@@ -94,7 +86,6 @@
       font-weight:700;
     }
 
-    /* 输入框：同源（与你之前一贯的方框输入一致） */
     .ansInput{
       height:var(--h-input);
       line-height:var(--h-input);
@@ -117,10 +108,21 @@
     }
     .ansInput:focus{ outline:none; box-shadow:none; }
 
-    /* 宽度：4字答案 */
+    /* ✅ placeholder 样式（新增） */
+    .ansInput::placeholder{
+      color:#888;
+      font-weight:700;
+      text-align:center;
+      opacity:1;
+    }
+    .ansInput::-webkit-input-placeholder{
+      color:#888;
+      font-weight:700;
+      text-align:center;
+    }
+
     .w4{ width:6.2em; }
 
-    /* A/B/C/D 位置对齐 */
     .abcdn{
       width:1.6em;
       text-align:center;
@@ -130,7 +132,6 @@
       user-select:none;
     }
 
-    /* ===== 按钮：同源 Square/Rotate 按钮 ===== */
     .panel{
       margin-top:var(--gap);
       display:flex;
@@ -143,7 +144,6 @@
       width:240px;
       height:var(--h-btn);
       padding:0 18px;
-      box-sizing:border-box;
       font-size:var(--fs-btn);
       font-weight:var(--fw-btn);
       background:#fff;
@@ -154,7 +154,7 @@
       -webkit-tap-highlight-color:transparent;
       font-family:inherit;
       user-select:none;
-      transition:none; /* 瞬切 */
+      transition:none;
     }
 
     @media (hover:hover) and (pointer:fine){
@@ -191,44 +191,46 @@
 <body>
   <div class="wrap">
 
-    <!-- ✅ 不要“建筑师的下午茶”，正文直接作为标题UI -->
-    <div class="titleLine">四君子正是四位建筑师，他们正在衡山宾馆大堂争论谁的作品最能代表上海的气质。</div>
+    <div class="titleLine">
+      四君子正是四位建筑师，他们正在衡山宾馆大堂争论谁的作品最能代表上海的气质。
+    </div>
 
-    <!-- ✅ 这四句：不加粗、斜体、紧贴（address风格） -->
-    <div class="quotes" aria-label="对话">
+    <div class="quotes">
       <div class="quote">A ： “我为那个‘上海滩名号最响的人’画了一座宫殿。虽然他从来没有住进来过。”</div>
       <div class="quote">B ： “我用家乡的一个大区毕卡第（Picardie）为我的作品命名。”</div>
       <div class="quote">C： “我堆砌了一座坚固的堡垒。它曾经拥有一个来自纽约的名字。”</div>
       <div class="quote">D： “我不想争第一，我只是为了让我的父亲有个家。”</div>
     </div>
 
-    <!-- ✅ 题目1：标题UI -->
     <div class="formBlock">
-      <div class="titleLine" style="margin-bottom:0;">上述4位建筑师在对话中提及的建筑分别是哪4个？（大堂墙面似乎有些线索，答案都为4个字）</div>
+      <div class="titleLine" style="margin-bottom:0;">
+        上述4位建筑师在对话中提及的建筑分别是哪4个？（大堂墙面似乎有些线索，答案都为4个字）
+      </div>
 
       <div class="row">
         <div class="abcdn">A</div>
-        <input id="ansA" class="ansInput w4" autocomplete="off" spellcheck="false" aria-label="A答案（4个字）" />
+        <input id="ansA" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
       </div>
       <div class="row">
         <div class="abcdn">B</div>
-        <input id="ansB" class="ansInput w4" autocomplete="off" spellcheck="false" aria-label="B答案（4个字）" />
+        <input id="ansB" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
       </div>
       <div class="row">
         <div class="abcdn">C</div>
-        <input id="ansC" class="ansInput w4" autocomplete="off" spellcheck="false" aria-label="C答案（4个字）" />
+        <input id="ansC" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
       </div>
       <div class="row">
         <div class="abcdn">D</div>
-        <input id="ansD" class="ansInput w4" autocomplete="off" spellcheck="false" aria-label="D答案（4个字）" />
+        <input id="ansD" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
       </div>
     </div>
 
-    <!-- ✅ 题目2：标题UI + 输入框 -->
     <div class="formBlock">
-      <div class="titleLine" style="margin-bottom:0;">上述建筑中，哪个与其他3个处于不同年代？</div>
+      <div class="titleLine" style="margin-bottom:0;">
+        上述建筑中，哪个与其他3个处于不同年代？
+      </div>
       <div class="row">
-        <input id="ansOdd" class="ansInput w4" autocomplete="off" spellcheck="false" aria-label="不同年代的建筑（4个字）" />
+        <input id="ansOdd" class="ansInput w4" placeholder="答案4个字" autocomplete="off" />
       </div>
     </div>
 
@@ -240,17 +242,15 @@
     <div class="msg" id="msg"></div>
   </div>
 
+  <!-- JS 原封不动 -->
   <script>
-    // ✅ 取消冻结逻辑：本页不再设置冻结
-
     const HINT_URL = "https://sorcbear.github.io/playground/riddle/hint";
     const NEXT_URL = "https://sorcbear.github.io/playground/painting/";
     const COUNTDOWN_START = 3;
 
-    // 正确答案（按你给的）
     const CORRECT = {
       A: "东湖宾馆",
-      B: "衡山宾馆",   // 你写“衡山宾馆/衡山酒店”，这里按“衡山宾馆”为标准答案
+      B: "衡山宾馆",
       C: "上海大厦",
       D: "瑞金宾馆",
       ODD: "瑞金宾馆"
@@ -270,9 +270,7 @@
     let timer = null;
     let btnTimer = null;
 
-    function clean(v){
-      return (v || "").replace(/\s/g,"");
-    }
+    function clean(v){ return (v || "").replace(/\s/g,""); }
 
     function flashInvert(btn, ms=120){
       btn.classList.add("invert");
@@ -292,11 +290,9 @@
 
     function setBtnText(text, ms=900){
       if (btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
-
       submitBtn.textContent = text;
       submitBtn.classList.add("invert");
       submitBtn.disabled = true;
-
       btnTimer = setTimeout(()=>{
         submitBtn.textContent = "提交答案";
         submitBtn.classList.remove("invert");
@@ -305,7 +301,6 @@
       }, ms);
     }
 
-    // 提示：先反馈，再跳转（同源按钮反馈）
     hintBtn.onclick = ()=>{
       if (locked) return;
       flashInvert(hintBtn,120);
@@ -318,40 +313,27 @@
       const c = clean(ansC.value);
       const d = clean(ansD.value);
       const o = clean(ansOdd.value);
-
-      // B 允许“衡山宾馆”或“衡山酒店”
       const bOk = (b === "衡山宾馆" || b === "衡山酒店");
-
-      return a === CORRECT.A
-        && bOk
-        && c === CORRECT.C
-        && d === CORRECT.D
-        && o === CORRECT.ODD;
+      return a === CORRECT.A && bOk && c === CORRECT.C && d === CORRECT.D && o === CORRECT.ODD;
     }
 
     submitBtn.onclick = ()=>{
       if (locked) return;
-
       if (isCorrect()){
         setLocked(true);
-
         localStorage.setItem("pg_unlock_paper_v1", "1");
-
         let t = COUNTDOWN_START;
         msg.textContent = `答案正确，即将进入下一题（${t}）`;
         msg.classList.add("ok");
-
-        if (timer) clearInterval(timer);
         timer = setInterval(()=>{
           t--;
-          if (t > 0){
+          if (t>0){
             msg.textContent = `答案正确，即将进入下一题（${t}）`;
           }else{
             clearInterval(timer);
             location.href = NEXT_URL;
           }
-        }, 1000);
-
+        },1000);
       }else{
         msg.textContent = "";
         msg.classList.remove("ok");
