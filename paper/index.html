@@ -59,7 +59,7 @@
       font-weight:700;
       margin:4px 0 var(--gap);
       text-align:left;
-      white-space:pre-wrap; /* 保持同源 */
+      white-space:pre-wrap; /* 同源保留 */
     }
 
     /* ✅ 更紧：标题→下一块（图片/输入框） */
@@ -108,7 +108,7 @@
       -webkit-appearance:none;
       font-weight:700;
       font-family:inherit;
-      width:120px;
+      width:140px;
     }
     .ansInput:focus{ outline:none; box-shadow:none; }
 
@@ -141,9 +141,25 @@
       button:hover{ background:#000; color:#fff; }
     }
 
+    button.invert{
+      background:#000;
+      color:#fff;
+    }
+
     button:disabled{
       opacity:.45;
       cursor:default;
+    }
+
+    .msg{
+      margin-top:var(--gap-tight);
+      min-height:1.4em;
+      font-size:14px;
+      line-height:1.6;
+    }
+    .msg.ok{
+      color:var(--c-ok);
+      font-weight:700;
     }
 
     @media (max-width:520px){
@@ -155,7 +171,7 @@
 <body>
   <div class="container">
 
-    <!-- ✅ 关键：文字不要另起一行/不要缩进空格，否则 pre-wrap 会渲染“空行” -->
+    <!-- ✅ 关键：不要在 title 内部另起一行/缩进（pre-wrap 会渲染空行） -->
     <div class="title tightGap">拿出道具中的【红色铁丝】和【方形图纸】，有数字的为前面（对应下图中的蓝色），没有数字的为背面（对应下图中的红色），按照下图指引，制作装置。</div>
 
     <div class="image-box">
@@ -170,17 +186,92 @@
       <img src="./p2.png" alt="p2" />
     </div>
 
-    <!-- ✅ 同样：不要前置换行/缩进 -->
     <div class="title tighterGap">请输入“已完成的装置”上可见的所有数字的总和：</div>
 
     <div class="answer">
-      <input class="ansInput" inputmode="numeric" autocomplete="off" />
+      <input id="sum" class="ansInput" inputmode="numeric" autocomplete="off" />
     </div>
 
     <div class="panel">
-      <button>提交答案</button>
+      <button id="submitBtn">提交答案</button>
     </div>
 
+    <div class="msg" id="msg"></div>
+
   </div>
+
+  <script>
+    /* ✅ 同源逻辑：与 Post Puzzle 一致的“正确提示 + 倒计时跳转 + 错误按钮闪字” */
+    const CORRECT_SUM = 2742;
+
+    /* 你要跳转到哪一页：把这里改成你的下一关链接即可 */
+    const NEXT_URL = "https://sorcbear.github.io/playground/";  // TODO: 改成你的目标页
+    const COUNTDOWN_START = 3;
+
+    const sumInput  = document.getElementById("sum");
+    const submitBtn = document.getElementById("submitBtn");
+    const msg       = document.getElementById("msg");
+
+    let locked=false;
+    let timer=null;
+    let btnTimer=null;
+
+    function setLocked(v){
+      locked=v;
+      submitBtn.disabled=v;
+      sumInput.disabled=v;
+    }
+
+    function setBtnText(text, ms=900){
+      if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+      submitBtn.textContent=text;
+      submitBtn.classList.add("invert");
+      submitBtn.disabled=true;
+
+      btnTimer=setTimeout(()=>{
+        submitBtn.textContent="提交答案";
+        submitBtn.classList.remove("invert");
+        submitBtn.disabled=false;
+        btnTimer=null;
+      }, ms);
+    }
+
+    function isCorrect(){
+      const v = sumInput.value.trim();
+      if(!v) return false;
+      const n = Number(v);
+      return Number.isFinite(n) && n === CORRECT_SUM;
+    }
+
+    submitBtn.onclick=()=>{
+      if(locked) return;
+
+      if(isCorrect()){
+        setLocked(true);
+        let t=COUNTDOWN_START;
+        msg.textContent=`答案正确，即将进入下一题（${t}）`;
+        msg.classList.add("ok");
+
+        timer=setInterval(()=>{
+          t--;
+          if(t>0){
+            msg.textContent=`答案正确，即将进入下一题（${t}）`;
+          }else{
+            clearInterval(timer);
+            location.href=NEXT_URL;
+          }
+        },1000);
+      }else{
+        msg.textContent="";
+        msg.classList.remove("ok");
+        setBtnText("错了，再试一次",900);
+      }
+    };
+
+    /* 可选：回车提交（同源不冲突） */
+    sumInput.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter") submitBtn.click();
+    });
+  </script>
 </body>
 </html>
