@@ -32,11 +32,10 @@
 
   --bg:#fff;
 
-  /* ✅ 第一张图（地图）单独控制：0.5 = 现在的一半 */
-  --map-scale: 0.5;
-
-  /* ✅ 地图“基准宽度”（用于算缩放），一般就跟容器 maxw 一致即可 */
-  --map-base: var(--maxw);
+  /* ✅ 第一张图（地图）单独控制：50% = 现在的一半（手机/PC 都有效） */
+  --map-w: 50%;
+  /* 可选：给地图一个最大像素上限（不想要就保持很大，比如 9999px） */
+  --map-max: 9999px;
 }
 
 *{ box-sizing:border-box; }
@@ -87,9 +86,10 @@ body{
   max-width:100%;
 }
 
-/* ✅ 第一张图：强制缩小（手机/PC 都生效） */
+/* ✅ 第一张图：强制用百分比控制（iOS Safari 稳） */
 .image-box.map img{
-  width: min(100%, calc(var(--map-base) * var(--map-scale)));
+  width: var(--map-w);
+  max-width: var(--map-max);
 }
 
 /* 第二张图：保持原样（铺满容器宽度即可） */
@@ -179,7 +179,7 @@ button:disabled{
 
   <div class="title">这是一条不超过200米的弄堂（沿着绿线探索）。</div>
 
-  <!-- ✅ 第一张图：map（缩放由 --map-scale 控制） -->
+  <!-- ✅ 第一张图：map（大小由 --map-w 控制） -->
   <div class="image-box map">
     <img src="map_152.png" alt="map 152">
   </div>
