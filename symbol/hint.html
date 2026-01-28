@@ -138,7 +138,9 @@
         <button id="hintBtn">看提示</button>
       </div>
 
-      <div class="hint-text" id="hintText">将木条上的第一个孔对准邮筒的位置，旋转一圈，只有唯一的一个蓝色方块；然后将木条上的孔对准蓝色方块，旋转一圈，只有唯一的一个红色三角形。 </div>
+      <div class="hint-text" id="hintText">
+          1. 将木条上的一个孔对准邮筒的位置（康平路宛平路路口的绿色圆圈），旋转一圈，只有唯一的一个蓝色方块（无论间距是几个孔）；
+          2. 同样的方法，将木条上的孔对准蓝色方块，旋转一圈，只有唯一的一个红色三角形。 </div>
 
       <!-- 新增：提示文字下面的“返回游戏”按钮（同样式） -->
       <div class="btn-row return-row" id="returnRow">
@@ -157,7 +159,7 @@
     const returnRow = document.getElementById('returnRow');
     const returnBtn = document.getElementById('returnBtn');
 
-    const BACK_URL = 'https://sorcbear.github.io/playground/circle/';
+    const BACK_URL = 'https://sorcbear.github.io/playground/symbol/';
 
     cancelBtn.addEventListener('click', () => {
       location.href = BACK_URL;
