@@ -1,280 +1,296 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Address Puzzle</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no,address=no,email=no">
 
-  <style>
-    :root{
-      --maxw: 720px;
+<title>Square Puzzle</title>
 
-      --fs-body: 18px;
-      --lh-body: 1.6;
+<style>
+:root{
+  /* ✅ 同源：Rotate / Post Puzzle */
+  --maxw: 720px;
 
-      --fs-hint: 18px;
-      --lh-hint: 1.6;
+  --fs-body: 18px;
+  --lh-body: 1.6;
 
-      --gap: 18px;
-      --gap-tight: 12px;
+  --fs-hint: 18px;
+  --lh-hint: 1.6;
 
-      --c-text: #111;
-      --c-danger: #b00020;
-      --c-border: #000;
+  --fs-btn: 18px;
+  --fw-btn: 600;
+  --h-btn: 52px;
 
-      --ok:#0b6b2b;
-      --bg:#fff;
-    }
+  --gap: 18px;
+  --gap-tight: 12px;
 
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
+  --c-text:#111;
+  --c-border:#000;
+  --c-ok:#0b6b2b;
+  --c-danger:#b00020;
 
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--c-text);
-      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-      font-size: var(--fs-body);
-      line-height: var(--lh-body);
-      -webkit-text-size-adjust: 100%;
-    }
+  /* 图1 → 中间文字 的距离 */
+  --mid-gap-top: 48px;
+  /* 中间文字 → 图2 的距离 */
+  --mid-gap-bottom: 18px;
 
-    .wrap{
-      max-width: var(--maxw);
-      margin: 0 auto;
-      padding: 18px 14px 28px;
-    }
+  --bg:#fff;
 
-    /* ✅ 标题：严格对齐 Rotate 的 .titleLine */
-    .title{
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      font-weight: 700;
-      margin: 4px 0 var(--gap);
-      text-align: left;
-      white-space: pre-wrap;
-    }
+  /* ✅ 第一张图（地图）单独控制：手机/PC 都有效 */
+  --map-w: 70%;
+  --map-max: 9999px;
+}
 
-    /* 故事整体：不再使用 pre-wrap */
-    .story{
-      margin-top: var(--gap);
-      font-size: var(--fs-hint);
-      line-height: var(--lh-hint);
-      font-weight: 700;
-    }
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
 
-    /* 已知行 */
-    .known{
-      margin: 0;
-    }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--c-text);
+  font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+  -webkit-text-size-adjust:100%;
+}
 
-    /* 对话整体：只在这里控制“隔一行” */
-    .quotes{
-      margin-top: 1em;   /* ← 只隔一行 */
-    }
+/* ✅ 同源容器（页面整体居中靠它） */
+.container{
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:18px 14px 28px;
+}
 
-    /* 三句对白：紧贴、不空行 */
-    .quote{
-      margin: 0;
-      font-style: italic;
-      font-weight: 400;
-      color: #000;
-    }
+/* ✅ 同源标题规范 */
+.title{
+  font-size:var(--fs-hint);
+  line-height:var(--lh-hint);
+  font-weight:700;
+  margin:4px 0 var(--gap);
+  text-align:left;
+  white-space:pre-wrap;
+}
 
-    /* 结论行 */
-    .conclusion{
-      margin-top: 1em;
-    }
+.red{ color:#FF0000; }
 
-    /* 红字提示 */
-    .hint{
-      margin-top: var(--gap-tight);
-      font-size: 12px;
-      line-height: 1.4;
-      color: var(--c-danger);
-      font-weight: 700;
-    }
+/* 中间说明文字：只调节上下，不破坏 title 规范 */
+.title.mid{
+  margin-top: var(--mid-gap-top);
+  margin-bottom: var(--mid-gap-bottom);
+}
 
-    /* 地址按钮网格 */
-    .grid{
-      margin-top: var(--gap);
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-    @media (min-width: 820px){
-      .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    }
+/* 图片：同源节奏 */
+.image-box{
+  margin:0 0 var(--gap);
+  text-align:center;
+}
+.image-box img{
+  height:auto;
+  display:block;
+  margin:0 auto;
+  max-width:100%;
+}
 
-    /* 按钮样式 */
-    button{
-      width:240px;
-      height:52px;
-      padding:0 18px;
-      font-size:18px;
-      font-weight:600;
-      background:#fff;
-      color:#000;
-      border:2px solid #000;
-      cursor:pointer;
-      border-radius:0;
-      appearance:none;
-      user-select:none;
-      -webkit-user-select:none;
-      -webkit-touch-callout:none;
-    }
-    button:hover{
-      background:#000;
-      color:#fff;
-    }
-    button:active{
-      background:#000;
-      color:#fff;
-    }
-    button:disabled{
-      opacity:.45;
-      cursor:default;
-    }
-    button.addr{ width:100%; }
+/* ✅ 第一张图：强制用百分比控制（iOS Safari 稳） */
+.image-box.map img{
+  width: var(--map-w);
+  max-width: var(--map-max);
+}
 
-    /* 状态文字 */
-    .msg{
-      margin-top: var(--gap-tight);
-      min-height: 20px;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-    .msg.ok{ color: var(--ok); font-weight: 700; }
-    .msg.locked{ color: var(--c-danger); font-weight: 700; }
+/* 第二张图：保持原样（铺满容器宽度即可） */
+.image-box.puzzle img{
+  width:100%;
+  max-width:100%;
+}
 
-    /* 提示按钮 */
-    .hintBtnRow{
-      margin-top: var(--gap);
-      display:flex;
-      justify-content:center;
-    }
-  </style>
+/* 题目输入行 */
+.answer{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-bottom:calc(var(--gap) * 2);
+}
+
+.ansInput{
+  width:4em;
+  height:40px;
+  padding:0 6px;
+  border:2px solid var(--c-border);
+  border-radius:0;
+  font-size:18px;
+  text-align:center;
+  outline:none;
+  box-shadow:none;
+  -webkit-appearance:none;
+  font-weight:700;
+  font-family:inherit;
+}
+
+/* 按钮区（同源） */
+.panel{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+}
+
+button{
+  width:240px;
+  height:var(--h-btn);
+  padding:0 18px;
+  font-size:var(--fs-btn);
+  font-weight:var(--fw-btn);
+  background:#fff;
+  color:#000;
+  border:2px solid var(--c-border);
+  cursor:pointer;
+  border-radius:0;
+  -webkit-tap-highlight-color:transparent;
+  font-family:inherit;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+
+@media (hover:hover) and (pointer:fine){
+  button:hover{ background:#000; color:#fff; }
+}
+
+button.invert{
+  background:#000;
+  color:#fff;
+}
+
+button:disabled{
+  opacity:.45;
+  cursor:default;
+}
+
+.msg{
+  margin-top:var(--gap-tight);
+  min-height:1.4em;
+  font-size:14px;
+  line-height:1.6;
+}
+.msg.ok{
+  color:var(--c-ok);
+  font-weight:700;
+}
+
+@media (max-width:520px){
+  button{ width:46vw; }
+}
+</style>
 </head>
 
 <body>
-  <div class="wrap">
-    <!-- ✅ 关键：不以换行/空格开头（配合 pre-wrap，避免前导缩进） -->
-    <div class="title">没错，Paul就是知道一部分线索的NPC，他和AI在假装讨论下个谜题的地点，推动剧情发展。下个谜题在以下10个可能的地点之一：</div>
+<div class="container">
 
-    <div class="story">
-      <div class="known">已知：Paul只知道街道名，AI只知道弄堂号码。</div>
+  <div class="title">这是一条不超过200米的弄堂（沿着绿线探索）。</div>
 
-      <div class="quotes">
-        <div class="quote">Paul说：“我不知道具体地点，但我知道AI也不知道。”</div>
-        <div class="quote">AI说：“起初我不知道，但现在我知道了。”</div>
-        <div class="quote">Paul说：“那我现在知道下个谜题在哪了。”</div>
-      </div>
-
-      <div class="conclusion">那么下个谜题在哪里？请点击下面的正确地址。</div>
-    </div>
-
-    <div class="hint">提示：点击错误会导致本页面冻结1分钟。</div>
-
-    <div class="grid" id="btnGrid"></div>
-
-    <div class="msg" id="msg"></div>
-
-    <div class="hintBtnRow">
-      <button id="btnHint" type="button">获得提示</button>
-    </div>
+  <div class="image-box map">
+    <img src="map_152.png" alt="map 152">
   </div>
 
+  <div class="title mid">请用弄堂里的环境信息完成以下谜题：</div>
+
+  <div class="image-box puzzle">
+    <img src="puzzle.jpg" alt="square puzzle">
+  </div>
+
+  <div class="answer">
+    <span><strong><span class="red">? </span>对应的是什么数字：</strong></span>
+    <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
+  </div>
+
+  <div class="panel">
+    <button id="hintBtn">获得提示</button>
+    <button id="submitBtn">提交答案</button>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+</div>
+
 <script>
-(() => {
-  const NEXT_URL = "https://sorcbear.github.io/playground/kp/";
-  const HINT_URL = "https://sorcbear.github.io/playground/address/hint";
-  const LOCK_MS = 1 * 60 * 1000;
-  const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
+/* ===== Square 数据 ===== */
+const CORRECT = "7";
+const HINT_URL = "https://sorcbear.github.io/playground/square/hint";
+const NEXT_URL = "https://sorcbear.github.io/playground/map/";
+const COUNTDOWN_START = 3;
 
-  // ✅ 新增：address 正确后解锁 save 的“康平路”
-  const UNLOCK_KEY_SQUARE = "pg_unlock_square_v1";
+const input = document.getElementById("answer");
+const submitBtn = document.getElementById("submitBtn");
+const hintBtn = document.getElementById("hintBtn");
+const msg = document.getElementById("msg");
 
-  const ADDRS = [
-    "天平路75弄","天平路152弄","天平路216弄",
-    "余庆路80弄","余庆路51弄",
-    "康平路101弄","康平路152弄",
-    "宛平路75弄","宛平路80弄","宛平路101弄"
-  ];
-  const CORRECT = "康平路152弄";
+let locked=false;
+let countdownTimer=null;
+let btnTimer=null;
 
-  const grid = document.getElementById("btnGrid");
-  const msgEl = document.getElementById("msg");
-  const btnHint = document.getElementById("btnHint");
+/* ===== 复用 Circle 的按钮反馈逻辑 ===== */
+function flashInvert(btn, ms=120){
+  btn.classList.add("invert");
+  setTimeout(()=>btn.classList.remove("invert"), ms);
+}
 
-  let lockTimer=null, successTimer=null, inSuccess=false;
+function setLocked(v){
+  locked=v;
+  submitBtn.disabled=v;
+  hintBtn.disabled=v;
+  input.disabled=v;
+}
 
-  const now=()=>Date.now();
-  const fmt=t=>{
-    t=Math.max(0,Math.ceil(t/1000));
-    return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
-  };
+/* Circle 风格：错误时把提交按钮临时变成“错了，再试一次” */
+function setBtnText(text, ms=900){
+  if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
 
-  const getLock=()=>Number(localStorage.getItem(STORAGE_LOCK_UNTIL)||0);
-  const setLock=t=>localStorage.setItem(STORAGE_LOCK_UNTIL,String(t));
-  const clearLock=()=>localStorage.removeItem(STORAGE_LOCK_UNTIL);
+  submitBtn.textContent = text;
+  submitBtn.classList.add("invert");
+  submitBtn.disabled = true;
 
-  const setBtns=e=>{
-    grid.querySelectorAll("button.addr").forEach(b=>b.disabled=!e);
-    btnHint.disabled=!e;
-  };
-  const show=(t,k)=>{msgEl.textContent=t||"";msgEl.className="msg"+(k?" "+k:"");};
+  btnTimer = setTimeout(()=>{
+    submitBtn.textContent = "提交答案";
+    submitBtn.classList.remove("invert");
+    submitBtn.disabled = false;
+    btnTimer = null;
+  }, ms);
+}
 
-  function startLock(){
-    clearInterval(lockTimer);
-    const tick=()=>{
-      if(inSuccess)return;
-      const left=getLock()-now();
-      if(left>0){
-        setBtns(false);
-        show(`页面已冻结：${fmt(left)}`,"locked");
+/* ===== 事件 ===== */
+hintBtn.onclick=()=>{
+  if(locked) return;
+  flashInvert(hintBtn, 120);
+  setTimeout(()=>location.href=HINT_URL, 120);
+};
+
+submitBtn.onclick=()=>{
+  if(locked) return;
+
+  if(input.value.trim()===CORRECT){
+    setLocked(true);
+
+    let t=COUNTDOWN_START;
+    msg.textContent=`答案正确，即将进入下一题（${t}）`;
+    msg.classList.add("ok");
+
+    countdownTimer=setInterval(()=>{
+      t--;
+      if(t>0){
+        msg.textContent=`答案正确，即将进入下一题（${t}）`;
       }else{
-        clearLock();setBtns(true);show("");
-        clearInterval(lockTimer);lockTimer=null;
+        clearInterval(countdownTimer);
+        location.href=NEXT_URL;
       }
-    };
-    tick();lockTimer=setInterval(tick,250);
-  }
-
-  function success(){
-    // ✅ 新增：正确时写入解锁（local + session 双写）
-    try{ localStorage.setItem(UNLOCK_KEY_SQUARE, "1"); }catch(e){}
-    try{ sessionStorage.setItem(UNLOCK_KEY_SQUARE, "1"); }catch(e){}
-
-    inSuccess=true;setBtns(false);
-    let n=3;show(`答案正确，即将进入下一题（${n}）`,"ok");
-    successTimer=setInterval(()=>{
-      n--;if(n>0)show(`答案正确，即将进入下一题（${n}）`,"ok");
-      else{clearInterval(successTimer);location.href=NEXT_URL;}
     },1000);
+
+  }else{
+    msg.textContent="";
+    msg.classList.remove("ok");
+    setBtnText("错了，再试一次", 900);
   }
-
-  function clickAddr(a){
-    if(inSuccess)return;
-    if(getLock()>now()){startLock();return;}
-    if(a===CORRECT){success();return;}
-    setLock(now()+LOCK_MS);startLock();
-  }
-
-  ADDRS.forEach(a=>{
-    const b=document.createElement("button");
-    b.className="addr";
-    b.textContent=a;
-    b.onclick=()=>clickAddr(a);
-    grid.appendChild(b);
-  });
-
-  btnHint.onclick=()=>{
-    if(inSuccess||getLock()>now())return;
-    location.href=HINT_URL;
-  };
-
-  startLock();
-})();
+};
 </script>
+
 </body>
 </html>
