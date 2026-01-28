@@ -31,15 +31,14 @@
   --c-danger:#b00020;
 
   /* 图1 → 中间文字 的距离 */
-  --mid-gap-top: 48px; /* ← 想更远就调大，比如 48px */
-/* 中间文字 → 图2 的距离 */
+  --mid-gap-top: 48px;
+  /* 中间文字 → 图2 的距离 */
   --mid-gap-bottom: 18px;
 
   --bg:#fff;
 
-  /* ✅ 第一张图（地图）单独控制：50% = 现在的一半（手机/PC 都有效） */
+  /* ✅ 第一张图（地图）单独控制：手机/PC 都有效 */
   --map-w: 70%;
-  /* 可选：给地图一个最大像素上限（不想要就保持很大，比如 9999px） */
   --map-max: 9999px;
 }
 
@@ -72,9 +71,9 @@ body{
   text-align:left;
   white-space:pre-wrap;
 }
-.red{
-      color: #FF0000;
-    }
+
+.red{ color:#FF0000; }
+
 /* 中间说明文字：只调节上下，不破坏 title 规范 */
 .title.mid{
   margin-top: var(--mid-gap-top);
@@ -189,14 +188,12 @@ button:disabled{
 
   <div class="title">这是一条不超过200米的弄堂（沿着绿线探索）。</div>
 
-  <!-- ✅ 第一张图：map（大小由 --map-w 控制） -->
   <div class="image-box map">
     <img src="map_152.png" alt="map 152">
   </div>
 
   <div class="title mid">请用弄堂里的环境信息完成以下谜题：</div>
 
-  <!-- ✅ 第二张图：puzzle（保持原样） -->
   <div class="image-box puzzle">
     <img src="puzzle.jpg" alt="square puzzle">
   </div>
@@ -216,6 +213,7 @@ button:disabled{
 </div>
 
 <script>
+/* ===== Square 数据 ===== */
 const CORRECT = "7";
 const HINT_URL = "https://sorcbear.github.io/playground/square/hint";
 const NEXT_URL = "https://sorcbear.github.io/playground/map/";
@@ -227,7 +225,14 @@ const hintBtn = document.getElementById("hintBtn");
 const msg = document.getElementById("msg");
 
 let locked=false;
-let timer=null;
+let countdownTimer=null;
+let btnTimer=null;
+
+/* ===== 复用 Circle 的按钮反馈逻辑 ===== */
+function flashInvert(btn, ms=120){
+  btn.classList.add("invert");
+  setTimeout(()=>btn.classList.remove("invert"), ms);
+}
 
 function setLocked(v){
   locked=v;
@@ -236,9 +241,27 @@ function setLocked(v){
   input.disabled=v;
 }
 
+/* Circle 风格：错误时把提交按钮临时变成“错了，再试一次” */
+function setBtnText(text, ms=900){
+  if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+
+  submitBtn.textContent = text;
+  submitBtn.classList.add("invert");
+  submitBtn.disabled = true;
+
+  btnTimer = setTimeout(()=>{
+    submitBtn.textContent = "提交答案";
+    submitBtn.classList.remove("invert");
+    submitBtn.disabled = false;
+    btnTimer = null;
+  }, ms);
+}
+
+/* ===== 事件 ===== */
 hintBtn.onclick=()=>{
   if(locked) return;
-  location.href=HINT_URL;
+  flashInvert(hintBtn, 120);
+  setTimeout(()=>location.href=HINT_URL, 120);
 };
 
 submitBtn.onclick=()=>{
@@ -246,23 +269,25 @@ submitBtn.onclick=()=>{
 
   if(input.value.trim()===CORRECT){
     setLocked(true);
+
     let t=COUNTDOWN_START;
     msg.textContent=`答案正确，即将进入下一题（${t}）`;
     msg.classList.add("ok");
 
-    timer=setInterval(()=>{
+    countdownTimer=setInterval(()=>{
       t--;
       if(t>0){
         msg.textContent=`答案正确，即将进入下一题（${t}）`;
       }else{
-        clearInterval(timer);
+        clearInterval(countdownTimer);
         location.href=NEXT_URL;
       }
     },1000);
+
   }else{
     msg.textContent="";
-    submitBtn.classList.add("invert");
-    setTimeout(()=>submitBtn.classList.remove("invert"),900);
+    msg.classList.remove("ok");
+    setBtnText("错了，再试一次", 900);
   }
 };
 </script>
