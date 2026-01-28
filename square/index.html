@@ -72,7 +72,9 @@ body{
   text-align:left;
   white-space:pre-wrap;
 }
-
+.red{
+      color: #FF0000;
+    }
 /* 中间说明文字：只调节上下，不破坏 title 规范 */
 .title.mid{
   margin-top: var(--mid-gap-top);
@@ -200,7 +202,7 @@ button:disabled{
   </div>
 
   <div class="answer">
-    <span><strong>? 对应的是什么数字：</strong></span>
+    <span><strong><span class="red">? </span>对应的是什么数字：</strong></span>
     <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
   </div>
 
