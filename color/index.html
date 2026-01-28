@@ -77,10 +77,11 @@
       white-space:pre-wrap;
     }
 
+    /* ✅✅✅ 只改这里：黑边框 -> 白边框（board 外框 + 分隔线底色） */
     .board{
       width:100%;
-      background:#000;
-      border: var(--frame) solid #000;
+      background:#fff;                 /* 原：#000 */
+      border: var(--frame) solid #fff; /* 原：#000 */
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap: 0;
@@ -103,12 +104,13 @@
       line-height:0;
     }
 
-    .cell.rline{ border-right: var(--frame) solid #000; }
-    .cell.bline{ border-bottom: var(--frame) solid #000; }
+    /* ✅✅✅ 只改这里：黑色分隔线 -> 白色分隔线 */
+    .cell.rline{ border-right: var(--frame) solid #fff; } /* 原：#000 */
+    .cell.bline{ border-bottom: var(--frame) solid #fff; } /* 原：#000 */
 
     /* 防止子像素/资源边缘露白 */
     .cell{
-      background:#000;
+      background:#fff;  /* 原：#000（兜底黑底改白） */
       font-size:0;
       line-height:0;
     }
