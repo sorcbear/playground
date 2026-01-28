@@ -115,11 +115,25 @@
       height:var(--btn-h);
       font-size:var(--fs-body);
       font-weight:600;
+
       background:#fff;
       color:#000;
       border:2px solid var(--c-border);
-      cursor:pointer;
       border-radius:0;
+      cursor:pointer;
+
+  /* ✅ 禁止文字选中 */
+      -webkit-user-select:none;
+      user-select:none;
+
+  /* ✅ 禁止 iOS 长按弹菜单 */
+      -webkit-touch-callout:none;
+
+  /* ✅ 禁止点击灰色高亮 */
+      -webkit-tap-highlight-color:transparent;
+
+  /* ✅ 告诉浏览器这是“点击”，不是缩放/拖拽 */
+      touch-action:manipulation;
     }
 
     button:hover{
