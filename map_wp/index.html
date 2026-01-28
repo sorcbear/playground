@@ -7,6 +7,9 @@
   <title>map</title>
 
   <style>
+    .green{
+      color: #2E7D32;
+    }
     :root{
       /* ===== Rotate 同源参数 ===== */
       --maxw: 720px;
@@ -106,6 +109,8 @@
       font-family:inherit;
       transition:none; /* 同源：瞬切 */
       user-select:none;
+      -webkit-user-select:none;
+      -webkit-touch-callout:none;
     }
     @media (hover:hover) and (pointer:fine){
       button:hover{ background:#000; color:#fff; }
@@ -128,7 +133,7 @@
   <div class="wrap">
 
     <div class="titleLine">
-      向右走，来到宛平路康平路路口，到达“<svg class="tri" viewBox="0 0 100 100" aria-hidden="true">
+      向右走，来到<span class="green">“宛平路康平路路口”</span>，到达“<svg class="tri" viewBox="0 0 100 100" aria-hidden="true">
         <polygon points="10,10 90,50 10,90" fill="#ff0000"></polygon>
       </svg>”标注的地点后，点击“已到达”。
     </div>
