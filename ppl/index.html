@@ -78,6 +78,11 @@ body{
   white-space:pre-wrap;
 }
 
+/* ✅ 仅新增：让指定句子变成图中蓝色（#1E88E5 / RGB 30,136,229） */
+.blueLine{
+  color:#1E88E5;
+}
+
 /* ✅ 插入图片：行内图标（大小/间距跟文字自然一致） */
 .inlineIcon{
   height:1em;
@@ -206,8 +211,11 @@ button:disabled{
 <body>
 <div class="wrap">
 
-  <!-- ✅ 只改第一段话：插入行内图片 -->
-  <div class="title">找到衡山公园里“<img class="inlineIcon" src="icon.png" alt="marker">”指向的地点，寻找线索。</div>
+  <!-- ✅ 唯一改动：这句话变蓝（其余文字不变） -->
+  <div class="title">
+    <span class="blueLine">刚才你找到的第一个蓝色方块，是一家超市，时间还长，可以先买瓶水喝。</span>
+    找到衡山公园里“<img class="inlineIcon" src="icon.png" alt="marker">”指向的地点，寻找线索。
+  </div>
 
   <img class="puzzleImg" src="puzzle.png" alt="puzzle">
 
