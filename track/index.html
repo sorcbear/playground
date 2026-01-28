@@ -15,7 +15,7 @@
       --fs-hint: 18px;
       --lh-hint: 1.6; /* 原样保留，不作为 title 的实际行高 */
 
-      --fs-btn: 16px;
+      --fs-btn: 18px;
       --fw-btn: 600;
       --h-btn: 52px;
 
@@ -125,6 +125,9 @@
       white-space:nowrap;
       border-radius:0;
       -webkit-tap-highlight-color:transparent;
+      -webkit-user-select:none;
+      user-select:none;
+      -webkit-touch-callout:none;
     }
     button:hover{ background:#000; color:#fff; }
     button:disabled{ opacity:.45; cursor:default; }
@@ -135,13 +138,13 @@
   <div class="wrap">
 
     <!-- ✅ 关键：不以换行/空格开头（避免 pre-wrap 显示缩进） -->
-    <div class="title">现在只有跟踪上一个玩家的踪影，才能找到下个解谜地点。你面向宛平路，发现她留下的自行车痕迹，你需要判断出她是往哪个方向前进的：向左还是向右？（不妨先尝试自己判断，如果实在想不出来，可以用道具包里的【自行车】和【车轮痕迹】验证）</div>
+    <div class="title">现在只有跟踪上一个玩家的踪影，才能找到下个地点。你面向宛平路，发现她留下的自行车痕迹，你要判断她是往哪个方向前进的：向左还是向右？（先尝试自己判断吧，如果实在想不出来，可以用道具包里的【自行车】和【车轮痕迹】验证）</div>
 
     <div class="image-box">
       <img src="track.png" alt="bike trace">
     </div>
 
-    <div class="hint">如果选错，本页面将冻结 5 分钟无法再次提交获取线索。</div>
+    <div class="hint">提示：点击错误会导致本页面冻结5分钟。</div>
 
     <div class="msg" id="msg"></div>
 
