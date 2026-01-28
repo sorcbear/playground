@@ -39,8 +39,8 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      padding: 18px;
-      box-sizing: border-box;
+      padding:18px;
+      box-sizing:border-box;
     }
 
     .panel{
@@ -58,46 +58,44 @@
       align-items:center;
     }
 
-    /* ===== 按钮：去掉 iOS 默认外观 + 宽度自适应 ===== */
+    /* ===== 按钮 ===== */
     button{
-      -webkit-appearance: none;
-      appearance: none;
+      -webkit-appearance:none;
+      appearance:none;
 
-      width: auto;                 /* 关键：不再固定宽度 */
-      min-width: 140px;            /* 不至于太窄 */
-      max-width: 44vw;             /* 手机上避免太宽 */
-      height: var(--ctl-h);
+      width:auto;
+      min-width:140px;
+      max-width:44vw;
+      height:var(--ctl-h);
 
-      padding: 0 18px;
-      box-sizing: border-box;
+      padding:0 18px;
+      box-sizing:border-box;
 
-      font-size: var(--fs-body);
-      font-weight: 600;
-      line-height: 1;
+      font-size:var(--fs-body);
+      font-weight:600;
+      line-height:1;
 
-      background: #fff;
-      color: #000;
-      border: 2px solid var(--c-border);
-      border-radius: 0;
+      background:#fff;
+      color:#000;
+      border:2px solid var(--c-border);
+      border-radius:0;
 
-      cursor: pointer;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent; /* 去掉 iOS 点击灰块 */
-      touch-action: manipulation;
-      white-space: nowrap;
+      cursor:pointer;
+      user-select:none;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+      white-space:nowrap;
     }
 
-    /* 反馈：桌面 hover 反色 */
     button:hover{
       background:#000;
       color:#fff;
     }
 
-    /* 反馈：手机按下也反色（无位移/无缩放） */
     button:active{
       background:#000;
       color:#fff;
-      transform: none;
+      transform:none;
     }
 
     button:disabled{
@@ -105,26 +103,35 @@
       cursor:default;
     }
 
+    /* ===== 提示文字 ===== */
     .hint-text{
       display:none;
       font-size:var(--fs-text);
       line-height:var(--lh-text);
-      white-space:pre-wrap;
-      text-align:left;             /* 关键：提示文字左对齐 */
+      text-align:left;      /* 左对齐 */
     }
 
-    /* 新增：提示下面的返回按钮行（默认隐藏） */
+    .hint-item{
+      margin:0;             /* ✅ 无缩进 */
+      padding:0;            /* ✅ 无缩进 */
+    }
+
+    /* 1 和 2 之间的间距 */
+    .hint-item + .hint-item{
+      margin-top:18px;      /* 👈 只改这里即可调间距 */
+    }
+
+    /* 返回按钮行（默认隐藏） */
     .return-row{
       display:none;
     }
 
-    /* 超小屏时，按钮略微缩紧一点 */
-    @media (max-width: 360px){
+    @media (max-width:360px){
       button{
-        min-width: 128px;
-        padding: 0 14px;
+        min-width:128px;
+        padding:0 14px;
       }
-      .btn-row{ gap: 14px; }
+      .btn-row{ gap:14px; }
     }
   </style>
 </head>
@@ -139,10 +146,14 @@
       </div>
 
       <div class="hint-text" id="hintText">
-          1. 将木条上的一个孔对准康平路宛平路路口的绿色圆圈，旋转一圈，只有唯一的一个蓝色方块（无论间距是几个孔）；
-          2. 同样的方法，将木条上的孔对准蓝色方块，旋转一圈，只有唯一的一个红色三角形。 </div>
+        <div class="hint-item">
+          1. 将木条上的一个孔对准康平路宛平路路口的绿色圆圈，旋转一圈，只有唯一的一个蓝色方块（无论间距是几个孔）。
+        </div>
+        <div class="hint-item">
+          2. 同样的方法，将木条上的孔对准蓝色方块，旋转一圈，只有唯一的一个红色三角形。
+        </div>
+      </div>
 
-      <!-- 新增：提示文字下面的“返回游戏”按钮（同样式） -->
       <div class="btn-row return-row" id="returnRow">
         <button id="returnBtn">返回游戏</button>
       </div>
