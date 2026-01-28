@@ -78,11 +78,6 @@ body{
   white-space:pre-wrap;
 }
 
-/* ✅ 仅新增：让指定句子变成图中蓝色（#1E88E5 / RGB 30,136,229） */
-.blueLine{
-  color:#1E88E5;
-}
-
 /* ✅ 插入图片：行内图标（大小/间距跟文字自然一致） */
 .inlineIcon{
   height:1em;
@@ -210,124 +205,113 @@ button:disabled{
 
 <body>
 <div class="wrap">
-
-  <!-- ✅ 唯一改动：这句话变蓝（其余文字不变） -->
-  <div class="title">
-  <span style="color:#1E88E5">刚才你找到的第一个蓝色方块，是一家超市，时间还长，可以先买瓶水喝。</span>找到衡山公园里“<img class="inlineIcon" src="icon.png" alt="marker">”指向的地点，寻找线索。
-  </div>
-
-  <img class="puzzleImg" src="puzzle.png" alt="puzzle">
-
-  <div class="code">
-    <div class="title" style="margin:0 0 var(--gap-tight);">请在彩色方框内输入暗号：</div>
-
-    <div class="slots">
-      <input id="s1" class="slot w1" style="background:var(--c-blue)"   inputmode="text" autocomplete="off" />
-      <input id="s2" class="slot w2" style="background:var(--c-cyan)"   inputmode="text" autocomplete="off" />
-      <input id="s3" class="slot w1" style="background:var(--c-green)"  inputmode="text" autocomplete="off" />
-      <input id="s4" class="slot w2" style="background:var(--c-lgreen)" inputmode="text" autocomplete="off" />
-
-      <div class="fixedWord">路</div>
-
-      <input id="s5" class="slot w1" style="background:var(--c-yellow)" inputmode="text" autocomplete="off" />
-      <input id="s6" class="slot w1" style="background:var(--c-red)"    inputmode="text" autocomplete="off" />
-      <input id="s7" class="slot w1" style="background:var(--c-orange)" inputmode="text" autocomplete="off" />
-      <input id="s8" class="slot w1" style="background:var(--c-purple)" inputmode="text" autocomplete="off" />
-    </div>
-  </div>
-
-  <div class="panel">
-    <button id="hintBtn">获得提示</button>
-    <button id="submitBtn">提交答案</button>
-  </div>
-
-  <div id="msg" class="msg"></div>
+<div class="title"><span style="color:#1E88E5">刚才你找到的第一个蓝色方块，是一家超市，时间还长，可以先买瓶水喝。</span>找到衡山公园里“<img class="inlineIcon" src="icon.png" alt="marker">”指向的地点，寻找线索。</div>
+<img class="puzzleImg" src="puzzle.png" alt="puzzle">
+<div class="code">
+<div class="title" style="margin:0 0 var(--gap-tight);">请在彩色方框内输入暗号：</div>
+<div class="slots">
+<input id="s1" class="slot w1" style="background:var(--c-blue)" inputmode="text" autocomplete="off" />
+<input id="s2" class="slot w2" style="background:var(--c-cyan)" inputmode="text" autocomplete="off" />
+<input id="s3" class="slot w1" style="background:var(--c-green)" inputmode="text" autocomplete="off" />
+<input id="s4" class="slot w2" style="background:var(--c-lgreen)" inputmode="text" autocomplete="off" />
+<div class="fixedWord">路</div>
+<input id="s5" class="slot w1" style="background:var(--c-yellow)" inputmode="text" autocomplete="off" />
+<input id="s6" class="slot w1" style="background:var(--c-red)" inputmode="text" autocomplete="off" />
+<input id="s7" class="slot w1" style="background:var(--c-orange)" inputmode="text" autocomplete="off" />
+<input id="s8" class="slot w1" style="background:var(--c-purple)" inputmode="text" autocomplete="off" />
+</div>
+</div>
+<div class="panel">
+<button id="hintBtn">获得提示</button>
+<button id="submitBtn">提交答案</button>
+</div>
+<div id="msg" class="msg"></div>
 </div>
 
 <script>
-const ANSWER = ["四","君子","在","衡山","五","三","四","号"];
-const ids = ["s1","s2","s3","s4","s5","s6","s7","s8"];
+const ANSWER=["四","君子","在","衡山","五","三","四","号"];
+const ids=["s1","s2","s3","s4","s5","s6","s7","s8"];
 
-const HINT_URL = "https://sorcbear.github.io/playground/ppl/hint";
-const NEXT_URL = "https://sorcbear.github.io/playground/riddle/";
-const COUNTDOWN_START = 3;
+const HINT_URL="https://sorcbear.github.io/playground/ppl/hint";
+const NEXT_URL="https://sorcbear.github.io/playground/riddle/";
+const COUNTDOWN_START=3;
 
-const hintBtn = document.getElementById("hintBtn");
-const submitBtn = document.getElementById("submitBtn");
-const msg = document.getElementById("msg");
+const hintBtn=document.getElementById("hintBtn");
+const submitBtn=document.getElementById("submitBtn");
+const msg=document.getElementById("msg");
 
-let locked = false;
-let timer = null;
-let btnTimer = null;
+let locked=false;
+let timer=null;
+let btnTimer=null;
 
 function clean(v){
-  return (v || "").replace(/\s/g,"");
+return (v||"").replace(/\s/g,"");
 }
 
-function flashInvert(btn, ms=120){
-  btn.classList.add("invert");
-  setTimeout(()=>btn.classList.remove("invert"), ms);
+function flashInvert(btn,ms=120){
+btn.classList.add("invert");
+setTimeout(()=>btn.classList.remove("invert"),ms);
 }
 
 function setLocked(v){
-  locked = v;
-  hintBtn.disabled = v;
-  submitBtn.disabled = v;
-  ids.forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.disabled = v;
-  });
+locked=v;
+hintBtn.disabled=v;
+submitBtn.disabled=v;
+ids.forEach(id=>{
+const el=document.getElementById(id);
+if(el) el.disabled=v;
+});
 }
 
-function setBtnText(text, ms=900){
-  if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
-  submitBtn.textContent = text;
-  submitBtn.classList.add("invert");
-  submitBtn.disabled = true;
+function setBtnText(text,ms=900){
+if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+submitBtn.textContent=text;
+submitBtn.classList.add("invert");
+submitBtn.disabled=true;
 
-  btnTimer = setTimeout(()=>{
-    submitBtn.textContent = "提交答案";
-    submitBtn.classList.remove("invert");
-    submitBtn.disabled = false;
-    btnTimer = null;
-  }, ms);
+btnTimer=setTimeout(()=>{
+submitBtn.textContent="提交答案";
+submitBtn.classList.remove("invert");
+submitBtn.disabled=false;
+btnTimer=null;
+},ms);
 }
 
-hintBtn.onclick = ()=>{
-  if(locked) return;
-  flashInvert(hintBtn,120);
-  setTimeout(()=>location.href = HINT_URL,120);
+hintBtn.onclick=()=>{
+if(locked) return;
+flashInvert(hintBtn,120);
+setTimeout(()=>location.href=HINT_URL,120);
 };
 
 function isCorrect(){
-  return ids.every((id,i)=> clean(document.getElementById(id).value) === ANSWER[i]);
+return ids.every((id,i)=> clean(document.getElementById(id).value)===ANSWER[i]);
 }
 
-submitBtn.onclick = ()=>{
-  if(locked) return;
+submitBtn.onclick=()=>{
+if(locked) return;
 
-  if(isCorrect()){
-    setLocked(true);
-    let t = COUNTDOWN_START;
-    msg.textContent = `答案正确，即将进入下一题（${t}）`;
-    msg.classList.add("ok");
+if(isCorrect()){
+setLocked(true);
+let t=COUNTDOWN_START;
+msg.textContent=`答案正确，即将进入下一题（${t}）`;
+msg.classList.add("ok");
 
-    if(timer) clearInterval(timer);
-    timer = setInterval(()=>{
-      t--;
-      if(t > 0){
-        msg.textContent = `答案正确，即将进入下一题（${t}）`;
-      }else{
-        clearInterval(timer);
-        location.href = NEXT_URL;
-      }
-    },1000);
+if(timer) clearInterval(timer);
+timer=setInterval(()=>{
+t--;
+if(t>0){
+msg.textContent=`答案正确，即将进入下一题（${t}）`;
+}else{
+clearInterval(timer);
+location.href=NEXT_URL;
+}
+},1000);
 
-  }else{
-    msg.textContent = "";
-    msg.classList.remove("ok");
-    setBtnText("错了，再试一次",900);
-  }
+}else{
+msg.textContent="";
+msg.classList.remove("ok");
+setBtnText("错了，再试一次",900);
+}
 };
 </script>
 </body>
