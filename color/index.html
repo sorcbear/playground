@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <!-- ✅ 保留可双指捏合缩放，不加 user-scalable=no -->
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- ✅ 全页面禁用缩放（双指捏合/双击缩放都禁） -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="format-detection" content="telephone=no,address=no,email=no">
   <title>4 Scratch Boards</title>
 
@@ -34,21 +34,21 @@
       --h-btn: 52px;
       --w-btn: 240px;
 
-      /* ✅ 按钮/输入框统一黑边框 */
       --c-border:#000;
-
-      /* ✅ 调色盘选中反馈：白色 */
       --c-swatch-ring:#fff;
 
       --c-ok:#0b6b2b;
       --c-danger:#b00020;
 
-      /* 标题与四宫格之间的间距（只调这里） */
       --space-title-board: 24px;
     }
 
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
+
+    /* ✅ 进一步阻止双击缩放（不影响点击） */
+    html, body{ touch-action: manipulation; }
+
     .green{ color:#2E7D32; }
 
     body{
@@ -79,8 +79,8 @@
     /* ✅ 四宫格边框：纯白 */
     .board{
       width:100%;
-      background:#fff;                 /* 原：#000 */
-      border: var(--frame) solid #fff; /* 原：#000 */
+      background:#fff;
+      border: var(--frame) solid #fff;
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap: 0;
@@ -95,7 +95,10 @@
       overflow:hidden;
       user-select:none;
       -webkit-user-select:none;
+
+      /* ✅ 刮擦区域：禁默认手势（这里也会进一步杜绝捏合缩放） */
       touch-action:none;
+
       min-width:0;
       aspect-ratio: 1 / 1;
 
@@ -104,12 +107,12 @@
     }
 
     /* ✅ 分隔线：纯白 */
-    .cell.rline{ border-right: var(--frame) solid #fff; }   /* 原：#000 */
-    .cell.bline{ border-bottom: var(--frame) solid #fff; }  /* 原：#000 */
+    .cell.rline{ border-right: var(--frame) solid #fff; }
+    .cell.bline{ border-bottom: var(--frame) solid #fff; }
 
     /* 防止子像素/资源边缘露白：兜底改白 */
     .cell{
-      background:#fff; /* 原：#000 */
+      background:#fff;
       font-size:0;
       line-height:0;
     }
@@ -124,7 +127,6 @@
       display:block;
     }
 
-    /* 底图仍然 cover */
     .cell img{ object-fit:cover; }
 
     .loading{
@@ -155,7 +157,7 @@
 
     .palette{
       display:grid;
-      grid-template-columns: repeat(8, var(--swatch)); /* ✅ 2x8 */
+      grid-template-columns: repeat(8, var(--swatch));
       grid-auto-rows: var(--swatch);
       gap: var(--swatch-gap);
       justify-content:center;
@@ -298,17 +300,6 @@
     @media (max-width:520px){
       button.uiBtn{ width:46vw; }
     }
-
-    /* =========================================================
-       ✅ 新增：防 iOS 双击缩放 + 放大后不“卡死”
-       ========================================================= */
-
-    /* ✅ 全局：阻止“双击放大”，但不禁止双指捏合 */
-    html, body{ touch-action: manipulation; }
-
-    /* ✅ 当页面处于缩放状态：让 Safari 接管手势（可拖动平移） */
-    body.zoomed canvas.overlay{ pointer-events:none; }
-    body.zoomed .cell{ touch-action: pan-x pan-y; }
   </style>
 </head>
 
@@ -346,7 +337,6 @@
   const COUNTDOWN_START = 3;
 
   const PALETTE_COLORS = [
-    // 原 8 个
     "#2A5A5E",
     "#C62622",
     "#E2C164",
@@ -355,8 +345,6 @@
     "#FF4FA0",
     "#0070C0",
     "#9B857A",
-
-    // ✅ 新增 8 个（和正确色差异大）
     "#FFEB3B",
     "#FF8C00",
     "#4A4A4A",
@@ -386,11 +374,28 @@
   const L_BOX_REL = { x: 0.61, y: 0.67, w: 0.10, h: 0.07 };
   const L_STROKE_FACTOR = 0.137;
 
-  const WHITE_TH = 200;
   const BRUSH_RADIUS = 18;
 
   const ANSWER = "paul";
   const HINT_TEXT = "线索：四个图里被“挖出来”的字母，按顺序组成答案。";
+
+  /* =========================================================
+     ✅ 彻底禁用缩放：iOS 手势 + 桌面 Ctrl/⌘ 缩放兜底
+     ========================================================= */
+  ["gesturestart","gesturechange","gestureend"].forEach(ev=>{
+    document.addEventListener(ev, (e)=>{ e.preventDefault(); }, { passive:false });
+  });
+
+  window.addEventListener("wheel", (e)=>{
+    if (e.ctrlKey || e.metaKey) e.preventDefault();
+  }, { passive:false });
+
+  window.addEventListener("keydown", (e)=>{
+    const k = (e.key || "").toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && (k === "+" || k === "-" || k === "=" || k === "0")) {
+      e.preventDefault();
+    }
+  }, { passive:false });
 
   function dpr(){ return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
   function sameHex(a,b){
@@ -409,22 +414,6 @@
   let locked = false;
   let timer = null;
   let btnTimer = null;
-
-  /* =========================================================
-     ✅ 新增：检测 Safari 缩放（visualViewport.scale）
-     放大时加 body.zoomed，避免“卡死”
-     ========================================================= */
-  function updateZoomState(){
-    const s = (window.visualViewport && typeof visualViewport.scale === "number")
-      ? visualViewport.scale
-      : 1;
-    document.body.classList.toggle("zoomed", s > 1.01);
-  }
-  updateZoomState();
-  if (window.visualViewport){
-    visualViewport.addEventListener("resize", updateZoomState);
-    visualViewport.addEventListener("scroll", updateZoomState);
-  }
 
   function setMsg(text, cls){
     msg.className = "msg" + (cls ? (" " + cls) : "");
@@ -561,9 +550,6 @@
       });
 
       this.cv.addEventListener("pointerdown", (e)=>{
-        // ✅ 放大状态（Safari 仍保持缩放）时：不吃手势，避免卡死
-        if(document.body.classList.contains("zoomed")) return;
-
         e.preventDefault();
         if(!CURRENT_COLOR) return;
         try{ this.cv.setPointerCapture(e.pointerId); }catch(_){}
@@ -574,9 +560,6 @@
       }, {passive:false});
 
       this.cv.addEventListener("pointermove", (e)=>{
-        // ✅ 放大状态时：不吃手势
-        if(document.body.classList.contains("zoomed")) return;
-
         if(!this.down) return;
         e.preventDefault();
         this.pending = this.posFromPointer(e);
@@ -626,7 +609,7 @@
       this.ctx.globalCompositeOperation = "source-over";
       this.ctx.fillStyle = color;
       this.ctx.beginPath();
-      this.ctx.arc(x,y,18,0,Math.PI*2);
+      this.ctx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
       this.ctx.fill();
       this.ctx.restore();
 
@@ -635,7 +618,7 @@
         this.correctPaintCtx.globalCompositeOperation = "source-over";
         this.correctPaintCtx.fillStyle = "white";
         this.correctPaintCtx.beginPath();
-        this.correctPaintCtx.arc(x,y,18,0,Math.PI*2);
+        this.correctPaintCtx.arc(x,y,BRUSH_RADIUS,0,Math.PI*2);
         this.correctPaintCtx.fill();
         this.correctPaintCtx.restore();
       }
@@ -646,7 +629,7 @@
     strokeOnly(a,b,c,d){
       const dx=c-a, dy=d-b;
       const dist=Math.hypot(dx,dy);
-      const step=Math.max(2, 18*0.5);
+      const step=Math.max(2, BRUSH_RADIUS*0.5);
       const n=Math.max(1, Math.ceil(dist/step));
       for(let i=1;i<=n;i++){
         const t=i/n;
