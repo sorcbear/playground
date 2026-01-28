@@ -1,296 +1,213 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="format-detection" content="telephone=no,address=no,email=no">
-
-<title>Square Puzzle</title>
-
-<style>
-:root{
-  /* ✅ 同源：Rotate / Post Puzzle */
-  --maxw: 720px;
-
-  --fs-body: 18px;
-  --lh-body: 1.6;
-
-  --fs-hint: 18px;
-  --lh-hint: 1.6;
-
-  --fs-btn: 18px;
-  --fw-btn: 600;
-  --h-btn: 52px;
-
-  --gap: 18px;
-  --gap-tight: 12px;
-
-  --c-text:#111;
-  --c-border:#000;
-  --c-ok:#0b6b2b;
-  --c-danger:#b00020;
-
-  /* 图1 → 中间文字 的距离 */
-  --mid-gap-top: 48px;
-  /* 中间文字 → 图2 的距离 */
-  --mid-gap-bottom: 18px;
-
-  --bg:#fff;
-
-  /* ✅ 第一张图（地图）单独控制：手机/PC 都有效 */
-  --map-w: 70%;
-  --map-max: 9999px;
-}
-
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--c-text);
-  font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
-  font-size:var(--fs-body);
-  line-height:var(--lh-body);
-  -webkit-text-size-adjust:100%;
-}
-
-/* ✅ 同源容器（页面整体居中靠它） */
-.container{
-  max-width:var(--maxw);
-  margin:0 auto;
-  padding:18px 14px 28px;
-}
-
-/* ✅ 同源标题规范 */
-.title{
-  font-size:var(--fs-hint);
-  line-height:var(--lh-hint);
-  font-weight:700;
-  margin:4px 0 var(--gap);
-  text-align:left;
-  white-space:pre-wrap;
-}
-
-.red{ color:#FF0000; }
-
-/* 中间说明文字：只调节上下，不破坏 title 规范 */
-.title.mid{
-  margin-top: var(--mid-gap-top);
-  margin-bottom: var(--mid-gap-bottom);
-}
-
-/* 图片：同源节奏 */
-.image-box{
-  margin:0 0 var(--gap);
-  text-align:center;
-}
-.image-box img{
-  height:auto;
-  display:block;
-  margin:0 auto;
-  max-width:100%;
-}
-
-/* ✅ 第一张图：强制用百分比控制（iOS Safari 稳） */
-.image-box.map img{
-  width: var(--map-w);
-  max-width: var(--map-max);
-}
-
-/* 第二张图：保持原样（铺满容器宽度即可） */
-.image-box.puzzle img{
-  width:100%;
-  max-width:100%;
-}
-
-/* 题目输入行 */
-.answer{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  margin-bottom:calc(var(--gap) * 2);
-}
-
-.ansInput{
-  width:4em;
-  height:40px;
-  padding:0 6px;
-  border:2px solid var(--c-border);
-  border-radius:0;
-  font-size:18px;
-  text-align:center;
-  outline:none;
-  box-shadow:none;
-  -webkit-appearance:none;
-  font-weight:700;
-  font-family:inherit;
-}
-
-/* 按钮区（同源） */
-.panel{
-  display:flex;
-  gap:12px;
-  justify-content:center;
-}
-
-button{
-  width:240px;
-  height:var(--h-btn);
-  padding:0 18px;
-  font-size:var(--fs-btn);
-  font-weight:var(--fw-btn);
-  background:#fff;
-  color:#000;
-  border:2px solid var(--c-border);
-  cursor:pointer;
-  border-radius:0;
-  -webkit-tap-highlight-color:transparent;
-  font-family:inherit;
-  -webkit-user-select:none;
-  user-select:none;
-  -webkit-touch-callout:none;
-}
-
-@media (hover:hover) and (pointer:fine){
-  button:hover{ background:#000; color:#fff; }
-}
-
-button.invert{
-  background:#000;
-  color:#fff;
-}
-
-button:disabled{
-  opacity:.45;
-  cursor:default;
-}
-
-.msg{
-  margin-top:var(--gap-tight);
-  min-height:1.4em;
-  font-size:14px;
-  line-height:1.6;
-}
-.msg.ok{
-  color:var(--c-ok);
-  font-weight:700;
-}
-
-@media (max-width:520px){
-  button{ width:46vw; }
-}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>addresss</title>
+  <style>
+    html, body{
+      margin:0; padding:0;
+      background:#fff; color:#111;
+      font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    }
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px 14px 28px;
+      box-sizing: border-box;
+    }
+    .title{
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 10px 0;
+      line-height: 1.5;
+    }
+    .hint{
+      font-size: 13px;
+      color: #555;
+      margin: 0 0 14px 0;
+    }
+    .grid{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (min-width: 820px){
+      .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    button.addr{
+      appearance:none;
+      border: 1px solid #111;
+      background:#111;
+      color:#fff;
+      border-radius: 10px;
+      padding: 12px 10px;
+      font-size: 15px;
+      cursor: pointer;
+      text-align: center;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select:none;
+      user-select:none;
+      -webkit-touch-callout:none;
+    }
+    button.addr:disabled{
+      opacity: .45;
+      cursor: not-allowed;
+    }
+    .text{
+      white-space: pre-wrap;
+      font-size: 16px;
+      line-height: 1.75;
+      margin-top: 6px;
+    }
+    .question{
+      margin-top: 10px;
+      font-weight: 700;
+    }
+    .status{
+      margin-top: 14px;
+      min-height: 22px;
+      font-size: 15px;
+    }
+    .status.ok{ color:#111; font-weight: 700; }
+    .status.bad{ color:#b00020; font-weight: 700; }
+  </style>
 </head>
 
 <body>
-<div class="container">
+  <div class="wrap">
+    <div class="title">你成功找到了玩家A，她正和玩家B讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：</div>
+    <div class="hint">提示：点击错误会导致本页面冻结3分钟。</div>
 
-  <div class="title">这是一条不超过200米的弄堂（沿着绿线探索）。</div>
+    <div class="grid" id="btnGrid"></div>
 
-  <div class="image-box map">
-    <img src="map_152.png" alt="map 152">
+    <div class="text" id="dialogText">现在有2个玩家，A知道街道，B知道多少弄。
+A说：“我不知道是多少弄，但我知道B也不知道。”
+B说：“起初我不知道，但现在我知道了。”
+A说：“那我现在知道下个谜题在哪了。”
+
+那么下个谜题在哪里？请点击正确地址。</div>
+
+    <div class="status" id="status"></div>
   </div>
-
-  <div class="title mid">请用弄堂里的环境信息完成以下谜题：</div>
-
-  <div class="image-box puzzle">
-    <img src="puzzle.jpg" alt="square puzzle">
-  </div>
-
-  <div class="answer">
-    <span><strong><span class="red">? </span>对应的是什么数字：</strong></span>
-    <input id="answer" class="ansInput" inputmode="numeric" autocomplete="off">
-  </div>
-
-  <div class="panel">
-    <button id="hintBtn">获得提示</button>
-    <button id="submitBtn">提交答案</button>
-  </div>
-
-  <div class="msg" id="msg"></div>
-
-</div>
 
 <script>
-/* ===== Square 数据 ===== */
-const CORRECT = "7";
-const HINT_URL = "https://sorcbear.github.io/playground/square/hint";
-const NEXT_URL = "https://sorcbear.github.io/playground/map/";
-const COUNTDOWN_START = 3;
+(() => {
+  const NEXT_URL = "https://sorcbear.github.io/playground/square/";
+  const LOCK_MS = 3 * 60 * 1000; // 3 minutes
+  const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
 
-const input = document.getElementById("answer");
-const submitBtn = document.getElementById("submitBtn");
-const hintBtn = document.getElementById("hintBtn");
-const msg = document.getElementById("msg");
+  const ADDRS = [
+    "天平路75弄",
+    "天平路152弄",
+    "天平路216弄",
+    "余庆路80弄",
+    "余庆路51弄",
+    "康平路101弄",
+    "康平路152弄",
+    "宛平路75弄",
+    "宛平路80弄",
+    "宛平路101弄",
+  ];
 
-let locked=false;
-let countdownTimer=null;
-let btnTimer=null;
+  // 正确答案：康平路152弄
+  const CORRECT = "康平路152弄";
 
-/* ===== 复用 Circle 的按钮反馈逻辑 ===== */
-function flashInvert(btn, ms=120){
-  btn.classList.add("invert");
-  setTimeout(()=>btn.classList.remove("invert"), ms);
-}
+  const grid = document.getElementById("btnGrid");
+  const statusEl = document.getElementById("status");
 
-function setLocked(v){
-  locked=v;
-  submitBtn.disabled=v;
-  hintBtn.disabled=v;
-  input.disabled=v;
-}
+  let timer = null;
 
-/* Circle 风格：错误时把提交按钮临时变成“错了，再试一次” */
-function setBtnText(text, ms=900){
-  if(btnTimer){ clearTimeout(btnTimer); btnTimer=null; }
+  function now(){ return Date.now(); }
 
-  submitBtn.textContent = text;
-  submitBtn.classList.add("invert");
-  submitBtn.disabled = true;
-
-  btnTimer = setTimeout(()=>{
-    submitBtn.textContent = "提交答案";
-    submitBtn.classList.remove("invert");
-    submitBtn.disabled = false;
-    btnTimer = null;
-  }, ms);
-}
-
-/* ===== 事件 ===== */
-hintBtn.onclick=()=>{
-  if(locked) return;
-  flashInvert(hintBtn, 120);
-  setTimeout(()=>location.href=HINT_URL, 120);
-};
-
-submitBtn.onclick=()=>{
-  if(locked) return;
-
-  if(input.value.trim()===CORRECT){
-    setLocked(true);
-
-    let t=COUNTDOWN_START;
-    msg.textContent=`答案正确，即将进入下一题（${t}）`;
-    msg.classList.add("ok");
-
-    countdownTimer=setInterval(()=>{
-      t--;
-      if(t>0){
-        msg.textContent=`答案正确，即将进入下一题（${t}）`;
-      }else{
-        clearInterval(countdownTimer);
-        location.href=NEXT_URL;
-      }
-    },1000);
-
-  }else{
-    msg.textContent="";
-    msg.classList.remove("ok");
-    setBtnText("错了，再试一次", 900);
+  function fmtMMSS(ms){
+    const t = Math.max(0, Math.ceil(ms / 1000));
+    const mm = String(Math.floor(t / 60)).padStart(2, "0");
+    const ss = String(t % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
   }
-};
-</script>
 
+  function getLockUntil(){
+    const v = localStorage.getItem(STORAGE_LOCK_UNTIL);
+    if (!v) return 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function setLockUntil(ts){
+    localStorage.setItem(STORAGE_LOCK_UNTIL, String(ts));
+  }
+
+  function clearLock(){
+    localStorage.removeItem(STORAGE_LOCK_UNTIL);
+  }
+
+  function setButtonsEnabled(enabled){
+    grid.querySelectorAll("button.addr").forEach(b => b.disabled = !enabled);
+  }
+
+  function showStatus(text, kind){
+    statusEl.textContent = text || "";
+    statusEl.className = "status" + (kind ? (" " + kind) : "");
+  }
+
+  function startCountdown(){
+    if (timer) clearInterval(timer);
+
+    const tick = () => {
+      const lockUntil = getLockUntil();
+      const left = lockUntil - now();
+      if (left > 0){
+        setButtonsEnabled(false);
+        showStatus(`try again（已冻结，剩余 ${fmtMMSS(left)}）`, "bad");
+      } else {
+        clearLock();
+        setButtonsEnabled(true);
+        showStatus("", "");
+        if (timer){ clearInterval(timer); timer = null; }
+      }
+    };
+
+    tick();
+    timer = setInterval(tick, 250);
+  }
+
+  function handleClick(addr){
+    const lockUntil = getLockUntil();
+    if (lockUntil > now()){
+      startCountdown();
+      return;
+    }
+
+    if (addr === CORRECT){
+      setButtonsEnabled(false);
+      showStatus("success", "ok");
+      setTimeout(() => { location.href = NEXT_URL; }, 500);
+      return;
+    }
+
+    // wrong
+    setLockUntil(now() + LOCK_MS);
+    startCountdown();
+  }
+
+  function buildButtons(){
+    grid.innerHTML = "";
+    ADDRS.forEach(addr => {
+      const btn = document.createElement("button");
+      btn.className = "addr";
+      btn.type = "button";
+      btn.textContent = addr;
+      btn.addEventListener("click", () => handleClick(addr));
+      grid.appendChild(btn);
+    });
+  }
+
+  buildButtons();
+  startCountdown();
+})();
+</script>
 </body>
 </html>
