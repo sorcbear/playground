@@ -97,11 +97,22 @@ body{
 }
 
 .pattern{
-  display:block;
-  width:100%;
-  height:auto;
-  user-select:none;
-  pointer-events:none;
+display:block;
+width:100%;
+height:auto;
+
+
+/* ❌ 不可选中 / 不可复制 */
+user-select:none;
+-webkit-user-select:none;
+
+
+/* ❌ 不可长按弹出菜单 */
+-webkit-touch-callout:none;
+
+
+/* ❌ 不参与任何指针事件 */
+pointer-events:none;
 }
 
 /* 分隔线覆盖绘制，不参与布局 */
@@ -117,19 +128,27 @@ body{
 
 /* 数字 */
 .digit{
-  position:absolute;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  font-family:"Cinzel","Times New Roman",serif;
-  font-size:var(--digitSize);
-  line-height:1;
-  color:var(--digitColor);
-  -webkit-text-stroke:var(--digitStrokeW) var(--digitStroke);
-  paint-order:stroke fill;
-  text-shadow:var(--digitShadow);
-  user-select:none;
-  filter:none;
+position:absolute;
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+font-family:"Cinzel","Times New Roman",serif;
+font-size:var(--digitSize);
+line-height:1;
+color:var(--digitColor);
+-webkit-text-stroke:var(--digitStrokeW) var(--digitStroke);
+paint-order:stroke fill;
+text-shadow:var(--digitShadow);
+
+
+/* ✅ 核心三件套 */
+user-select:none;
+-webkit-user-select:none;
+-webkit-touch-callout:none;
+
+
+/* ❌ 不响应任何触摸/鼠标 */
+pointer-events:none;
 }
 
 /* 按钮 */
