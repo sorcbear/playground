@@ -7,6 +7,14 @@
 <title>Number Puzzle</title>
 
 <style>
+/* ✅ 整块（含数字）都不可选中 */
+.strip,
+.strip *{
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-user-drag:none;
+}
 .green{
     color: #2E7D32;
   }
