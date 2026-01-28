@@ -3,210 +3,278 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>addresss</title>
+  <title>Address Puzzle</title>
+
   <style>
-    html, body{
-      margin:0; padding:0;
-      background:#fff; color:#111;
-      font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    :root{
+      --maxw: 720px;
+
+      --fs-body: 18px;
+      --lh-body: 1.6;
+
+      --fs-hint: 18px;
+      --lh-hint: 1.6;
+
+      --gap: 18px;
+      --gap-tight: 12px;
+
+      --c-text: #111;
+      --c-danger: #b00020;
+      --c-border: #000;
+
+      --ok:#0b6b2b;
+      --bg:#fff;
     }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--c-text);
+      font-family: system-ui, -apple-system, "PingFang SC","Microsoft YaHei", Arial, sans-serif;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      -webkit-text-size-adjust: 100%;
+    }
+
     .wrap{
-      max-width: 980px;
+      max-width: var(--maxw);
       margin: 0 auto;
       padding: 18px 14px 28px;
-      box-sizing: border-box;
     }
+
+    /* ✅ 标题：严格对齐 Rotate 的 .titleLine */
     .title{
-      font-size: 16px;
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
       font-weight: 700;
-      margin: 0 0 10px 0;
-      line-height: 1.5;
+      margin: 4px 0 var(--gap);
+      text-align: left;
+      white-space: pre-wrap;
     }
+
+    /* 故事整体：不再使用 pre-wrap */
+    .story{
+      margin-top: var(--gap);
+      font-size: var(--fs-hint);
+      line-height: var(--lh-hint);
+      font-weight: 700;
+    }
+
+    /* 已知行 */
+    .known{
+      margin: 0;
+    }
+
+    /* 对话整体：只在这里控制“隔一行” */
+    .quotes{
+      margin-top: 1em;   /* ← 只隔一行 */
+    }
+
+    /* 三句对白：紧贴、不空行 */
+    .quote{
+      margin: 0;
+      font-style: italic;
+      font-weight: 400;
+      color: #000;
+    }
+
+    /* 结论行 */
+    .conclusion{
+      margin-top: 1em;
+    }
+
+    /* 红字提示 */
     .hint{
-      font-size: 13px;
-      color: #555;
-      margin: 0 0 14px 0;
+      margin-top: var(--gap-tight);
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--c-danger);
+      font-weight: 700;
     }
+
+    /* 地址按钮网格 */
     .grid{
+      margin-top: var(--gap);
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      margin-bottom: 16px;
     }
     @media (min-width: 820px){
       .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
-    button.addr{
+
+    /* 按钮样式 */
+    button{
+      width:240px;
+      height:52px;
+      padding:0 18px;
+      font-size:18px;
+      font-weight:600;
+      background:#fff;
+      color:#000;
+      border:2px solid #000;
+      cursor:pointer;
+      border-radius:0;
       appearance:none;
-      border: 1px solid #111;
-      background:#111;
-      color:#fff;
-      border-radius: 10px;
-      padding: 12px 10px;
-      font-size: 15px;
-      cursor: pointer;
-      text-align: center;
       user-select:none;
-      -webkit-tap-highlight-color: transparent;
       -webkit-user-select:none;
       user-select:none;
       -webkit-touch-callout:none;
     }
-    button.addr:disabled{
-      opacity: .45;
-      cursor: not-allowed;
+    button:hover{
+      background:#000;
+      color:#fff;
     }
-    .text{
-      white-space: pre-wrap;
-      font-size: 16px;
-      line-height: 1.75;
-      margin-top: 6px;
+    button:active{
+      background:#000;
+      color:#fff;
     }
-    .question{
-      margin-top: 10px;
-      font-weight: 700;
+    button:disabled{
+      opacity:.45;
+      cursor:default;
     }
-    .status{
-      margin-top: 14px;
-      min-height: 22px;
-      font-size: 15px;
+    button.addr{ width:100%; }
+
+    /* 状态文字 */
+    .msg{
+      margin-top: var(--gap-tight);
+      min-height: 20px;
+      font-size: 14px;
+      line-height: 1.4;
     }
-    .status.ok{ color:#111; font-weight: 700; }
-    .status.bad{ color:#b00020; font-weight: 700; }
+    .msg.ok{ color: var(--ok); font-weight: 700; }
+    .msg.locked{ color: var(--c-danger); font-weight: 700; }
+
+    /* 提示按钮 */
+    .hintBtnRow{
+      margin-top: var(--gap);
+      display:flex;
+      justify-content:center;
+    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="title">你成功找到了玩家A，她正和玩家B讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：</div>
+    <!-- ✅ 关键：不以换行/空格开头（配合 pre-wrap，避免前导缩进） -->
+    <div class="title">你遇到2个玩家A和B，他们在讨论下个谜题的地点。现在知道下个谜题在以下10个可能的地点之一：</div>
+
+    <div class="story">
+      <div class="known">已知：A知道街道名，B知道弄堂号码。</div>
+
+      <div class="quotes">
+        <div class="quote">A说：“我不知道具体地点，但我知道B也不知道。”</div>
+        <div class="quote">B说：“起初我不知道，但现在我知道了。”</div>
+        <div class="quote">A说：“那我现在知道下个谜题在哪了。”</div>
+      </div>
+
+      <div class="conclusion">那么下个谜题在哪里？请点击下面的正确地址。</div>
+    </div>
+
     <div class="hint">提示：点击错误会导致本页面冻结3分钟。</div>
 
     <div class="grid" id="btnGrid"></div>
 
-    <div class="text" id="dialogText">现在有2个玩家，A知道街道，B知道多少弄。
-A说：“我不知道是多少弄，但我知道B也不知道。”
-B说：“起初我不知道，但现在我知道了。”
-A说：“那我现在知道下个谜题在哪了。”
+    <div class="msg" id="msg"></div>
 
-那么下个谜题在哪里？请点击正确地址。</div>
-
-    <div class="status" id="status"></div>
+    <div class="hintBtnRow">
+      <button id="btnHint" type="button">获得提示</button>
+    </div>
   </div>
 
 <script>
 (() => {
   const NEXT_URL = "https://sorcbear.github.io/playground/square/";
-  const LOCK_MS = 3 * 60 * 1000; // 3 minutes
+  const HINT_URL = "https://sorcbear.github.io/playground/address/hint";
+  const LOCK_MS = 1 * 60 * 1000;
   const STORAGE_LOCK_UNTIL = "riddle_addr_lock_until_ts";
 
-  const ADDRS = [
-    "天平路75弄",
-    "天平路152弄",
-    "天平路216弄",
-    "余庆路80弄",
-    "余庆路51弄",
-    "康平路101弄",
-    "康平路152弄",
-    "宛平路75弄",
-    "宛平路80弄",
-    "宛平路101弄",
-  ];
+  // ✅ 新增：address 正确后解锁 save 的“康平路”
+  const UNLOCK_KEY_SQUARE = "pg_unlock_square_v1";
 
-  // 正确答案：康平路152弄
+  const ADDRS = [
+    "天平路75弄","天平路152弄","天平路216弄",
+    "余庆路80弄","余庆路51弄",
+    "康平路101弄","康平路152弄",
+    "宛平路75弄","宛平路80弄","宛平路101弄"
+  ];
   const CORRECT = "康平路152弄";
 
   const grid = document.getElementById("btnGrid");
-  const statusEl = document.getElementById("status");
+  const msgEl = document.getElementById("msg");
+  const btnHint = document.getElementById("btnHint");
 
-  let timer = null;
+  let lockTimer=null, successTimer=null, inSuccess=false;
 
-  function now(){ return Date.now(); }
+  const now=()=>Date.now();
+  const fmt=t=>{
+    t=Math.max(0,Math.ceil(t/1000));
+    return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
+  };
 
-  function fmtMMSS(ms){
-    const t = Math.max(0, Math.ceil(ms / 1000));
-    const mm = String(Math.floor(t / 60)).padStart(2, "0");
-    const ss = String(t % 60).padStart(2, "0");
-    return `${mm}:${ss}`;
-  }
+  const getLock=()=>Number(localStorage.getItem(STORAGE_LOCK_UNTIL)||0);
+  const setLock=t=>localStorage.setItem(STORAGE_LOCK_UNTIL,String(t));
+  const clearLock=()=>localStorage.removeItem(STORAGE_LOCK_UNTIL);
 
-  function getLockUntil(){
-    const v = localStorage.getItem(STORAGE_LOCK_UNTIL);
-    if (!v) return 0;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  }
+  const setBtns=e=>{
+    grid.querySelectorAll("button.addr").forEach(b=>b.disabled=!e);
+    btnHint.disabled=!e;
+  };
+  const show=(t,k)=>{msgEl.textContent=t||"";msgEl.className="msg"+(k?" "+k:"");};
 
-  function setLockUntil(ts){
-    localStorage.setItem(STORAGE_LOCK_UNTIL, String(ts));
-  }
-
-  function clearLock(){
-    localStorage.removeItem(STORAGE_LOCK_UNTIL);
-  }
-
-  function setButtonsEnabled(enabled){
-    grid.querySelectorAll("button.addr").forEach(b => b.disabled = !enabled);
-  }
-
-  function showStatus(text, kind){
-    statusEl.textContent = text || "";
-    statusEl.className = "status" + (kind ? (" " + kind) : "");
-  }
-
-  function startCountdown(){
-    if (timer) clearInterval(timer);
-
-    const tick = () => {
-      const lockUntil = getLockUntil();
-      const left = lockUntil - now();
-      if (left > 0){
-        setButtonsEnabled(false);
-        showStatus(`try again（已冻结，剩余 ${fmtMMSS(left)}）`, "bad");
-      } else {
-        clearLock();
-        setButtonsEnabled(true);
-        showStatus("", "");
-        if (timer){ clearInterval(timer); timer = null; }
+  function startLock(){
+    clearInterval(lockTimer);
+    const tick=()=>{
+      if(inSuccess)return;
+      const left=getLock()-now();
+      if(left>0){
+        setBtns(false);
+        show(`页面已冻结：${fmt(left)}`,"locked");
+      }else{
+        clearLock();setBtns(true);show("");
+        clearInterval(lockTimer);lockTimer=null;
       }
     };
-
-    tick();
-    timer = setInterval(tick, 250);
+    tick();lockTimer=setInterval(tick,250);
   }
 
-  function handleClick(addr){
-    const lockUntil = getLockUntil();
-    if (lockUntil > now()){
-      startCountdown();
-      return;
-    }
+  function success(){
+    // ✅ 新增：正确时写入解锁（local + session 双写）
+    try{ localStorage.setItem(UNLOCK_KEY_SQUARE, "1"); }catch(e){}
+    try{ sessionStorage.setItem(UNLOCK_KEY_SQUARE, "1"); }catch(e){}
 
-    if (addr === CORRECT){
-      setButtonsEnabled(false);
-      showStatus("success", "ok");
-      setTimeout(() => { location.href = NEXT_URL; }, 500);
-      return;
-    }
-
-    // wrong
-    setLockUntil(now() + LOCK_MS);
-    startCountdown();
+    inSuccess=true;setBtns(false);
+    let n=3;show(`答案正确，即将进入下一题（${n}）`,"ok");
+    successTimer=setInterval(()=>{
+      n--;if(n>0)show(`答案正确，即将进入下一题（${n}）`,"ok");
+      else{clearInterval(successTimer);location.href=NEXT_URL;}
+    },1000);
   }
 
-  function buildButtons(){
-    grid.innerHTML = "";
-    ADDRS.forEach(addr => {
-      const btn = document.createElement("button");
-      btn.className = "addr";
-      btn.type = "button";
-      btn.textContent = addr;
-      btn.addEventListener("click", () => handleClick(addr));
-      grid.appendChild(btn);
-    });
+  function clickAddr(a){
+    if(inSuccess)return;
+    if(getLock()>now()){startLock();return;}
+    if(a===CORRECT){success();return;}
+    setLock(now()+LOCK_MS);startLock();
   }
 
-  buildButtons();
-  startCountdown();
+  ADDRS.forEach(a=>{
+    const b=document.createElement("button");
+    b.className="addr";
+    b.textContent=a;
+    b.onclick=()=>clickAddr(a);
+    grid.appendChild(b);
+  });
+
+  btnHint.onclick=()=>{
+    if(inSuccess||getLock()>now())return;
+    location.href=HINT_URL;
+  };
+
+  startLock();
 })();
 </script>
 </body>
