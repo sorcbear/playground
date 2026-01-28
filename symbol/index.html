@@ -46,12 +46,14 @@
       -webkit-text-size-adjust:100%;
     }
 
+    /* ✅ 同源 container */
     .container{
       max-width:var(--maxw);
       margin:0 auto;
       padding:18px 14px 28px;
     }
 
+    /* ✅ 同源标题 / 说明文本 */
     .title{
       font-size:var(--fs-hint);
       line-height:var(--lh-hint);
@@ -61,10 +63,19 @@
       white-space:pre-wrap;
     }
 
-    .red{
-      color:var(--c-danger);
+    /* ✅ 更紧：标题→下一块（图片/输入框） */
+    .title.tightGap{
+      margin-bottom: var(--gap-tight); /* 12px */
     }
 
+    /* ✅ 更更紧：底部说明→输入框 */
+    .title.tighterGap{
+      margin-bottom: 6px;
+    }
+
+    .red{ color:var(--c-danger); }
+
+    /* 图片区（同源） */
     .image-box{
       margin:0 0 var(--gap);
       text-align:center;
@@ -74,26 +85,23 @@
       height:auto;
       display:block;
       margin:0 auto;
+      user-select:none;
+      -webkit-user-drag:none;
+      background:#f5f5f5; /* 与上面一致：有底色更稳 */
     }
 
-    .answer-line{
+    /* ✅ 输入区（同源结构） */
+    .answer{
       display:flex;
+      gap:8px;
       align-items:center;
-      gap:12px;
-      margin-bottom: calc(var(--gap) * 2);
       flex-wrap:nowrap;
-    }
-
-    .answer-line .label{
-      font-size:var(--fs-hint);
-      font-weight:700;
-      white-space:nowrap;
+      margin-bottom: var(--gap);
     }
 
     .ansInput{
-      width: 8em;
       height:40px;
-      padding:0 6px;
+      padding:0 8px;
       border:2px solid var(--c-border);
       border-radius:0;
       font-size:18px;
@@ -103,9 +111,11 @@
       -webkit-appearance:none;
       font-weight:700;
       font-family:inherit;
+      width:140px; /* ✅ 同源 */
     }
     .ansInput:focus{ outline:none; box-shadow:none; }
 
+    /* 按钮区（同源） */
     .panel{
       display:flex;
       gap:12px;
@@ -164,17 +174,19 @@
 <body>
   <div class="container">
 
-    <div class="title">
-这个绿色大邮筒正是寻找下一个地点的关键。使用道具包中的【带孔木条】和【地图】，在图纸中找到现在你所在的绿色大邮筒的位置，利用带孔木条，按照下图中的规则，找到下一个地点。请注意：下个地点只能在每日5点至18点进入，你要抓紧时间了。
-    </div>
+    <!-- ✅ 顶部说明：用 tightGap，让它到图片的间隔=gap-tight（同源） -->
+    <div class="title tightGap">这个绿色大邮筒正是寻找下一个地点的关键。使用道具包中的【带孔木条】和【地图】，在图纸中找到现在你所在的绿色大邮筒的位置，利用木条上的孔，按照下图中的规则，找到下一个地点。请注意：下个地点只能在每日5点至18点进入，你要抓紧时间了。</div>
 
     <div class="image-box">
       <img src="symbol.png" alt="symbol" />
     </div>
 
-    <div class="answer-line">
-      <div class="label">正确地点：</div>
-      <input id="place" class="ansInput" placeholder=答案4个字 autocomplete="off" />
+    <!-- ✅ 输入提示：用 tighterGap，让提示到输入框间隔=6px（同源） -->
+    <div class="title tighterGap">请输入正确地点（4个字）：</div>
+
+    <!-- ✅ 输入框区：同源 answer 结构 -->
+    <div class="answer">
+      <input id="place" class="ansInput" placeholder="答案4个字" autocomplete="off" />
     </div>
 
     <div class="panel">
@@ -192,7 +204,7 @@
 
     const CORRECT = "衡山公园";
 
-    /* ✅ 新增：symbol 成功后解锁 save 的“衡山路” */
+    /* ✅ symbol 成功后解锁 save 的“衡山路” */
     const UNLOCK_KEY_PPL = "pg_unlock_ppl_v1";
 
     const placeInput = document.getElementById("place");
@@ -245,7 +257,7 @@
 
       if(normalize(placeInput.value) === CORRECT){
 
-        /* ✅ 只加这两行：写入解锁（local + session） */
+        /* ✅ 写入解锁（local + session） */
         try{ localStorage.setItem(UNLOCK_KEY_PPL, "1"); }catch(e){}
         try{ sessionStorage.setItem(UNLOCK_KEY_PPL, "1"); }catch(e){}
 
@@ -269,6 +281,11 @@
         setBtnText("错了，再试一次",900);
       }
     };
+
+    /* 可选：回车提交（同源不冲突） */
+    placeInput.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter") submitBtn.click();
+    });
   </script>
 </body>
 </html>
