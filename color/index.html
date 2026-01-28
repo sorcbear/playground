@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
+  <!-- ✅ 保留可双指捏合缩放，不加 user-scalable=no -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="format-detection" content="telephone=no,address=no,email=no">
-  <title>Color Puzzle</title>
+  <title>4 Scratch Boards</title>
 
   <style>
-    
     :root{
       --maxw: 980px;
       --bg:#fff;
@@ -48,13 +48,9 @@
     }
 
     *{ box-sizing:border-box; }
-    html,body{ 
-      height:100%;
-      touch-action: manipulation;
-    }
-    .green{
-      color: #2E7D32;
-    }
+    html,body{ height:100%; }
+    .green{ color:#2E7D32; }
+
     body{
       margin:0;
       background:var(--bg);
@@ -80,7 +76,7 @@
       white-space:pre-wrap;
     }
 
-    /* ✅✅✅ 只改这里：黑边框 -> 白边框（board 外框 + 分隔线底色） */
+    /* ✅ 四宫格边框：纯白 */
     .board{
       width:100%;
       background:#fff;                 /* 原：#000 */
@@ -107,13 +103,13 @@
       line-height:0;
     }
 
-    /* ✅✅✅ 只改这里：黑色分隔线 -> 白色分隔线 */
-    .cell.rline{ border-right: var(--frame) solid #fff; } /* 原：#000 */
-    .cell.bline{ border-bottom: var(--frame) solid #fff; } /* 原：#000 */
+    /* ✅ 分隔线：纯白 */
+    .cell.rline{ border-right: var(--frame) solid #fff; }   /* 原：#000 */
+    .cell.bline{ border-bottom: var(--frame) solid #fff; }  /* 原：#000 */
 
-    /* 防止子像素/资源边缘露白 */
+    /* 防止子像素/资源边缘露白：兜底改白 */
     .cell{
-      background:#fff;  /* 原：#000（兜底黑底改白） */
+      background:#fff; /* 原：#000 */
       font-size:0;
       line-height:0;
     }
@@ -129,9 +125,7 @@
     }
 
     /* 底图仍然 cover */
-    .cell img{
-      object-fit:cover;
-    }
+    .cell img{ object-fit:cover; }
 
     .loading{
       position:absolute;
@@ -167,15 +161,14 @@
       justify-content:center;
       align-content:center;
       width: 100%;
-      max-width: min(100%, calc(8 * var(--swatch) + 7 * var(--swatch-gap))); /* ✅ 对应 8 列 */
+      max-width: min(100%, calc(8 * var(--swatch) + 7 * var(--swatch-gap)));
     }
 
     :root{
-      --ring-w: 3px;        /* ✅ 白圈厚度：想更粗就加大 */
-      --ring-inset: 3px;    /* ✅ 白圈离外缘内缩：越大=外侧保留原色越宽 */
+      --ring-w: 3px;
+      --ring-inset: 3px;
     }
 
-    /* 调色点本体 */
     .swatch{
       width:var(--swatch);
       height:var(--swatch);
@@ -191,7 +184,6 @@
       box-sizing:border-box;
     }
 
-    /* ✅ 选中：画“内嵌白色圆环”（外侧仍是原色） */
     .swatch.selected::after{
       content:"";
       position:absolute;
@@ -202,8 +194,6 @@
       transform: translate(-50%, -50%);
       border-radius:999px;
       box-sizing:border-box;
-
-      /* 只画环，不填充 */
       box-shadow: inset 0 0 0 var(--ring-w) var(--c-swatch-ring);
       background: transparent;
       pointer-events:none;
@@ -308,6 +298,17 @@
     @media (max-width:520px){
       button.uiBtn{ width:46vw; }
     }
+
+    /* =========================================================
+       ✅ 新增：防 iOS 双击缩放 + 放大后不“卡死”
+       ========================================================= */
+
+    /* ✅ 全局：阻止“双击放大”，但不禁止双指捏合 */
+    html, body{ touch-action: manipulation; }
+
+    /* ✅ 当页面处于缩放状态：让 Safari 接管手势（可拖动平移） */
+    body.zoomed canvas.overlay{ pointer-events:none; }
+    body.zoomed .cell{ touch-action: pan-x pan-y; }
   </style>
 </head>
 
@@ -356,14 +357,14 @@
     "#9B857A",
 
     // ✅ 新增 8 个（和正确色差异大）
-    "#39FF14",  // 亮绿
-    "#FF8C00",  // 橙
-    "#4A4A4A",  // 金黄
-    "#00A3FF",  // 亮蓝
-    "#8A2BE2",  // 紫罗兰
-    "#FF00A8",  // 霓虹粉紫
-    "#FFFF00",  // 春绿
-    "#111111"   // 近黑
+    "#FFEB3B",
+    "#FF8C00",
+    "#4A4A4A",
+    "#00A3FF",
+    "#8A2BE2",
+    "#FF00A8",
+    "#00FF7F",
+    "#111111"
   ];
 
   const TILES = [
@@ -408,6 +409,22 @@
   let locked = false;
   let timer = null;
   let btnTimer = null;
+
+  /* =========================================================
+     ✅ 新增：检测 Safari 缩放（visualViewport.scale）
+     放大时加 body.zoomed，避免“卡死”
+     ========================================================= */
+  function updateZoomState(){
+    const s = (window.visualViewport && typeof visualViewport.scale === "number")
+      ? visualViewport.scale
+      : 1;
+    document.body.classList.toggle("zoomed", s > 1.01);
+  }
+  updateZoomState();
+  if (window.visualViewport){
+    visualViewport.addEventListener("resize", updateZoomState);
+    visualViewport.addEventListener("scroll", updateZoomState);
+  }
 
   function setMsg(text, cls){
     msg.className = "msg" + (cls ? (" " + cls) : "");
@@ -544,6 +561,9 @@
       });
 
       this.cv.addEventListener("pointerdown", (e)=>{
+        // ✅ 放大状态（Safari 仍保持缩放）时：不吃手势，避免卡死
+        if(document.body.classList.contains("zoomed")) return;
+
         e.preventDefault();
         if(!CURRENT_COLOR) return;
         try{ this.cv.setPointerCapture(e.pointerId); }catch(_){}
@@ -554,6 +574,9 @@
       }, {passive:false});
 
       this.cv.addEventListener("pointermove", (e)=>{
+        // ✅ 放大状态时：不吃手势
+        if(document.body.classList.contains("zoomed")) return;
+
         if(!this.down) return;
         e.preventDefault();
         this.pending = this.posFromPointer(e);
