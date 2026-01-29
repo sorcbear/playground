@@ -6,6 +6,10 @@
 <title>Secret Puzzle</title>
 
 <style>
+
+.green{
+  color: #2E7D32;
+}
 :root{
   --c-blue:#0070c0;
   --c-cyan:#00b0f0;
@@ -169,6 +173,9 @@ button{
   -webkit-tap-highlight-color:transparent;
   font-family:inherit;
   transition:none;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
 }
 
 @media (hover:hover) and (pointer:fine){
@@ -205,7 +212,7 @@ button:disabled{
 
 <body>
 <div class="wrap">
-<div class="title"><span style="color:#1E88E5">Tips：刚才你找到的第一个蓝色方块，是一家超市，时间还长，可以先买瓶水喝。</span>解谜继续：找到衡山公园里“<img class="inlineIcon" src="icon.png" alt="marker">”指向的地点，寻找线索。</div>
+<div class="title"><span style="color:#1E88E5">Tips：刚才你找到的第一个蓝色方形，是一家超市，时间还长，可以先去买瓶水喝。</span>解谜继续：找到<span class="green">衡山公园</span>里“<img class="inlineIcon" src="icon.png" alt="marker">”指向的地点，寻找线索。</div>
 <img class="puzzleImg" src="puzzle.png" alt="puzzle">
 <div class="code">
 <div class="title" style="margin:0 0 var(--gap-tight);">请在彩色方框内输入暗号：</div>
