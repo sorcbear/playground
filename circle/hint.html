@@ -90,9 +90,12 @@
     }
 
     /* 反馈：桌面 hover 反色 */
-    button:hover{
-      background:#000;
-      color:#fff;
+/* ✅ 修复：只在有鼠标的设备上启用 hover，避免手机 hover 卡住 */
+    @media (hover: hover) and (pointer: fine){
+      button:hover{
+        background:#000;
+        color:#fff;
+      }
     }
 
     /* 反馈：手机按下也反色（无位移/无缩放） */
