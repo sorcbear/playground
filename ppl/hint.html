@@ -85,6 +85,8 @@
       -webkit-tap-highlight-color: transparent; /* 去掉 iOS 点击灰块 */
       touch-action: manipulation;
       white-space: nowrap;
+      -webkit-user-select:none;
+      -webkit-touch-callout:none;
     }
 
     /* 反馈：桌面 hover 反色 */
@@ -138,7 +140,7 @@
         <button id="hintBtn">看提示</button>
       </div>
 
-      <div class="hint-text" id="hintText">沈钧儒石碑，图上不同色块所在位置对应的文字 </div>
+      <div class="hint-text" id="hintText">沈钧儒石碑，找到图上不同色块所在位置对应的文字。 </div>
 
       <!-- 新增：提示文字下面的“返回游戏”按钮（同样式） -->
       <div class="btn-row return-row" id="returnRow">
