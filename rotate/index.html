@@ -179,10 +179,12 @@
       transition:none; /* 保持“瞬切” */
     }
 
-    /* ✅ 同源：直接使用 :hover（示例就是这样写的） */
-    .puzzleBtn:hover{
-      background:#000;
-      color:#fff;
+    /* ✅ 仅在“真鼠标设备”启用 hover，避免 iOS 点击后 sticky hover 导致按钮变黑 */
+    @media (hover:hover) and (pointer:fine){
+      .puzzleBtn:hover{
+        background:#000;
+        color:#fff;
+      }
     }
 
     /* JS 错误反馈（保留你原逻辑） */
