@@ -65,7 +65,7 @@
     setDisabledAll(on);
   }
 
-  // Square 同款：错误提示（按钮 invert + 禁用，随后恢复）
+  // ✅ 按你要求：错误提示期间按钮“同源 UI”，但结束后必须回到白底黑字（去掉 invert）
   function setBtnText(text, ms = 900) {
     if (!btnSubmit) return;
     clearBtnHint();
@@ -76,6 +76,7 @@
 
     btnTextTimer = setTimeout(() => {
       btnSubmit.textContent = BTN_TEXT_DEFAULT;
+      // 关键：恢复为白底黑字
       btnSubmit.classList.remove("invert");
       btnSubmit.disabled = false;
       btnTextTimer = null;
@@ -275,11 +276,27 @@
 
       if (okPuzzle && okAns) {
         startCountdownAndRedirect();
-      } else {
-        msg.textContent = "";
-        msg.classList.remove("ok");
-        setBtnText("错了，再试一次", 900);
+        return;
       }
+
+      // ✅ 其他逻辑不变：只改“按钮提示文字分流”
+      msg.textContent = "";
+      msg.classList.remove("ok");
+
+      // 1) 拼图正确、答案不正确 → “错了，再试一次”
+      if (okPuzzle && !okAns) {
+        setBtnText("错了，再试一次", 900);
+        return;
+      }
+
+      // 2) 拼图不正确、答案正确 → “请完成拼图”
+      if (!okPuzzle && okAns) {
+        setBtnText("请完成拼图", 900);
+        return;
+      }
+
+      // 3) 两者都不对 → 仍然按原来“错了，再试一次”
+      setBtnText("错了，再试一次", 900);
     };
   }
 
